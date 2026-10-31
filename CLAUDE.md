@@ -4,10 +4,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## State of the repo
 
-This is mostly a scaffold: the app code (`*.py` modules, `frontend/`, `lab/`) is still **empty**. What *is* written and frozen is the contract and demo content, all validated against the Testing Plan's T0.04–T0.06 rules:
+The backend app code is **implemented** (both backend lanes): Lane 1 (Ishaan) covers the
+foundation and the alert/action/lesson pipeline; Lane 2 (Cetas) covers drills, the restore
+check, the device strip and the demo backup. What is still missing: the frontend build,
+Kishaann's live-mode pieces (`ingest/wazuh.py`, the real `RealWazuhClient`), and `lab/`.
+The full suite is green: `cd backend && python -m pytest -q` (211 tests).
+
+The contract and demo content are frozen and validated against the Testing Plan's T0.04–T0.06 rules:
 
 - [docs/DECISIONS.md](docs/DECISIONS.md) — the 22 pre-H0 decisions, **team ownership** (Ishaan: backend core; Cetas: drills/restore/devices; Abhiram: frontend; Kishaann: Wazuh lab and live mode), and where it departs from the spec. Read it before the PDFs; it wins on conflicts.
 - `backend/contract.py` (Pydantic models and the 21-route `ROUTES` index), `backend/fixtures/*.json` (one stub body per route), `backend/schema.sql`, `backend/seed/clinic.json`, `backend/replay/alerts.json`, `backend/scenarios/*.json`, `backend/lessons/lessons.json`, `backend/.env.example`.
+
+Lane 2 notes (Cetas):
+- `drills/models.py` loads/validates the scenario JSON; `drills/engine.py` owns the lobby/open/review/finished machine and is the only writer of the drill tables; `drills/scoring.py` is a pure function (results per phase, missed action IDs); `drills/impact.py` is a pure lookup joining step device states with the seed's services/`when_down` (T2.06).
+- Host-aware scoring: the host runs the drill and gets no results row; only the host's *answered* steps count in the team tally (matches `fixtures/drill_view_finished.json`: 8 of 10).
+- `restore/checker.py` copies the backup into `restore_sandbox/` (its only writable folder, T1.14), hashes against the manifest, and reports freshness/integrity/exposure; `demo_backup/make.py` regenerates the 50-file synthetic backup on every reset (2 altered, 9 days old, always connected) and has a `--good` passing variant for tests (T0.06, T1.12, T1.13).
+- `routes/devices.py` exports `set_device_status`, the seam `db.mark_device` calls; keep it there so Lane 1 never writes `devices` directly.
 
 Owner PIN and Undo are deliberately off but kept in the contract. `lessons.json` has English only (Kannada/Hindi pending a fluent checker). `seed/clinic.json` IPs and agent IDs are placeholders until the Wazuh lab exists.
 
@@ -19,6 +31,31 @@ The original source documents are the four PDFs in `docs/`, which are not text-s
 - `ShieldMate design plan.pdf` — Software Design, with Appendix A (drill scenario) and Appendix B (replay alerts), which the spec says to use unchanged.
 
 When implementing a file, read the matching section of the Build Spec first, and build route responses against `contract.py`. Don't invent routes, fields or error codes; the contract is meant to be frozen.
+
+## Two-person backend split
+
+The backend is built by two people in parallel lanes (mirrors `docs/DECISIONS.md`). Work
+only inside your own lane; the seams below are the exact boundaries.
+
+**Lane 1 — "backend core" (Ishaan):**
+- Foundation: `main.py`, `config.py`, `db.py`, `errors.py`, `clock.py`, `requirements.txt`, `tests/conftest.py`
+- Modules: `alerts/*`, `ingest/source.py` + `ingest/replay.py`, `lessons/*`, `actions/{propose,targets,timeout,wazuh_client}.py`
+- Routes: `routes/{clinic,alerts,notifications,actions,demo}.py`
+- Kishaann (lane-1 side, still to land): `ingest/wazuh.py` and the `RealWazuhClient` in `actions/wazuh_client.py`
+
+**Lane 2 — "backend features" (Cetas):**
+- Modules: `drills/{models,engine,scoring,impact}.py`, `restore/checker.py`, `demo_backup/make.py`
+- Routes: `routes/{drills,restore,devices}.py`
+- Tests: `tests/unit/{test_engine,test_models,test_scoring,test_impact,test_restore}.py`, `tests/api/{test_drill_flow,test_restore_flow,test_devices_flow}.py`, `tests/contract/test_lane2_routes.py`
+
+**Seams (keep these signatures stable so the lanes stay parallel-safe):**
+- `db.mark_device(db, agent, status, when)` → `routes.devices.set_device_status` — the *only*
+  path by which lane 1's `alerts/pipeline.py` and `actions/timeout.py` touch the `devices` table.
+- `drills.engine.ScenarioRegistry` loads the frozen `scenarios/*.json`; tests may pass their own registry.
+- `drills.scoring.results(scenario, players, answers, restore_result=, host_player_id=)` — the host
+  is not scored (matches `fixtures/drill_view_finished.json`).
+- Both lanes build through `tests/conftest.py`'s `make_app` / `Harness` (FakeClock, FakeWazuhClient,
+  temp DB) and validate responses against `contract.py` only.
 
 ## What it is
 
