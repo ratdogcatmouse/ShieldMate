@@ -76,11 +76,11 @@ def _scan(base: Path, markers: list[str]) -> dict[str, list[str]]:
 
 
 def snapshot_only(db: Database, clock: Clock, config: Config) -> dict:
-    """Step 1 alone, for the pipeline hook: back up the compromised directory now.
+    """Step 1 alone: back up the compromised directory now (the button/verify path).
 
-    Ishaan's lane calls this when an encryption (100201) card is created, so the
-    compromised state is snapshotted automatically, not only on button press.
     No alert/DB writes - the snapshot is pure filesystem, in the sandbox (T1.14).
+    Raises ApiError on a missing/unsupported layout - fine for a route call, wrong
+    for an automatic hook; use ``auto_snapshot`` for that.
     """
     compromised, _, markers_path = _ensure_trees(config)
     markers = _markers(markers_path)
@@ -92,6 +92,24 @@ def snapshot_only(db: Database, clock: Clock, config: Config) -> dict:
     db.emit("restore.snapshot", subject=("restore_run", None), files=report["files"],
             vuln_files=report["vuln_files"])
     return report
+
+
+def auto_snapshot(db: Database, clock: Clock, config: Config) -> dict | None:
+    """The pipeline-safe variant of ``snapshot_only`` (the 100201 created-card hook).
+
+    Ishaan's lane calls this when an encryption card is created, so the compromised
+    state is backed up automatically. It must never crash the pipeline: the demo
+    layout snapshots (regenerating missing trees), any other layout (a real backup
+    drive) is a quiet no-op, and a broken demo layout just logs nothing.
+    """
+    if not _is_demo_layout(config):
+        return None
+    try:
+        return snapshot_only(db, clock, config)
+    except Exception:
+        # An automatic hook must never take the alert pipeline down (T5.09 rule);
+        # a broken layout just means no snapshot this time.
+        return None
 
 
 def run_verify(db: Database, clock: Clock, config: Config) -> dict:

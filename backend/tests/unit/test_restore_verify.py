@@ -108,3 +108,37 @@ def test_verify_writes_only_to_the_sandbox(tmp_path):
     after.update(_tree(base / "patched"))
     after.update(_tree(base / "backup"))
     assert after == live
+
+
+# --- auto_snapshot: the pipeline-safe hook Ishaan's lane calls on a 100201 card ---
+
+def test_auto_snapshot_on_the_demo_layout_snapshots(tmp_path, monkeypatch):
+    db, clock, config = _setup(tmp_path, good=True)
+    # Pretend this temp layout IS the demo layout (and don't touch the real trees).
+    monkeypatch.setattr(make, "BACKUP_DIR", config.restore_backup_dir)
+    monkeypatch.setattr(make, "ensure", lambda force=False: None)
+    report = verify.auto_snapshot(db, clock, config)
+    assert report == {"files": 50, "vuln_files": 3}
+    assert len(_tree(config.restore_sandbox_dir / "snapshot")) == 50
+
+
+def test_auto_snapshot_on_a_real_layout_is_a_quiet_noop(tmp_path):
+    db, clock, config = _setup(tmp_path, good=True)   # temp layout, real BACKUP_DIR
+    assert verify.auto_snapshot(db, clock, config) is None
+    # A real backup drive never gets a snapshot attempt.
+    assert not config.restore_sandbox_dir.exists()
+
+
+def test_auto_snapshot_regenerates_missing_demo_trees(tmp_path, monkeypatch):
+    db, clock, config = _setup(tmp_path, good=True)
+    monkeypatch.setattr(make, "BACKUP_DIR", config.restore_backup_dir)
+    base = config.restore_backup_dir.parent
+    for name in ("compromised", "patched"):
+        import shutil
+        shutil.rmtree(base / name, ignore_errors=True)
+    (base / "vuln_markers.json").unlink()
+    def regen():  # stand in for ensure(): rebuild the temp trees, not the real ones
+        make.build(tmp_path / "orig", tmp_path / "backup",
+                   now_text="2026-11-01T04:00:00Z")
+    monkeypatch.setattr(make, "ensure", regen)
+    assert verify.auto_snapshot(db, clock, config) == {"files": 50, "vuln_files": 3}
