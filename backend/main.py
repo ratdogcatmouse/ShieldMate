@@ -70,7 +70,13 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
         if wazuh_source is None:
             log.warning("ALERT_SOURCE=wazuh but ingest/wazuh.py has no WazuhSource yet; staying on replay")
         else:
-            live = wazuh_source(config, clock)
+            try:
+                live = wazuh_source(config, clock)
+            except Exception as exc:
+                # WazuhSource builds the real client, which rejects a half-set-up lab. Same rule as the
+                # client below (T5.09): a broken lab config must not stop the app; stay on replay.
+                log.warning(f"ALERT_SOURCE=wazuh but the Wazuh source could not start "
+                            f"({type(exc).__name__}: {exc}); staying on the replay source.")
     # Wazuh client: the fake unless live mode and a real client exists. Simulated actions bypass it anyway.
     client = wazuh_client
     if client is None:
