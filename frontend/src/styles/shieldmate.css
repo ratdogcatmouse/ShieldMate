@@ -171,6 +171,12 @@ details.log .body { padding: 0 16px 16px; display: flex; flex-direction: column;
 .timeline { display: flex; flex-direction: column; gap: 10px; }
 .timeline .ev { display: flex; gap: 12px; font-size: 15px; line-height: 1.4; }
 .timeline .ev time { flex: none; width: 64px; color: var(--muted); }
+/* The "LIVE · Wazuh" chip on a timeline line that came from the real feed (dark on the projector). */
+.feed-tag { flex: none; align-self: flex-start; margin-top: 2px; padding: 3px 7px; border-radius: 6px; background: var(--blue-soft); color: var(--blue-dark); font: 700 11px/1 var(--mono); letter-spacing: 0.06em; white-space: nowrap; }
+.mc-feed .feed-tag { background: rgba(56,189,248,0.16); color: #7DD3FC; }
+/* Notifications on a staff phone: an attack stands out, an info note is quieter. */
+.card.note-attack { border-left: 6px solid var(--red); background: var(--red-soft); }
+.card.note-info { opacity: 0.85; }
 
 /* ---------- Drill options ---------- */
 .options { display: flex; flex-direction: column; gap: 10px; }

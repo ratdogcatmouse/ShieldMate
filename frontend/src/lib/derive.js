@@ -60,6 +60,18 @@ export const fixNote = (alert) =>
 export const restoreSince = (restore, alert) =>
   restore && restore.result !== "NOT_TESTED" && toMs(restore.started_at) >= toMs(alert.first_seen) ? restore : null;
 
+const LIVE_WHAT = { password_guessing: "Password guessing", ransomware: "Ransomware" };
+
+// The feed line for an alert that came from Wazuh (source "wazuh"), tagged so it can't be mistaken
+// for a replay: "rule 60204 - Password guessing on RECEPTION-PC from 192.168.137.50 x9". One line per
+// alert, however many times it repeats. The attacker's address is on the owner's card, else on the block request.
+function liveLine(a, actions, fallback) {
+  const ip = a.card.log_fields?.source_ip || actions.find((x) => x.alert_id === a.id)?.target_ip || null;
+  const what = LIVE_WHAT[a.lesson_id] ? `${LIVE_WHAT[a.lesson_id]} on ${a.agent_name}` : fallback;
+  const times = (a.count ?? 0) > 1 ? ` ×${a.count}` : "";
+  return { tag: "LIVE · Wazuh", text: `rule ${a.rule_id} — ${what}${ip ? ` from ${ip}` : ""}${times}` };
+}
+
 // What happened, newest first: a timeline built from the timestamps the API already returns
 // (alerts, block requests and decisions, ticked steps, the IT history) plus the owner's
 // notifications. `alerts` should be the owner's view, with closed incidents included.
@@ -69,7 +81,7 @@ export function activity(clinic, alerts, actions, notes) {
   const short = (a) => a.card.headline.replace(/\.$/, "");
   const ev = [];
   for (const a of alerts) {
-    ev.push({ at: a.first_seen, text: short(a) });
+    ev.push({ at: a.first_seen, ...(a.source === "wazuh" ? liveLine(a, actions, short(a)) : { text: short(a) }) });
     if (a.mine_at) ev.push({ at: a.mine_at, text: `${staffName(clinic, a.mine_by)} said "That was me"` });
     for (const s of a.card.steps) {
       if (s.done && s.action !== "CALL_SAVED_IT") ev.push({ at: s.done_at, text: `${staffName(clinic, s.done_by)}: ${s.text.replace(/\.$/, "")}` });
@@ -90,7 +102,8 @@ export function activity(clinic, alerts, actions, notes) {
       if (text) ev.push({ at: x.decided_at, text });
     }
   }
-  for (const n of notes) ev.push({ at: n.created_at, text: n.text });
+  // An attack note repeats its alert's own line above (same headline), so only the plain ones count.
+  for (const n of notes) if (n.kind !== "attack") ev.push({ at: n.created_at, text: n.text });
   return ev.sort((a, b) => toMs(b.at) - toMs(a.at));
 }
 

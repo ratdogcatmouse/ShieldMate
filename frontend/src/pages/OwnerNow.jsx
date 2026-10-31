@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Clock, Phone, Shield } from "../components/Icons.jsx";
 import { OwnerShell } from "../components/Shells.jsx";
-import { Countdown, Pill, StatusPill, TimeLeft, useAction, useToast } from "../components/ui.jsx";
+import { Countdown, FeedTag, Pill, StatusPill, TimeLeft, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { alertFx } from "../lib/fx.js";
 import {
@@ -441,7 +441,7 @@ function Activity({ events }) {
       <h2 style={{ fontSize: 18 }}>What happened</h2>
       <div className="timeline">
         {events.slice(0, 7).map((e, i) => (
-          <div key={i} className="ev"><time>{fmtTime(e.at)}</time><span>{e.text}</span></div>
+          <div key={i} className="ev"><time>{fmtTime(e.at)}</time><FeedTag tag={e.tag} /><span>{e.text}</span></div>
         ))}
       </div>
     </section>

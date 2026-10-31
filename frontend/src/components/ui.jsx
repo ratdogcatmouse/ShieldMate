@@ -66,6 +66,11 @@ export function StatusPill({ status, label }) {
   return <Pill tone={s.tone} small>{label || s.label}</Pill>;
 }
 
+// The small "LIVE · Wazuh" chip in front of a timeline line that came from the real Wazuh feed.
+export function FeedTag({ tag }) {
+  return tag ? <span className="feed-tag">{tag}</span> : null;
+}
+
 // "Couldn't reach the server" banner: the screen keeps its last good data underneath.
 export function StaleBanner({ stale }) {
   if (!stale) return null;

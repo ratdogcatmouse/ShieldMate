@@ -5,6 +5,7 @@ import { ShieldPlain } from "../components/Icons.jsx";
 import { useAction } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { decideBy, ownerOf } from "../lib/derive.js";
+import { hideBlockDuplicates } from "../lib/notifications.js";
 import { ago, fmtDate, fmtTime, useNow } from "../lib/time.js";
 import { usePoll } from "../lib/usePoll.js";
 
@@ -76,7 +77,8 @@ export default function OwnerNotify() {
             <Link className="btn btn-light" to="/backstage">Open Backstage</Link>
           </article>
         )}
-        {data?.notes.slice(-2).reverse().map((n) => (
+        {/* A note about a block that is still pending is the approval card above; don't say it twice. */}
+        {data && hideBlockDuplicates(data.notes, data.actions).slice(-2).reverse().map((n) => (
           <article key={n.id} className="notif faded">
             <div className="row tiny" style={{ color: "#C9D6E8" }}>
               <span className="bold">ShieldMate</span><span style={{ marginLeft: "auto" }}>{ago(n.created_at, now)}</span>

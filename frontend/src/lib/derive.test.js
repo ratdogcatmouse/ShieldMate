@@ -89,6 +89,52 @@ describe("activity", () => {
   });
 });
 
+describe("activity: live Wazuh alerts and attack notes", () => {
+  const live = (over) => alert({
+    source: "wazuh", rule_id: "60204", count: 8,
+    card: { headline: "Someone is repeatedly guessing the password on RECEPTION-PC.", steps: [], log_fields: { source_ip: "192.168.137.50" } },
+    ...over,
+  });
+
+  it("drops attack notes (the alert's own line already says it) but keeps plain ones", () => {
+    const notes = [
+      { kind: "attack", created_at: "2026-11-01T04:01:00Z", text: "Someone is repeatedly guessing the password on RECEPTION-PC." },
+      { kind: "info", created_at: "2026-11-01T04:02:00Z", text: "Meena handled it" },
+    ];
+    expect(activity(clinic, [alert()], [], notes).map((e) => e.text)).toEqual(["Meena handled it", "Someone is guessing"]);
+  });
+
+  it("tags a wazuh alert as live and gives its rule id and the attacker's address", () => {
+    const [line] = activity(clinic, [live()], [], []);
+    expect(line.tag).toBe("LIVE · Wazuh");
+    expect(line.text).toBe("rule 60204 — Password guessing on RECEPTION-PC from 192.168.137.50 ×8");
+  });
+
+  it("takes the address from the block request when the card doesn't show it", () => {
+    const a = live({ card: { headline: "x", steps: [], log_fields: {} } });
+    const [line] = activity(clinic, [a], [{ alert_id: 1, status: "proposed", target_ip: "192.168.137.50", proposed_at: "2026-11-01T03:00:00Z" }], []);
+    expect(line.text).toContain("from 192.168.137.50");
+  });
+
+  it("leaves out the address when there is none (ransomware) and the count when it is 1", () => {
+    const a = live({ lesson_id: "ransomware", rule_id: "100201", agent_name: "FILE-SERVER", count: 1,
+      card: { headline: "x", steps: [], log_fields: {} } });
+    expect(activity(clinic, [a], [], [])[0].text).toBe("rule 100201 — Ransomware on FILE-SERVER");
+  });
+
+  it("is one line per alert however high the count goes", () => {
+    const lines = activity(clinic, [live({ count: 9 })], [], []).filter((e) => e.tag);
+    expect(lines).toHaveLength(1);
+    expect(lines[0].text.endsWith("×9")).toBe(true);
+  });
+
+  it("keeps a replayed alert's wording and gives it no tag", () => {
+    const [line] = activity(clinic, [alert({ source: "replay" })], [], []);
+    expect(line).toMatchObject({ text: "Someone is guessing" });
+    expect(line.tag).toBeUndefined();
+  });
+});
+
 describe("time formatting", () => {
   it("shows Indian time from UTC", () => {
     expect(fmtTime("2026-11-01T04:10:00Z")).toBe("9:40 AM");

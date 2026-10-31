@@ -9,7 +9,7 @@ import {
 import { getPlayer, setPlayer } from "../lib/session.js";
 import { fmtTime, useNow } from "../lib/time.js";
 import { usePoll } from "../lib/usePoll.js";
-import { Countdown, Stopwatch, TimeLeft } from "../components/ui.jsx";
+import { Countdown, FeedTag, Stopwatch, TimeLeft } from "../components/ui.jsx";
 
 const TONE = { green: "#22C55E", red: "#F04438", blue: "#38BDF8", amber: "#F5A524", grey: "#7C8BA5" };
 // Floor plan rooms (viewBox 900 x 470), one per device.
@@ -116,8 +116,8 @@ export default function Mission() {
           <section className="mc-panel" style={{ flex: 1, minHeight: 0 }}>
             <span className="mc-label">Live feed</span>
             <div className="mc-feed">
-              {data.feed.length ? data.feed.slice(0, 5).map((e, i) => (
-                <div key={i} className="ev"><time>{fmtTime(e.at)}</time><span>{e.text}</span></div>
+              {data.feed.length ? data.feed.slice(0, 8).map((e, i) => (
+                <div key={i} className="ev"><time>{fmtTime(e.at)}</time><FeedTag tag={e.tag} /><span>{e.text}</span></div>
               )) : <span style={{ color: "#7C8BA5" }}>Nothing yet.</span>}
             </div>
           </section>

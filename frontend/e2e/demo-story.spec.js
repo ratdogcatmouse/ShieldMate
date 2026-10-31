@@ -176,6 +176,31 @@ test("team drill: owner hosts, staff join by code, answer, and see results", asy
   }
 });
 
+test("attack notification: a staff phone taps Block, and the owner's lock screen doesn't repeat it", async ({ browser, request }) => {
+  const meena = await device(browser, PHONE, "/staff/1");
+  const lock = await device(browser, PHONE, "/owner/notify");
+
+  await backstage(request, "replay/password_guessing");
+
+  // Meena's phone gets an attack note with the server's own button label.
+  const note = meena.page.getByRole("article", { name: "Attack notification" });
+  await expect(note).toBeVisible();
+  const block = note.getByRole("button", { name: /^Block 192\.168\.1\.57 for 60 minutes$/ });
+  await expect(block).toBeEnabled();
+
+  // The owner's lock screen shows the approval card once; the matching attack note is hidden.
+  await expect(lock.page.getByText("Block an attacker on the reception computer?")).toBeVisible();
+  await expect(lock.page.getByText(/repeatedly guessing the password/)).toHaveCount(0);
+
+  // One tap: the action runs and the button turns into a disabled "Blocked".
+  await block.click();
+  await expect(note.getByRole("button", { name: /^Blocked/ })).toBeDisabled();
+  await expect(lock.page.getByText("Blocked 192.168.1.57")).toBeVisible();
+
+  expect(meena.errors).toEqual([]);
+  expect(lock.errors).toEqual([]);
+});
+
 test("every screen loads without script errors", async ({ browser, request }) => {
   await backstage(request, "replay/password_guessing");
   for (const [path, text] of [

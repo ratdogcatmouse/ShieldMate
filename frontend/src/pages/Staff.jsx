@@ -2,11 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { Back, Calendar, Check, Phone, Shield } from "../components/Icons.jsx";
+import { NoteList } from "../components/Notifications.jsx";
 import { StaffTabs } from "../components/Shells.jsx";
 import { Pill, StaleBanner, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { LANGS, LOG_FIELD_LABEL, TIP_OF_THE_WEEK, UI_TEXT } from "../lib/content.js";
 import { alertFx, soundEnabled, soundReady, unlockAudio } from "../lib/fx.js";
+import { useNotifications } from "../lib/notifications.js";
 import { getLang, seenOnce, setLang } from "../lib/session.js";
 import { track } from "../lib/telemetry.js";
 import { ago, clinicHour, fmtTime } from "../lib/time.js";
@@ -44,6 +46,8 @@ export default function Staff({ view }) {
     if (lang !== firstLang.current) refresh();
   }, [lang, refresh]);
 
+  // Attack notifications for this person, with the one-tap block button (owner has their own screens).
+  const notif = useNotifications(data?.me && data.me.role !== "owner" ? data.me.role : null, staffId);
   const alerts = data?.list?.alerts ?? [];
   const open = alerts.filter((a) => a.status === "new");
   const shown = view === "history" ? null : open[0] || alerts.find((a) => a.id === acked) || null;
@@ -63,6 +67,16 @@ export default function Staff({ view }) {
 
   const me = data?.me;
   const act = (key, fn) => run(key, async () => { await fn(); await refresh(); });
+  // Tapping Block approves the existing block request. If someone else answered first (409
+  // action_not_pending) that is fine: poll again and the note shows what happened.
+  const onBlock = (n) => run(`block-${n.id}`, async () => {
+    try {
+      await api.approve(n.quick_action.action_row_id, staffId);
+    } catch (e) {
+      if (!(e instanceof api.ApiError && e.error === "action_not_pending")) throw e;
+    }
+    await Promise.all([notif.refresh(), refresh()]);
+  });
 
   const pickLang = (l) => {
     if (l === lang) return;
@@ -97,6 +111,7 @@ export default function Staff({ view }) {
       </header>
 
       <main className="content" aria-live="polite">
+        {view !== "history" ? <NoteList notes={notif.data} busy={busy} onBlock={onBlock} /> : null}
         {!data ? <p className="muted">Loading…</p>
           : view === "history" ? <HistoryList alerts={alerts} />
           : shown ? (
