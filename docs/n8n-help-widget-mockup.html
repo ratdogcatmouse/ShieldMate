@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help widget mockup</title>
+<!--
+  STATIC MOCKUP, NOT PRODUCTION CODE.
+  Shows what docs/n8nintegration.md (Frontend section) describes: a floating "?" button on the task
+  screens that opens a ~320px chat box. Colours and shapes reuse the tokens in
+  frontend/src/styles/shieldmate.css. Nothing here calls a backend; the replies are canned.
+  Items tagged "NOT IN SPEC" are my suggestions and are only here so you can accept or cut them.
+-->
+<style>
+  :root {
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "IBM Plex Mono", monospace;
+    --bg: #F4F7FB; --surface: #FFFFFF; --surface-2: #E9EEF5; --line: #D6DFEA; --line-soft: #EEF2F7;
+    --ink: #0F1B2D; --ink-2: #2C3A4B; --muted: #4A5868;
+    --blue: #1B5FC1; --blue-dark: #123F80; --blue-soft: #E8F0FB; --soft-btn: #E3EAF3;
+    --red: #B42318; --red-ink: #9B1C12; --red-soft: #FDECEA;
+    --green: #1E7B3A; --green-soft: #E6F4EA; --green-ink: #1E5E33;
+    --amber: #F5A524; --amber-ink: #7A3306; --amber-soft: #FEF3E6;
+    --night: #0F1B2D; --night-muted: #C9D6E8;
+    --r-card: 20px; --r-item: 16px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DDE4EE; color: var(--ink); font: 16px/1.45 var(--font); }
+  h1, h2, h3, p { margin: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .page { max-width: 1180px; margin: 0 auto; padding: 24px 20px 60px; }
+  .banner { background: var(--amber-soft); color: var(--amber-ink); border-radius: 12px; padding: 10px 14px; font-size: 14px; margin-bottom: 18px; }
+  .switch { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; align-items: center; }
+  .switch span { font-size: 14px; color: var(--muted); margin-right: 4px; }
+  .switch button { border: 0; background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; }
+  .switch button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+  .stage { display: grid; grid-template-columns: 400px 1fr; gap: 28px; align-items: start; }
+  @media (max-width: 960px) { .stage { grid-template-columns: 1fr; justify-items: center; } }
+  .label { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+  /* ---------- phone frame ---------- */
+  .phone { width: 380px; height: 760px; background: var(--bg); border-radius: 36px; border: 10px solid #0F1B2D; position: relative; overflow: hidden; box-shadow: 0 18px 40px rgba(15,27,45,.25); }
+  .phone .scroll { height: 100%; overflow: hidden; padding: 20px 16px 90px; display: flex; flex-direction: column; gap: 12px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; }
+  .topbar b { font-size: 19px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 700; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
+  .pill-red { background: var(--red-soft); color: var(--red-ink); }
+  .pill-blue { background: var(--blue-soft); color: var(--blue-dark); }
+  .card { background: var(--surface); border-radius: var(--r-card); padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card h1 { font-size: 22px; line-height: 1.25; }
+  .muted { color: var(--muted); } .small { font-size: 15px; }
+  .step { display: flex; gap: 10px; align-items: flex-start; background: var(--line-soft); border-radius: 14px; padding: 12px; font-size: 15px; }
+  .step i { flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--blue); margin-top: 1px; }
+  .opt { border: 2px solid var(--line); background: #fff; border-radius: 14px; padding: 12px 14px; font-size: 15px; text-align: left; }
+
+  /* ---------- the widget (the thing being specified) ---------- */
+  .help-fab { position: absolute; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--blue); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 6px 16px rgba(27,95,193,.45); z-index: 5; }
+  .help-fab:hover { background: var(--blue-dark); }
+  .help-fab[hidden], .help-panel[hidden] { display: none; }
+  .help-panel { position: absolute; right: 12px; bottom: 12px; width: min(320px, calc(100% - 24px)); height: 470px; background: #fff; color: var(--ink); border-radius: 20px; box-shadow: 0 12px 34px rgba(15,27,45,.32); display: flex; flex-direction: column; overflow: hidden; z-index: 6; border: 1px solid var(--line); }
+  .help-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px; background: var(--night); color: #fff; }
+  .help-head b { flex: 1; font-size: 16px; }
+  .help-head button { background: transparent; border: 0; color: #fff; font-size: 22px; line-height: 1; padding: 2px 6px; border-radius: 8px; }
+  .help-ctx { padding: 7px 14px; font-size: 12.5px; background: var(--blue-soft); color: var(--blue-dark); border-bottom: 1px solid var(--line); }
+  .help-ctx em { font-style: normal; font-weight: 700; }
+  .help-ctx .ns { float: right; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--amber-ink); background: var(--amber-soft); border-radius: 6px; padding: 1px 6px; }
+  .help-msgs { flex: 1; overflow: auto; padding: 12px 12px 6px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); }
+  .msg { max-width: 86%; padding: 9px 12px; border-radius: 16px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.me { align-self: flex-end; background: var(--blue); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+  .msg.note { align-self: center; max-width: 100%; background: var(--amber-soft); color: var(--amber-ink); font-size: 14px; text-align: center; border-radius: 12px; }
+  .msg.err { align-self: stretch; max-width: 100%; background: var(--red-soft); color: var(--red-ink); font-size: 14px; border-radius: 12px; }
+  .msg.err button { margin-top: 6px; border: 0; background: #fff; border-radius: 999px; padding: 5px 12px; font-weight: 700; font-size: 13px; }
+  .typing { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; display: flex; gap: 4px; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: #8A97A8; animation: bl 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes bl { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+  .help-suggest { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 12px 8px; background: var(--bg); }
+  .help-suggest button { border: 0; background: var(--soft-btn); border-radius: 999px; padding: 6px 11px; font-size: 13px; }
+  .help-form { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); background: #fff; }
+  .help-form input { flex: 1; min-width: 0; border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 15px; }
+  .help-form input:focus { outline: 3px solid var(--blue); outline-offset: 0; border-color: var(--blue); }
+  .help-form button { border: 0; background: var(--blue); color: #fff; font-weight: 700; border-radius: 12px; padding: 0 14px; min-height: 44px; }
+  .help-form button:disabled { opacity: .5; cursor: not-allowed; }
+  .help-count { font-size: 11.5px; color: var(--muted); text-align: right; padding: 0 14px 6px; background: #fff; }
+
+  /* ---------- laptop / Mission (dark projector) ---------- */
+  .laptop { width: 100%; max-width: 640px; min-height: 540px; background: var(--night); color: #fff; border-radius: 14px; border: 8px solid #26354d; position: relative; overflow: hidden; padding: 16px; box-shadow: 0 18px 40px rgba(15,27,45,.25); }
+  .laptop h3 { font-size: 18px; margin-bottom: 10px; }
+  .mc { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mc div { background: rgba(255,255,255,.07); border-radius: 12px; padding: 10px 12px; font-size: 13.5px; color: var(--night-muted); }
+  .mc b { color: #fff; display: block; font-size: 15px; margin-bottom: 2px; }
+  .laptop .help-fab { position: absolute; }
+  .laptop .help-panel { height: 470px; }
+
+  .notes { margin-top: 26px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .notes .card { font-size: 14.5px; }
+  .notes h2 { font-size: 16px; } .notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 3px 0; }
+  code { font-family: var(--mono); font-size: .9em; background: var(--line-soft); padding: 1px 5px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="banner"><b>Mockup only, nothing is built.</b> Click the “?” button, type a question or tap a state below. Replies are canned. Yellow “NOT IN SPEC” tags mark things I added that you can accept or cut.</div>
+
+  <div class="switch" role="group" aria-label="Widget state">
+    <span>Show state:</span>
+    <button data-state="closed" aria-pressed="true">Closed</button>
+    <button data-state="chat" aria-pressed="false">Conversation</button>
+    <button data-state="sending" aria-pressed="false">Waiting for answer</button>
+    <button data-state="fallback" aria-pressed="false">Fallback answer</button>
+    <button data-state="notenabled" aria-pressed="false">Not enabled (404)</button>
+    <button data-state="error" aria-pressed="false">Server error</button>
+  </div>
+
+  <div class="stage">
+    <!-- PHONE: staff drill screen -->
+    <div>
+      <div class="label">Staff phone · <code>StaffDrill.jsx</code> (also OwnerNotify, OwnerDrill)</div>
+      <div class="phone" id="phone">
+        <div class="scroll">
+          <div class="topbar"><b>ShieldMate</b><span class="pill pill-blue">Drill</span></div>
+          <div class="card">
+            <span class="pill pill-red" style="align-self:flex-start">Step 3 of 10</span>
+            <h1>Files on the reception computer are renamed. What do you do?</h1>
+            <p class="muted small">Pick one. The owner will see how the team answered.</p>
+            <button class="opt">Switch off the Wi-Fi and tell Dr. Rao</button>
+            <button class="opt">Restart the computer to see if it fixes itself</button>
+            <button class="opt">Open one of the files to check it</button>
+          </div>
+          <div class="card"><div class="step"><i></i><span>Do not pay or reply to anyone yet.</span></div></div>
+        </div>
+        <!-- widget lives inside whichever screen is showing -->
+        <button class="help-fab" id="fab-phone" aria-label="Open help chat" aria-expanded="false">?</button>
+        <section class="help-panel" id="panel-phone" role="dialog" aria-label="Help chat" hidden></section>
+      </div>
+    </div>
+
+    <!-- LAPTOP: Mission -->
+    <div>
+      <div class="label">Laptop / projector · <code>Mission.jsx</code> (attack, drill and simulation surfaces)</div>
+      <div class="laptop" id="laptop">
+        <h3>Mission control · Sunrise Family Clinic</h3>
+        <div class="mc">
+          <div><b>Reception PC</b>Isolated · 14:02</div>
+          <div><b>Password attack</b>192.168.1.57 · 18 attempts</div>
+          <div><b>Backup check</b>2 files altered</div>
+          <div><b>CERT-In clock</b>5h 41m left</div>
+        </div>
+        <button class="help-fab" id="fab-laptop" aria-label="Open help chat" aria-expanded="false">?</button>
+        <section class="help-panel" id="panel-laptop" role="dialog" aria-label="Help chat" hidden></section>
+      </div>
+      <p class="muted small" style="margin-top:10px">Same widget, same 320px box, bottom-right. The spec does not say whether it is restyled for the dark screen; here it stays light.</p>
+    </div>
+  </div>
+
+  <div class="notes">
+    <div class="card"><h2>What this page shows from the spec</h2>
+      <ul>
+        <li>Fixed floating “?” button, bottom-right, on OwnerNotify, OwnerDrill, StaffDrill and Mission.</li>
+        <li>Click opens a ~320px chat box: message list, input, send.</li>
+        <li>Conversation kept in local state; the last few messages go with each send as <code>history</code>.</li>
+        <li>Handles <code>not_enabled</code> (“AI help isn't enabled here”), server errors, and fallback answers (shown like a normal reply).</li>
+        <li>Question limit 500 characters, answer up to 2000, rendered as plain text only.</li>
+      </ul></div>
+    <div class="card"><h2>Added by me (NOT IN SPEC)</h2>
+      <ul>
+        <li>“Asking about …” strip showing the context that will be sent.</li>
+        <li>Starter question chips on an empty chat.</li>
+        <li>Typing indicator, character counter, “Try again” on errors, close “×”.</li>
+        <li>Light styling on the dark Mission screen.</li>
+      </ul></div>
+  </div>
+</div>
+
+<script>
+  // ----- canned content -----
+  const STARTERS = ["What does this step mean?", "Why was this flagged?", "What should I do first?"];
+  const CTX = "<em>Asking about:</em> Drill step 3 · Reception PC";
+  const CHAT = [
+    { me: true,  t: "What does “isolate” mean?" },
+    { me: false, t: "It means cutting the computer off from the network so a problem can't spread. Unplug the network cable or turn off Wi-Fi, but leave the computer switched on." },
+    { me: true,  t: "Should I turn it off?" },
+    { me: false, t: "Not yet. Switching it off can erase clues the IT person needs. Disconnect it first, then tell Dr. Rao." },
+  ];
+  const FALLBACK = "Several wrong passwords were tried on the reception computer from the same address. ShieldMate may offer to block it for you.";
+
+  const panelHtml = (body, opts = {}) => `
+    <div class="help-head"><b>Ask for help</b><button class="close" aria-label="Close help chat">×</button></div>
+    <div class="help-ctx">${CTX} <span class="ns">not in spec</span></div>
+    <div class="help-msgs" aria-live="polite">${body}</div>
+    ${opts.starters ? `<div class="help-suggest">${STARTERS.map(s => `<button type="button" class="chip">${s}</button>`).join("")}</div>` : ""}
+    <form class="help-form"><input maxlength="500" placeholder="Type your question…" aria-label="Your question" ${opts.disabled ? "disabled" : ""}><button ${opts.disabled ? "disabled" : ""}>Send</button></form>
+    <div class="help-count">0 / 500</div>`;
+
+  const bubble = m => `<div class="msg ${m.me ? "me" : "bot"}">${m.t}</div>`;
+  const TYPING = `<div class="typing" aria-label="Waiting for an answer"><i></i><i></i><i></i></div>`;
+
+  const STATES = {
+    closed: null,
+    chat: () => panelHtml(CHAT.map(bubble).join("")),
+    sending: () => panelHtml(bubble(CHAT[0]) + TYPING, { disabled: true }),
+    fallback: () => panelHtml(bubble({ me: true, t: "Why was this flagged?" }) + bubble({ me: false, t: FALLBACK })),
+    notenabled: () => panelHtml(bubble({ me: true, t: "What does “isolate” mean?" }) + `<div class="msg note">AI help isn't enabled here.</div>`),
+    error: () => panelHtml(bubble({ me: true, t: "What does “isolate” mean?" }) + `<div class="msg err">Couldn't get an answer. Check the connection and try again.<br><button type="button">Try again</button></div>`),
+  };
+  const empty = () => panelHtml(`<div class="msg bot">Stuck? Ask me about what's on your screen.</div>`, { starters: true });
+
+  // ----- wiring (both surfaces share the same widget) -----
+  const surfaces = ["phone", "laptop"].map(k => ({ k, fab: document.getElementById("fab-" + k), panel: document.getElementById("panel-" + k) }));
+
+  function show(s, html) {
+    s.panel.hidden = !html; s.fab.hidden = !!html;
+    s.fab.setAttribute("aria-expanded", String(!!html));
+    if (html) { s.panel.innerHTML = html; bind(s); const m = s.panel.querySelector(".help-msgs"); m.scrollTop = m.scrollHeight; }
+  }
+  function bind(s) {
+    s.panel.querySelector(".close").onclick = () => { show(s, null); mark("closed"); };
+    const form = s.panel.querySelector("form"), input = form.querySelector("input"), count = s.panel.querySelector(".help-count");
+    input.oninput = () => count.textContent = input.value.length + " / 500";
+    const send = text => {
+      if (!text.trim()) return;
+      const msgs = s.panel.querySelector(".help-msgs");
+      s.panel.querySelector(".help-suggest")?.remove();
+      msgs.insertAdjacentHTML("beforeend", bubble({ me: true, t: text.replace(/</g, "&lt;") }) + TYPING);
+      input.value = ""; count.textContent = "0 / 500"; msgs.scrollTop = msgs.scrollHeight;
+      setTimeout(() => {
+        msgs.querySelector(".typing")?.remove();
+        msgs.insertAdjacentHTML("beforeend", bubble({ me: false, t: "This is a canned reply in the mockup. The real one comes from the n8n agent via the backend." }));
+        msgs.scrollTop = msgs.scrollHeight;
+      }, 900);
+    };
+    form.onsubmit = e => { e.preventDefault(); send(input.value); };
+    s.panel.querySelectorAll(".chip").forEach(c => c.onclick = () => send(c.textContent));
+  }
+  surfaces.forEach(s => s.fab.onclick = () => { show(s, empty()); mark("chat-empty"); });
+
+  const buttons = [...document.querySelectorAll(".switch button")];
+  function mark(name) { buttons.forEach(b => b.setAttribute("aria-pressed", String(b.dataset.state === name))); }
+  buttons.forEach(b => b.onclick = () => {
+    mark(b.dataset.state);
+    surfaces.forEach(s => show(s, STATES[b.dataset.state]?.()));
+    // Only render the open widget on the phone so the two views don't look identical; laptop stays closed.
+    show(surfaces[1], null);
+  });
+</script>
+</body>
+</html>

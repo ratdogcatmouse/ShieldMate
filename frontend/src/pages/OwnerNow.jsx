@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, Clock, Phone, Shield } from "../components/Icons.jsx";
+import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { OwnerShell } from "../components/Shells.jsx";
 import { Countdown, FeedTag, Pill, StatusPill, TimeLeft, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
@@ -104,6 +105,7 @@ export default function OwnerNow() {
   const handled = alerts.filter((a) => drillFor(a) && (a.status === "done" || (a === pw && ["executed", "expired", "undone"].includes(act?.status))));
 
   return (
+    <RephraseProvider role="owner" lang="en">
     <OwnerShell clinicName={clinic.clinic.name} ownerName={owner?.name} urgent={urgent} stale={stale}>
       <div className="owner-head">
         <div><span className="owner-mobile-head">{clinic.clinic.name}</span><h1>Right now</h1></div>
@@ -153,16 +155,19 @@ export default function OwnerNow() {
         </aside>
       </div>
     </OwnerShell>
+    </RephraseProvider>
   );
 }
 
 function NeedsYou({ a }) {
   return (
-    <article className="card">
-      <Pill tone="red">Needs you now</Pill>
-      <h1>{a.card.headline}</h1>
-      <p className="ink-2">{a.card.what_we_know}</p>
-    </article>
+    <Rephrasable id={`alert-${a.id}`} kind="Alert" title={a.card.headline} text={`${a.card.what_we_know} ${a.card.why}`} alertId={a.id}>
+      <article className="card">
+        <Pill tone="red">Needs you now</Pill>
+        <h1>{a.card.headline}</h1>
+        <p className="ink-2">{a.card.what_we_know}</p>
+      </article>
+    </Rephrasable>
   );
 }
 
@@ -171,10 +176,13 @@ function ApprovalCard({ act, alert, clinic, fresh, busy, onApprove, onDecline })
   const due = decideBy(act, clinic);
   const backup = clinic.staff.find((s) => s.is_backup_approver);
   const late = act.seconds_left === 0;
+  const title = `Block the attacker on the ${deviceName(alert.agent_name).toLowerCase()} for ${clinic.clinic.block_minutes} minutes?`;
   return (
+    <Rephrasable id={`action-${act.id}`} kind="Decision" alertId={alert.id} title={title}
+      text={`${alert.count}+ wrong passwords. It stops only that address for ${clinic.clinic.block_minutes} minutes. ${rule ? "If you don't answer, your standing rule blocks it." : "If you don't answer in time, your backup person is asked."}`}>
     <article className={`card outlined${fresh ? " slide-in" : ""}`}>
       <Pill tone="red">{late ? "Still needs your decision" : "Your decision needed"}</Pill>
-      <h1>Block the attacker on the {deviceName(alert.agent_name).toLowerCase()} for {clinic.clinic.block_minutes} minutes?</h1>
+      <h1>{title}</h1>
       <p className="ink-2">
         {alert.count}+ wrong passwords from <span className="mono">{act.target_ip}</span>.
         {alert.status === "done" ? ` ${staffName(clinic, alert.done_by)} has already stopped using that computer.` : ""}
@@ -198,6 +206,7 @@ function ApprovalCard({ act, alert, clinic, fresh, busy, onApprove, onDecline })
       </div>
       <span className="small muted">Proposed by ShieldMate's fixed rules, not by AI.{act.simulated ? " In demo mode the block is simulated." : ""}</span>
     </article>
+    </Rephrasable>
   );
 }
 
@@ -248,11 +257,13 @@ function MineCard({ a, clinic }) {
 
 function IncidentHead({ a }) {
   return (
-    <article className="card">
-      <div className="row"><Pill tone="red">Needs you now</Pill><span className="small muted">Started {fmtTime(a.first_seen)} · {ago(a.first_seen)}</span></div>
-      <h1>{a.card.headline}</h1>
-      <p className="ink-2">{a.card.what_we_know}</p>
-    </article>
+    <Rephrasable id={`alert-${a.id}`} kind="Alert" title={a.card.headline} text={`${a.card.what_we_know} ${a.card.why}`} alertId={a.id}>
+      <article className="card">
+        <div className="row"><Pill tone="red">Needs you now</Pill><span className="small muted">Started {fmtTime(a.first_seen)} · {ago(a.first_seen)}</span></div>
+        <h1>{a.card.headline}</h1>
+        <p className="ink-2">{a.card.what_we_know}</p>
+      </article>
+    </Rephrasable>
   );
 }
 

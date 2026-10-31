@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rephrase picker mockup</title>
+<!--
+  STATIC MOCKUP, NOT PRODUCTION CODE. Replaces the earlier chat-box mockup.
+  Rules from the brief:
+    - Phones only. Nothing on the Mission control screen.
+    - The "?" exists only while alert / action cards are on screen.
+    - No text box and no chat. Pressing "?" lists the cards on screen; the user ticks the ones
+      they want said in simpler words and the rephrased text shows under those cards.
+  Colours reuse the tokens in frontend/src/styles/shieldmate.css. Replies are canned; nothing here
+  calls a backend. Rephrased text is always inserted as plain text (never innerHTML).
+-->
+<style>
+  :root {
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --bg: #F4F7FB; --surface: #FFFFFF; --line: #D6DFEA; --line-soft: #EEF2F7;
+    --ink: #0F1B2D; --ink-2: #2C3A4B; --muted: #4A5868;
+    --blue: #1B5FC1; --blue-dark: #123F80; --blue-soft: #E8F0FB; --soft-btn: #E3EAF3;
+    --red: #B42318; --red-ink: #9B1C12; --red-soft: #FDECEA;
+    --green: #1E7B3A; --green-ink: #1E5E33; --green-soft: #E6F4EA;
+    --amber-ink: #7A3306; --amber-soft: #FEF3E6; --night: #0F1B2D;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DDE4EE; color: var(--ink); font: 16px/1.45 var(--font); }
+  h1, h2, h3, p { margin: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  [hidden] { display: none !important; }
+  .page { max-width: 980px; margin: 0 auto; padding: 24px 20px 60px; }
+  .banner { background: var(--amber-soft); color: var(--amber-ink); border-radius: 12px; padding: 10px 14px; font-size: 14px; margin-bottom: 18px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .controls span { font-size: 14px; color: var(--muted); margin-right: 4px; }
+  .controls button { border: 0; background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; }
+  .controls button[aria-pressed="true"] { background: var(--blue); color: #fff; }
+  .stage { display: grid; grid-template-columns: 400px 1fr; gap: 32px; align-items: start; margin-top: 18px; }
+  @media (max-width: 860px) { .stage { grid-template-columns: 1fr; justify-items: center; } }
+  .label { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+  /* ---------- phone ---------- */
+  .phone { width: 380px; height: 780px; background: var(--bg); border-radius: 36px; border: 10px solid #0F1B2D; position: relative; overflow: hidden; box-shadow: 0 18px 40px rgba(15,27,45,.25); }
+  .scroll { height: 100%; overflow-y: auto; padding: 20px 16px 96px; display: flex; flex-direction: column; gap: 12px; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; }
+  .topbar b { font-size: 19px; } .topbar small { color: var(--muted); font-size: 14px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 11px; font-size: 13px; font-weight: 700; align-self: flex-start; }
+  .pill::before { content: ""; width: 8px; height: 8px; border-radius: 99px; background: currentColor; }
+  .pill-red { background: var(--red-soft); color: var(--red-ink); }
+  .pill-blue { background: var(--blue-soft); color: #123F80; }
+  .pill-green { background: var(--green-soft); color: var(--green-ink); }
+  .card { background: var(--surface); border-radius: 20px; padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card.attack { border-left: 6px solid var(--red); }
+  .card h2 { font-size: 20px; line-height: 1.25; }
+  .muted { color: var(--muted); } .small { font-size: 15px; }
+  .step { display: flex; gap: 10px; align-items: flex-start; background: var(--line-soft); border-radius: 14px; padding: 11px 12px; font-size: 15px; }
+  .step i { flex: none; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--blue); margin-top: 1px; }
+  .btn { border: 0; border-radius: 14px; min-height: 48px; font-weight: 700; padding: 0 16px; }
+  .btn-primary { background: var(--blue); color: #fff; } .btn-soft { background: var(--soft-btn); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+
+  /* the rephrased block that appears under a card */
+  .simple { border-radius: 14px; background: var(--blue-soft); padding: 12px 13px; display: flex; flex-direction: column; gap: 6px; }
+  .simple .tag { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--blue-dark); display: flex; justify-content: space-between; align-items: center; }
+  .simple .tag button { border: 0; background: transparent; color: var(--blue); font-weight: 700; font-size: 13px; padding: 2px 4px; }
+  .simple p { font-size: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .simple.err { background: var(--red-soft); } .simple.err .tag { color: var(--red-ink); }
+  .dots { display: inline-flex; gap: 4px; } .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: bl 1.2s infinite; }
+  .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
+  @keyframes bl { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+
+  /* ---------- the "?" and its picker ---------- */
+  .fab { position: absolute; right: 16px; bottom: 16px; width: 56px; height: 56px; border-radius: 50%; border: 0; background: var(--blue); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 6px 16px rgba(27,95,193,.45); z-index: 5; }
+  .fab:hover { background: var(--blue-dark); }
+  .scrim { position: absolute; inset: 0; background: rgba(15,27,45,.45); z-index: 6; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 24px 24px 0 0; padding: 18px 16px 16px; z-index: 7; display: flex; flex-direction: column; gap: 12px; max-height: 82%; box-shadow: 0 -10px 30px rgba(15,27,45,.25); }
+  .sheet header { display: flex; align-items: flex-start; gap: 10px; }
+  .sheet h3 { font-size: 18px; line-height: 1.3; flex: 1; }
+  .sheet .x { border: 0; background: var(--soft-btn); width: 36px; height: 36px; border-radius: 50%; font-size: 20px; line-height: 1; }
+  .picks { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+  .pick { display: flex; gap: 12px; align-items: flex-start; border: 2px solid var(--line); border-radius: 16px; padding: 12px; cursor: pointer; background: #fff; }
+  .pick:has(input:checked) { border-color: var(--blue); background: var(--blue-soft); }
+  .pick:has(input:focus-visible) { outline: 3px solid var(--blue); outline-offset: 2px; }
+  .pick input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--blue); flex: none; }
+  .pick b { display: block; font-size: 16px; line-height: 1.3; } .pick span { font-size: 13.5px; color: var(--muted); }
+  .sheet .msg { border-radius: 12px; padding: 10px 12px; font-size: 14.5px; }
+  .msg.warn { background: var(--amber-soft); color: var(--amber-ink); }
+
+  .notes { margin-top: 8px; display: flex; flex-direction: column; gap: 14px; }
+  .notes .box { background: #fff; border-radius: 20px; padding: 16px 18px; font-size: 14.5px; }
+  .notes h2 { font-size: 16px; margin-bottom: 6px; } .notes ul { margin: 0; padding-left: 18px; } .notes li { margin: 4px 0; }
+  code { font-family: ui-monospace, monospace; font-size: .9em; background: var(--line-soft); padding: 1px 5px; border-radius: 5px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="banner"><b>Mockup only, nothing is built.</b> Try it: pick a scene below, press the blue “?”, tick the cards you want in simpler words, then press Rephrase. Replies are canned.</div>
+
+  <div class="controls" role="group" aria-label="Scene">
+    <span>Scene:</span>
+    <button data-scene="none" aria-pressed="false">No cards (no “?”)</button>
+    <button data-scene="one" aria-pressed="false">One alert card</button>
+    <button data-scene="many" aria-pressed="true">Alert + approval + info</button>
+  </div>
+  <div class="controls" role="group" aria-label="Server behaviour">
+    <span>When I press Rephrase:</span>
+    <button data-mode="ok" aria-pressed="true">Works</button>
+    <button data-mode="slow" aria-pressed="false">Slow (4 s)</button>
+    <button data-mode="fallback" aria-pressed="false">Falls back to plain headline</button>
+    <button data-mode="notenabled" aria-pressed="false">Feature off (404)</button>
+    <button data-mode="error" aria-pressed="false">Server error</button>
+  </div>
+
+  <div class="stage">
+    <div>
+      <div class="label">Staff / owner phone</div>
+      <div class="phone" id="phone">
+        <div class="scroll" id="scroll"></div>
+        <button class="fab" id="fab" aria-label="Explain these in simpler words" aria-haspopup="dialog">?</button>
+        <div class="scrim" id="scrim" hidden></div>
+        <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></section>
+      </div>
+    </div>
+
+    <div class="notes">
+      <div class="box"><h2>How it behaves</h2>
+        <ul>
+          <li>The “?” is on screen <b>only while at least one alert or action card is showing</b>. “No cards” hides it. It is never on Mission control.</li>
+          <li>Pressing it opens a bottom sheet listing <b>every card currently on screen</b>. Nothing is typed.</li>
+          <li>Tick one or more, press <b>Rephrase</b>. The sheet closes and a “In simpler words” block appears under each ticked card, with a Hide button.</li>
+          <li>The original wording on the card is never replaced or removed.</li>
+          <li>Pressing “?” again lets them pick other cards, or the same one again.</li>
+          <li>Failures stay on the card they belong to and say the original wording is still valid.</li>
+        </ul></div>
+      <div class="box"><h2>Choices I made that you didn't specify</h2>
+        <ul>
+          <li><b>Multi-select</b> (checkboxes), because you wrote “alerts/cards”. Single-select is a one-line change.</li>
+          <li><b>Inline result</b> under the card rather than inside the sheet, so the person reads it next to the original.</li>
+          <li>Approval cards (e.g. “Block an attacker?”) are rephrasable too. Their Approve / Don't buttons stay untouched.</li>
+          <li>Works for both staff and owner phones; same “?” and sheet.</li>
+        </ul></div>
+      <div class="box"><h2>What this means for the plan</h2>
+        <ul>
+          <li>The request becomes a list of card ids (<code>alert_id</code>s and action ids) instead of a typed <code>question</code>, so no free text goes to n8n at all.</li>
+          <li>No <code>history</code>, no multi-turn, no 500-char limit. The earlier gaps about <code>history</code> disappear.</li>
+          <li>The backend contract needs a different request shape; that is still a frozen-contract change for Cetas.</li>
+        </ul></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----- canned cards (what would be on a phone) -----
+  const CARDS = {
+    attack: {
+      id: "a1", kind: "Alert", cls: "attack", pill: ["pill-red", "Needs action"],
+      title: "Someone is repeatedly guessing the password on the reception computer",
+      body: "18 wrong passwords were tried in 5 minutes from the same address. This often comes before a break-in.",
+      steps: ["Tell Dr. Rao now", "Do not share the password with anyone"],
+      simple: "Someone is trying lots of passwords on the reception computer, hoping to get in.\nIt is like a stranger trying keys on the clinic door.\nTell Dr. Rao, and don't tell anyone the password.",
+      fallback: "Someone is repeatedly guessing the password on the reception computer.",
+    },
+    approve: {
+      id: "x7", kind: "Approval", cls: "", pill: ["pill-blue", "Waiting for you"],
+      title: "Block an attacker on the reception computer?",
+      body: "Blocking stops this address from reaching the computer for 60 minutes. Answer by 2:15 pm.",
+      buttons: ["Approve", "Don't block"],
+      simple: "ShieldMate wants to shut the door on the person guessing passwords.\nIf you press Approve, they cannot try again for one hour.\nIt will not affect the clinic's own computers.",
+      fallback: "Block an attacker on the reception computer.",
+    },
+    info: {
+      id: "a2", kind: "Alert", cls: "", pill: ["pill-green", "For your information"],
+      title: "Backup is 9 days old",
+      body: "The last copy of patient files was made 9 days ago and 2 files look changed.",
+      simple: "The safety copy of your patient files is old, and two files in it look different from the originals.\nAsk IT to make a fresh copy this week.",
+      fallback: "Backup is 9 days old.",
+    },
+  };
+  const SCENES = { none: [], one: ["attack"], many: ["attack", "approve", "info"] };
+
+  let scene = "many", mode = "ok";
+  const results = {};      // card key -> {state: "loading"|"done"|"err", text}
+
+  const $ = id => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+  // ----- render the phone screen (textContent only: card text is untrusted in the real app) -----
+  function renderPhone() {
+    const root = $("scroll"); root.replaceChildren();
+    const top = el("div", "topbar"); top.append(el("b", "", "ShieldMate"), el("small", "", "Meena · Receptionist")); root.append(top);
+    const keys = SCENES[scene];
+    if (!keys.length) {
+      root.append(Object.assign(el("div", "card empty", "Nothing needs your attention right now."))); }
+    keys.forEach(k => {
+      const c = CARDS[k], card = el("article", "card " + c.cls);
+      card.setAttribute("aria-label", c.kind + " card");
+      const pill = el("span", "pill " + c.pill[0], c.pill[1]);
+      card.append(pill, el("h2", "", c.title), el("p", "muted small", c.body));
+      (c.steps || []).forEach(s => { const st = el("div", "step"); st.append(el("i"), el("span", "", s)); card.append(st); });
+      if (c.buttons) { const row = el("div"); row.style.cssText = "display:flex;gap:8px"; c.buttons.forEach((b, i) => { const x = el("button", "btn " + (i ? "btn-soft" : "btn-primary"), b); x.style.flex = 1; x.onclick = () => alert("Mockup: this button is unchanged by the rephrase feature."); row.append(x); }); card.append(row); }
+      const r = results[k];
+      if (r) card.append(simpleBlock(k, r));
+      root.append(card);
+    });
+    $("fab").hidden = keys.length === 0;           // "?" only exists while cards are on screen
+  }
+
+  function simpleBlock(k, r) {
+    const box = el("div", "simple" + (r.state === "err" ? " err" : ""));
+    box.setAttribute("aria-live", "polite");
+    const tag = el("div", "tag");
+    tag.append(el("span", "", r.state === "err" ? "Couldn't rephrase" : "In simpler words"));
+    const hide = el("button", "", "Hide"); hide.onclick = () => { delete results[k]; renderPhone(); };
+    if (r.state !== "loading") tag.append(hide);
+    box.append(tag);
+    if (r.state === "loading") { const d = el("span", "dots"); d.append(el("i"), el("i"), el("i")); d.setAttribute("aria-label", "Rephrasing"); box.append(d); }
+    else box.append(el("p", "", r.text));
+    if (r.state === "err") { const retry = el("button", "btn btn-soft", "Try again"); retry.style.minHeight = "40px"; retry.onclick = () => rephrase([k]); box.append(retry); }
+    return box;
+  }
+
+  // ----- the picker -----
+  function openSheet() {
+    const sheet = $("sheet"); sheet.replaceChildren();
+    const head = el("header"), h = el("h3", "", "Which would you like in simpler words?"); h.id = "sheet-title";
+    const x = el("button", "x", "×"); x.setAttribute("aria-label", "Close"); x.onclick = closeSheet;
+    head.append(h, x);
+    const list = el("div", "picks");
+    SCENES[scene].forEach(k => {
+      const c = CARDS[k], lab = el("label", "pick"), cb = document.createElement("input");
+      cb.type = "checkbox"; cb.value = k;
+      const t = el("div"); t.append(el("b", "", c.title), el("span", "", c.kind + " · " + c.pill[1]));
+      lab.append(cb, t); list.append(lab);
+    });
+    const go = el("button", "btn btn-primary", "Rephrase"); go.disabled = true;
+    const sync = () => { const n = list.querySelectorAll("input:checked").length; go.disabled = !n; go.textContent = n ? `Rephrase ${n} ${n === 1 ? "card" : "cards"}` : "Rephrase"; };
+    list.addEventListener("change", sync);
+    go.onclick = () => { const ks = [...list.querySelectorAll("input:checked")].map(i => i.value); closeSheet(); rephrase(ks); };
+    sheet.append(head, list, go);
+    if (mode === "notenabled") { const m = el("div", "msg warn", "AI help isn't enabled here."); sheet.insertBefore(m, go); go.disabled = true; list.addEventListener("change", () => go.disabled = true); }
+    $("scrim").hidden = sheet.hidden = false; list.querySelector("input")?.focus();
+  }
+  function closeSheet() { $("scrim").hidden = $("sheet").hidden = true; $("fab").focus(); }
+
+  // ----- fake "backend" -----
+  function rephrase(keys) {
+    keys.forEach(k => results[k] = { state: "loading" }); renderPhone();
+    const delay = mode === "slow" ? 4000 : 900;
+    setTimeout(() => {
+      keys.forEach(k => {
+        if (mode === "error") results[k] = { state: "err", text: "Something went wrong. The wording on the card above is still correct." };
+        else if (mode === "fallback") results[k] = { state: "done", text: CARDS[k].fallback };
+        else results[k] = { state: "done", text: CARDS[k].simple };
+      });
+      renderPhone();
+    }, delay);
+  }
+
+  // ----- controls -----
+  $("fab").onclick = openSheet; $("scrim").onclick = closeSheet;
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+  const press = (sel, attr, val) => document.querySelectorAll(sel).forEach(b => b.setAttribute("aria-pressed", String(b.dataset[attr] === val)));
+  document.querySelectorAll("[data-scene]").forEach(b => b.onclick = () => { scene = b.dataset.scene; Object.keys(results).forEach(k => delete results[k]); closeSheetQuiet(); press("[data-scene]", "scene", scene); renderPhone(); });
+  document.querySelectorAll("[data-mode]").forEach(b => b.onclick = () => { mode = b.dataset.mode; press("[data-mode]", "mode", mode); });
+  function closeSheetQuiet() { $("scrim").hidden = $("sheet").hidden = true; }
+  renderPhone();
+</script>
+</body>
+</html>

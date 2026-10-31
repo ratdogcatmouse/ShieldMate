@@ -201,6 +201,36 @@ test("attack notification: a staff phone taps Block, and the owner's lock screen
   expect(lock.errors).toEqual([]);
 });
 
+test("explain in simpler words: the ? appears only with a card on screen, and the picker has no text box", async ({ browser, request }) => {
+  const meena = await device(browser, PHONE, "/staff/1");
+  const help = meena.page.getByRole("button", { name: /simpler words/i });
+
+  // All clear: no card, no "?".
+  await expect(meena.page.getByText("All clear")).toBeVisible();
+  await expect(help).toHaveCount(0);
+
+  await backstage(request, "replay/password_guessing");
+  await expect(help).toBeVisible();
+
+  // The picker lists the card on screen; nothing is typed.
+  await help.click();
+  const sheet = meena.page.getByRole("dialog");
+  await expect(sheet.getByText(/repeatedly guessing the password/i)).toBeVisible();
+  await expect(meena.page.getByRole("textbox")).toHaveCount(0);
+  const go = sheet.getByRole("button", { name: "Rephrase" });
+  await expect(go).toBeDisabled();
+  await sheet.getByRole("checkbox").first().check();
+  await sheet.getByRole("button", { name: "Rephrase 1 card" }).click();
+
+  // The result lands under the card. Which text depends on the server's AI_INTERPRETER flag and
+  // n8n URL: off -> "not enabled"; on with no reachable agent -> the card says it couldn't. Never an error screen.
+  await expect(meena.page.getByText(/AI help isn't enabled here|Couldn't rephrase|In simpler words/).first()).toBeVisible();
+  await expect(meena.page.getByRole("heading", { level: 1 })).toBeVisible(); // original wording untouched
+
+  // The browser logs the 404 from a flag-off server as a "console error"; only script errors matter here.
+  expect(meena.errors.filter((e) => !e.startsWith("Failed to load resource"))).toEqual([]);
+});
+
 test("every screen loads without script errors", async ({ browser, request }) => {
   await backstage(request, "replay/password_guessing");
   for (const [path, text] of [

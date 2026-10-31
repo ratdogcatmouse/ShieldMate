@@ -93,6 +93,9 @@ export const markDone = (id, staffId, lang) =>
   call("POST", `/alerts/${id}/done${query({ lang })}`, { body: { staff_id: staffId } });
 export const reword = (id, role, lang) =>
   call("POST", `/alerts/${id}/reword`, { body: { role, lang } });
+// AI interpreter (flag AI_INTERPRETER, else not_enabled): the n8n agent explains what is on a card.
+// body: { question (<=500), role, lang, alert_id? }. Answers { answer, source: "ai" | "fallback" }.
+export const interpret = (body) => call("POST", "/interpreter/chat", { body });
 // v2: tick or untick one card step, by action ID.
 export const setStep = (id, action, staffId, done, lang) =>
   call("PUT", `/alerts/${id}/steps/${action}${query({ lang })}`, { body: { staff_id: staffId, done } });

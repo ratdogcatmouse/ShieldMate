@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { Back, Calendar, Check, Phone, Shield } from "../components/Icons.jsx";
 import { NoteList } from "../components/Notifications.jsx";
+import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { StaffTabs } from "../components/Shells.jsx";
 import { Pill, StaleBanner, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
@@ -86,6 +87,7 @@ export default function Staff({ view }) {
   };
 
   return (
+    <RephraseProvider role={me?.role} lang={lang}>
     <div className="shell">
       <StaleBanner stale={stale} />
       <header className="topbar">
@@ -135,6 +137,7 @@ export default function Staff({ view }) {
       </main>
       <StaffTabs staffId={staffId} />
     </div>
+    </RephraseProvider>
   );
 }
 
@@ -160,6 +163,7 @@ function AlertCard({ a, en, me, clinic, lang, fresh, busy, onTick, onDone, onMin
 
   return (
     <>
+      <Rephrasable id={`alert-${a.id}`} kind="Alert" title={c.headline} text={`${c.what_we_know} ${c.why}`} alertId={a.id}>
       <article className={`card${bold ? " hero" : ""}${isOpen ? " breath" : ""}${fresh ? " slide-in shake" : ""}`}>
         {isOpen ? <Pill tone="red">{ui.needs} · {ago(a.last_seen)}</Pill>
           : a.status === "mine" ? <Pill tone="blue">{ui.paused} · {fmtTime(a.mine_at)}</Pill>
@@ -169,6 +173,7 @@ function AlertCard({ a, en, me, clinic, lang, fresh, busy, onTick, onDone, onMin
         <p className="ink-2">{c.what_we_know}</p>
         {untranslated ? <p className="tiny muted">Not translated yet. Showing English.</p> : null}
       </article>
+      </Rephrasable>
 
       <div className="row-between" style={{ padding: "0 4px" }}>
         <h2 style={{ fontSize: 18 }}>{ui.doThese}</h2>
