@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ImpactPills, Options, PhaseRows, Ring, Segments, playerTotal } from "../components/Drill.jsx";
 import { sceneFor } from "../components/Scenes.jsx";
 import { StaffTabs } from "../components/Shells.jsx";
+import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { Retest, StaleBanner, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { ACTION_LABEL, PHASE_LABEL, PREVIOUS_DRILL, ROLE_LABEL } from "../lib/content.js";
@@ -59,22 +60,24 @@ export default function StaffDrill() {
   const banner = view?.status === "finished" ? "PRACTICE · finished" : "PRACTICE · not a real attack";
   const me = data?.me;
   return (
-    <div className="shell">
-      <div className="practice-banner" role="note">{banner}</div>
-      <StaleBanner stale={stale} />
-      <main className="content" id="main" aria-live="polite">
-        {!data ? <p className="muted">Loading…</p>
-          : !me ? <p className="card">Unknown person. <Link to="/">Pick again</Link>.</p>
-          : !view ? (
-            <JoinForm me={me} value={joinValue}
-              current={data.current} onType={(v) => setTyped(v.replace(/\D/g, "").slice(0, 4))} onSubmit={join} busy={busy} />
-          )
-          : view.status === "lobby" ? <Lobby v={view} />
-          : view.status === "finished" ? <Results v={view} staffId={staffId} />
-          : <Moment v={view} onAnswer={answer} busy={busy} />}
-      </main>
-      <StaffTabs staffId={staffId} />
-    </div>
+    <RephraseProvider role={me?.role} lang="en" drillCode={view?.code}>
+      <div className="shell">
+        <div className="practice-banner" role="note">{banner}</div>
+        <StaleBanner stale={stale} />
+        <main className="content" id="main" aria-live="polite">
+          {!data ? <p className="muted">Loading…</p>
+            : !me ? <p className="card">Unknown person. <Link to="/">Pick again</Link>.</p>
+            : !view ? (
+              <JoinForm me={me} value={joinValue}
+                current={data.current} onType={(v) => setTyped(v.replace(/\D/g, "").slice(0, 4))} onSubmit={join} busy={busy} />
+            )
+            : view.status === "lobby" ? <Lobby v={view} />
+            : view.status === "finished" ? <Results v={view} staffId={staffId} />
+            : <Moment v={view} onAnswer={answer} busy={busy} />}
+        </main>
+        <StaffTabs staffId={staffId} />
+      </div>
+    </RephraseProvider>
   );
 }
 
@@ -165,7 +168,9 @@ function Moment({ v, onAnswer, busy }) {
       </div>
       {sceneFor(v.scenario_id, st.step_id)}
       <div className="game-sheet">
-        <p style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.4 }}>{st.situation}</p>
+        <Rephrasable id={`moment-${st.step_id}`} kind="This moment" title={`Moment ${v.step_index + 1}`} text={st.situation}>
+          <p style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.4 }}>{st.situation}</p>
+        </Rephrasable>
         <ImpactPills impact={v.impact} />
         {!v.options.length ? (
           <section className="verdict">
@@ -176,10 +181,12 @@ function Moment({ v, onAnswer, busy }) {
           <>
             <Options view={v} onAnswer={onAnswer} disabled={!!busy} />
             {v.my_answer ? (
-              <section className="verdict slide-in" role="status">
-                <span className="bold" style={{ fontSize: 18 }}>{v.my_answer.correct ? "Nice call! +1 for the team" : "Close, but not quite."}</span>
-                <span className="fb">{v.my_answer.feedback}</span>
-              </section>
+              <Rephrasable id={`why-${st.step_id}`} kind="Why" title={v.my_answer.correct ? "Nice call!" : "Close, but not quite."} text={v.my_answer.feedback}>
+                <section className="verdict slide-in" role="status">
+                  <span className="bold" style={{ fontSize: 18 }}>{v.my_answer.correct ? "Nice call! +1 for the team" : "Close, but not quite."}</span>
+                  <span className="fb">{v.my_answer.feedback}</span>
+                </section>
+              </Rephrasable>
             ) : v.status === "review" ? (
               <section className="verdict"><span className="bold">This moment closed before you answered.</span></section>
             ) : null}

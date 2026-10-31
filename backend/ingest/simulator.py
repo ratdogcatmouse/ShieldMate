@@ -19,6 +19,13 @@ run's outcome becomes ``contained`` and every remaining ``cancel_if`` phase is s
 That is the "act fast, and the encrypt wave never happens" lesson: the end screen says
 *contained in 4:12*, not *script finished*.
 
+v4: a script may name ``contain_on``, the action IDs that stop it. For those scripts the
+team also contains the attack the way non-technical staff actually respond - by ticking
+that step on a card this run created - or by a correct drill answer carrying one of them
+since the run started (and ``BLOCK_IP`` counts only if listed). The first such response is
+latched as ``contained_by`` (what, who, when) for the results screen. Scripts without
+``contain_on`` keep the original check exactly (decision: the rehearsed demos don't change).
+
 Outcomes: ``running`` / ``contained`` / ``spread`` (no cancellable phase was skipped) /
 ``stopped`` (Backstage kill switch) / ``expired`` (the run outlived its sim time limit).
 """
@@ -29,10 +36,16 @@ import json
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import get_args
 
 from clock import Clock, iso, now_iso
+from contract import ActionId
 from db import Database
 from ingest.source import RawAlert
+
+_ACTION_IDS = set(get_args(ActionId))
+# What stops a script that has no contain_on (the original check, unchanged).
+_LEGACY_STOP = ["BLOCK_IP", "ISOLATE_NETWORK"]
 
 
 class SimScriptError(ValueError):
@@ -87,6 +100,10 @@ class Simulator:
         mult = script.get("sim_time_ms_multiplier", 1)
         if not isinstance(mult, (int, float)) or mult <= 0:
             raise SimScriptError("sim_time_ms_multiplier must be a positive number")
+        contain_on = script.get("contain_on")
+        if contain_on is not None and (not isinstance(contain_on, list) or not contain_on
+                                       or not set(contain_on) <= _ACTION_IDS):
+            raise SimScriptError("contain_on must be a non-empty list of action IDs")
 
     # --- start / stop --------------------------------------------------------
 
@@ -105,6 +122,8 @@ class Simulator:
                 "multiplier": multiplier,
                 "limit_ms": limit_ms,
                 "title": script.get("title", script_id),
+                "contain_on": script.get("contain_on"),   # None = the original check
+                "contained_by": None,                     # {action, staff_id, at} once contained
                 "real_total_ms": total_ms * multiplier,
                 "fired_hi": 0,          # index of the first phase not yet emitted
                 "fired": 0,             # phases actually emitted
@@ -157,13 +176,17 @@ class Simulator:
             elapsed = self._elapsed_ms(run)
             now_dt = self._clock.now()
             phases = run["phases"]
+            # v4 scripts latch the first response on every poll, so a tick that is later
+            # unticked (or a drill that moves on) still counts: the team did act in time.
+            if run["contain_on"] is not None and run["contained_by"] is None:
+                run["contained_by"] = self._contained_by_v4(run)
             batch: list[RawAlert] = []
             i = run["fired_hi"]
             while i < len(phases):
                 phase = phases[i]
                 if int(phase["at_ms"]) * run["multiplier"] > elapsed:
                     break                                # not yet due; phases are time-ordered
-                if phase.get("cancel_if") == "CONTAINED" and self._is_contained(run):
+                if phase.get("cancel_if") == "CONTAINED" and self._contained(run):
                     run["cancelled"] += 1                # escalation avoided
                     i += 1
                     continue
@@ -210,32 +233,107 @@ class Simulator:
 
     # --- the containment check (read-only, the branch condition) -------------
 
-    def _is_contained(self, run: dict) -> bool:
+    def _contained(self, run: dict) -> bool:
+        """The branch condition for a due ``cancel_if`` phase."""
+        if run["contain_on"] is not None:
+            return run["contained_by"] is not None
+        found = self._is_contained(run)
+        if found is not None and run["contained_by"] is None:
+            run["contained_by"] = found                 # for the results screen only
+        return found is not None
+
+    def _is_contained(self, run: dict) -> dict | None:
+        """The original check (scripts without ``contain_on``), unchanged in what it accepts.
+        Returns who/what/when for the results screen, or None."""
         db = self._db
         attacker_ip = (run["attacker"] or {}).get("ip")
         # (a) An executed BLOCK_IP against the attacker's address.
         if attacker_ip:
-            row = db.one(
-                "SELECT 1 FROM actions WHERE action_id='BLOCK_IP' AND status='executed' AND target_ip=?",
-                (attacker_ip,))
-            if row is not None:
-                return True
+            found = self._executed_block(attacker_ip)
+            if found is not None:
+                return found
         # (b) The open drill's latest correct answer carried ISOLATE_NETWORK.
         drill = db.one("SELECT code FROM drills WHERE status='open' LIMIT 1")
         if drill is not None:
-            ans = db.one("SELECT action_ids FROM drill_answers WHERE drill_code=? AND correct=1"
-                         " ORDER BY answered_at DESC LIMIT 1", (drill["code"],))
+            ans = db.one("SELECT a.action_ids, a.answered_at, p.staff_id FROM drill_answers a"
+                         " JOIN drill_players p ON p.id = a.player_id"
+                         " WHERE a.drill_code=? AND a.correct=1"
+                         " ORDER BY a.answered_at DESC LIMIT 1", (drill["code"],))
             if ans is not None:
                 ids = json.loads(ans["action_ids"] or "[]")
                 if "ISOLATE_NETWORK" in ids:
-                    return True
-        return False
+                    return {"action": "ISOLATE_NETWORK", "staff_id": ans["staff_id"], "at": ans["answered_at"]}
+        return None
+
+    def _executed_block(self, attacker_ip: str) -> dict | None:
+        row = self._db.one(
+            "SELECT decided_by, decided_at FROM actions WHERE action_id='BLOCK_IP' AND status='executed'"
+            " AND target_ip=? ORDER BY decided_at LIMIT 1", (attacker_ip,))
+        if row is None:
+            return None
+        # decided_at is always set by actions/*, but a hand-edited row may lack it: then "now".
+        return {"action": "BLOCK_IP", "staff_id": row["decided_by"],
+                "at": row["decided_at"] or now_iso(self._clock)}
+
+    def _contained_by_v4(self, run: dict) -> dict | None:
+        """v4: the earliest response naming one of the script's ``contain_on`` actions.
+
+        (a) a step ticked on a card this run created (its alerts carry ``sim:{run}:`` ids);
+        (b) a correct drill answer carrying one, given since the run started;
+        (c) an executed ``BLOCK_IP`` on the attacker, only when the script lists BLOCK_IP.
+        """
+        db = self._db
+        stop = list(run["contain_on"])
+        marks = ",".join("?" for _ in stop)
+        found: list[dict] = []
+        tick = db.one(
+            f"SELECT s.action, s.done_by, s.done_at FROM alert_steps s JOIN alerts a ON a.id = s.alert_id"
+            f" WHERE a.external_id LIKE ? AND s.action IN ({marks}) ORDER BY s.done_at LIMIT 1",
+            (f"sim:{run['id']}:%", *stop))
+        if tick is not None:
+            found.append({"action": tick["action"], "staff_id": tick["done_by"], "at": tick["done_at"]})
+        for ans in db.query(
+                "SELECT a.action_ids, a.answered_at, p.staff_id FROM drill_answers a"
+                " JOIN drill_players p ON p.id = a.player_id"
+                " WHERE a.correct=1 AND a.answered_at >= ? ORDER BY a.answered_at", (run["started_at"],)):
+            hit = next((x for x in json.loads(ans["action_ids"] or "[]") if x in stop), None)
+            if hit is not None:
+                found.append({"action": hit, "staff_id": ans["staff_id"], "at": ans["answered_at"]})
+                break
+        attacker_ip = (run["attacker"] or {}).get("ip")
+        if "BLOCK_IP" in stop and attacker_ip:
+            block = self._executed_block(attacker_ip)
+            if block is not None:
+                found.append(block)
+        return min(found, key=lambda f: f["at"] or "") if found else None
 
     # --- observation ---------------------------------------------------------
 
     def run_out(self) -> dict | None:
         with self._lock:
             return self._run_out_locked()
+
+    def summary(self) -> dict | None:
+        """v4: the ``SimSummary`` on GET /status - what the team sees about the latest run
+        (its title, the outcome, what stopped it or what would have). None before any run."""
+        with self._lock:
+            run = self._run
+            if run is None:
+                return None
+            out = self._run_out_locked()
+            stop = list(run["contain_on"]) if run["contain_on"] is not None else list(_LEGACY_STOP)
+            return {
+                "script_id": out["script_id"],
+                "title": run["title"],
+                "status": out["status"],
+                "started_at": out["started_at"],
+                "finished_at": out["finished_at"],
+                "elapsed_ms": out["elapsed_ms"],
+                "phases_fired": out["phases_fired"],
+                "phases_cancelled": out["phases_cancelled"],
+                "stop_actions": stop,
+                "contained_by": dict(run["contained_by"]) if run["contained_by"] else None,
+            }
 
     def _run_out_locked(self) -> dict | None:
         run = self._run

@@ -7,7 +7,7 @@ import { Phone, Shield } from "../components/Icons.jsx";
 import { Pill, StaleBanner, StatusPill, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { IT_PLAYBOOK, LOG_FIELD_LABEL, RULE_DESC } from "../lib/content.js";
-import { deviceStates, fixNote, ownerOf, staffName } from "../lib/derive.js";
+import { deviceStates, fixNote, itAlertKeys, ownerOf, staffName } from "../lib/derive.js";
 import { alertFx } from "../lib/fx.js";
 import { seenOnce } from "../lib/session.js";
 import { ago, fmtTime } from "../lib/time.js";
@@ -45,10 +45,11 @@ export default function ItPanel() {
     .sort((x, y) => ORDER[x.it.status] - ORDER[y.it.status] || y.first_seen.localeCompare(x.first_seen));
   const closed = all.filter((a) => a.it.closed_at);
 
-  // A new call buzzes and chimes once per tab.
-  const ringing = open.filter((a) => a.it.status === "called").map((a) => a.id).join(",");
+  // Every new (or reopened) alert, and every call, buzzes and chimes once per tab: the IT contact
+  // is told about all of the clinic's alerts, not only the ones staff call about.
+  const ringing = itAlertKeys(open).join(",");
   useEffect(() => {
-    const fresh = ringing ? ringing.split(",").filter((id) => !seenOnce(`it-${id}`)) : [];
+    const fresh = ringing ? ringing.split(",").filter((key) => !seenOnce(key)) : [];
     if (fresh.length) alertFx();
   }, [ringing]);
 
@@ -91,7 +92,7 @@ export default function ItPanel() {
             <section className="card">
               <span className="ok-icon"><Shield /></span>
               <h1>Nothing open at {c.clinic.name}</h1>
-              <p className="ink-2">When staff call you about an alert, it appears here. Keep this page open.</p>
+              <p className="ink-2">Every alert at the clinic appears here the moment it happens. Keep this page open.</p>
             </section>
           )}
           {closed.length ? (

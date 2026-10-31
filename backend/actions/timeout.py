@@ -52,7 +52,11 @@ def run_once(db: Database, clock: Clock, config: Config, client: WazuhClient) ->
 
 
 def _escalate(db: Database, clinic: dict, action, now_text: str) -> bool:
-    """Ask the backup approver, once per action, with the IT contact's number (decision 16)."""
+    """Ask the backup approver, once per action, with the IT contact's number (decision 16).
+
+    The note names the computer, because the backup approver may not see that alert's card (Ravi
+    never gets RECEPTION-PC cards), and ``routes/notifications.py`` gives it the Block button.
+    """
     backup = next((s for s in db.staff_list() if s["is_backup_approver"]), None)
     if backup is None:
         return False
@@ -62,7 +66,8 @@ def _escalate(db: Database, clinic: dict, action, now_text: str) -> bool:
         return False
     owner = next((s["name"] for s in db.staff_list() if s["role"] == "owner"), "The owner")
     db.add_notification(
-        f"{owner} hasn't answered: please decide or call {clinic['it_contact_name']} on {clinic['it_contact_phone']}.",
+        f"{owner} hasn't answered the request to block an attacker on {action['agent_name']}: please decide,"
+        f" or call {clinic['it_contact_name']} on {clinic['it_contact_phone']}.",
         now_text, alert_id=action["alert_id"], action_row_id=action["id"], to_staff_id=backup["id"])
     waited = (parse_iso(now_text) - parse_iso(action["proposed_at"])).total_seconds()
     db.emit("action.escalated", subject=("action", action["id"]), alert_id=action["alert_id"],

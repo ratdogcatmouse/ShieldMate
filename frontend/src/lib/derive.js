@@ -1,6 +1,6 @@
 // Facts the screens work out from API data, shared so the owner page, the IT panel and
 // mission control always agree.
-import { CERTIN_HOURS, DEVICE_STATUS, SCENARIOS, deviceShort } from "./content.js";
+import { ACTION_LABEL, CERTIN_HOURS, DEVICE_STATUS, SCENARIOS, deviceShort } from "./content.js";
 import { toMs } from "./time.js";
 
 export const ownerOf = (clinic) => clinic.staff.find((s) => s.role === "owner") || null;
@@ -10,6 +10,68 @@ const isOpen = (a) => !a.it.closed_at;
 export const passwordAlert = (alerts) => alerts.find((a) => a.lesson_id === "password_guessing" && isOpen(a)) || null;
 export const ransomwareAlert = (alerts) =>
   alerts.find((a) => a.lesson_id === "ransomware" && isOpen(a) && a.status !== "mine") || null;
+
+// Mission control's people panel: how far one staff member is with an alert, read from their own
+// role's list (GET /alerts?role=<theirs>). null when it isn't theirs: the alert is on somebody
+// else's computer, so it never reached their phone.
+export function stepProgress(alertsByRole, role, alertId) {
+  const a = (alertsByRole[role] || []).find((x) => x.id === alertId);
+  if (!a) return null;
+  return { done: a.card.steps.filter((s) => s.done).length, total: a.card.steps.length };
+}
+
+// The IT panel's chimes: one key per open alert as it arrives (and again when it reopens), plus
+// one per incoming call. The panel chimes once per key per tab, so the IT contact hears about
+// every alert, not only the ones staff call about. Times are in the keys because alert ids
+// start again from 1 after a Reset.
+export function itAlertKeys(open) {
+  return open.flatMap((a) => [
+    `it-new-${a.id}-${a.first_seen}${a.reopened ? `-r-${a.mine_at}` : ""}`,
+    ...(a.it.status === "called" ? [`it-call-${a.id}-${a.it.called_at}`] : []),
+  ]);
+}
+
+// Every other open incident (phishing, the three v4 drills' attacks, ...): the owner page and
+// mission control show these generically, since they have no screen of their own.
+const NAMED = ["password_guessing", "ransomware"];
+export const otherAlerts = (alerts) =>
+  alerts.filter((a) => isOpen(a) && a.status !== "mine" && !NAMED.includes(a.lesson_id));
+
+// v4: the attack simulation's outcome (GET /status `simulation`) in words the team understands.
+// null while nothing has run, while it's still running (the cards tell that story), or after Reset.
+export function simResult(sim, clinic) {
+  if (!sim || sim.status === "running") return null;
+  const clock = (ms) => {
+    const s = Math.max(0, Math.round(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+  const label = (id) => ACTION_LABEL[id] || id;
+  if (sim.status === "contained") {
+    const by = sim.contained_by;
+    const who = !by ? "The team" : by.staff_id === null ? "The standing rule" : staffName(clinic, by.staff_id);
+    const later = sim.phases_cancelled === 1 ? "The next stage never happened." : `${sim.phases_cancelled} later stages never happened.`;
+    return {
+      tone: "green",
+      title: by ? `Attack stopped in ${clock(toMs(by.at) - toMs(sim.started_at))}` : "Attack stopped",
+      line: `${who}: ${by ? label(by.action).toLowerCase() : "acted in time"}. ${later}`,
+      what: sim.title,
+    };
+  }
+  if (sim.status === "spread") {
+    return {
+      tone: "red",
+      title: "The attack got through",
+      line: `What would have stopped it: ${sim.stop_actions.map((a) => label(a).toLowerCase()).join(", or ")}.`,
+      what: sim.title,
+    };
+  }
+  return {
+    tone: "grey",
+    title: "Practice attack ended early",
+    line: sim.status === "stopped" ? "It was stopped from Backstage before the end." : "It ran out of time before the end.",
+    what: sim.title,
+  };
+}
 
 const stepDone = (alert, action) => !!alert?.card.steps.find((s) => s.action === action && s.done);
 

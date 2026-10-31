@@ -40,3 +40,36 @@ def test_a_role_without_a_card_is_skipped(make_app, book):
     assert len(ids) == 1
     row = db.one("SELECT to_role, kind, text FROM notifications WHERE id = ?", (ids[0],))
     assert (row["to_role"], row["kind"]) == ("owner", "attack")
+
+
+# --- notify.audience: the one rule for cards and notifications -------------------------------
+
+ALL_STAFF = {"notify_roles": ["front_desk", "billing", "owner"]}
+
+
+def test_without_notify_roles_the_audience_is_the_computers_account_then_the_owner(book):
+    assert notify.audience({}, "RECEPTION-PC", book) == ["front_desk", "owner"]
+    assert notify.audience({}, "FILE-SERVER", book) == ["billing", "owner"]
+    assert notify.audience({}, "DOCTOR-PC", book) == ["owner"]
+    assert notify.audience({}, "NEW-LAPTOP", book) == ["owner"]
+
+
+def test_notify_roles_never_reach_another_staff_members_computer(book):
+    # Ravi never hears about the reception PC; Meena never about Ravi's computer.
+    assert notify.audience(ALL_STAFF, "RECEPTION-PC", book) == ["front_desk", "owner"]
+    assert notify.audience(ALL_STAFF, "FILE-SERVER", book) == ["billing", "owner"]
+    assert notify.audience({"notify_roles": ["billing", "owner"]}, "RECEPTION-PC", book) == ["owner"]
+    assert notify.audience({"notify_roles": ["front_desk"]}, "FILE-SERVER", book) == ["owner"]
+
+
+def test_notify_roles_apply_in_full_on_a_shared_computer(book):
+    assert notify.audience(ALL_STAFF, "DOCTOR-PC", book) == ["front_desk", "billing", "owner"]
+    assert notify.audience(ALL_STAFF, "NEW-LAPTOP", book) == ["front_desk", "billing", "owner"]
+    assert notify.audience({"notify_roles": ["billing", "owner"]}, "DOCTOR-PC", book) == ["billing", "owner"]
+
+
+def test_the_owner_is_always_in_the_audience_and_last(book):
+    assert notify.audience({"notify_roles": ["owner", "billing"]}, "DOCTOR-PC", book) == ["billing", "owner"]
+    assert notify.audience({"notify_roles": ["billing"]}, "DOCTOR-PC", book) == ["billing", "owner"]
+    assert notify.audience(ALL_STAFF, "RECEPTION-PC", None) == ["front_desk", "billing", "owner"]
+    assert notify.audience({}, "RECEPTION-PC", None) == ["owner"]

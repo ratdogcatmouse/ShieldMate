@@ -41,13 +41,18 @@ def test_tick_is_shared_across_roles_and_keeps_the_first_ticker(app_h):
     assert r.status_code == 200, r.text
     first = _step(r.json(), "CALL_SAVED_IT")
     assert first["done"] and first["done_by"] == MEENA and first["done_at"] == "2026-11-01T04:00:30Z"
-    # Ravi ticks it again later: nothing changes, Meena stays the one who did it.
-    app_h.clock.advance(30)
-    again = app_h.put(f"/alerts/{a['id']}/steps/CALL_SAVED_IT", json={"staff_id": RAVI, "done": True}).json()
-    assert _step(again, "CALL_SAVED_IT") == first
     # The owner's card has CALL_SAVED_IT too, and shows it ticked.
     owner = app_h.get("/alerts?role=owner").json()["alerts"][0]
     assert _step(owner, "CALL_SAVED_IT")["done_by"] == MEENA
+    # The owner ticks it again later: nothing changes, Meena stays the one who did it.
+    app_h.clock.advance(30)
+    again = app_h.put(f"/alerts/{a['id']}/steps/CALL_SAVED_IT", json={"staff_id": OWNER, "done": True}).json()
+    # (The owner's step has its own wording; who ticked it and when must be unchanged.)
+    tick = lambda s: (s["done"], s["done_by"], s["done_at"])
+    assert tick(_step(again, "CALL_SAVED_IT")) == tick(first)
+    # Ravi can't tick it at all: RECEPTION-PC isn't his computer, so for him the alert doesn't exist.
+    r = app_h.put(f"/alerts/{a['id']}/steps/CALL_SAVED_IT", json={"staff_id": RAVI, "done": True})
+    assert (r.status_code, r.json()["error"]) == (404, "not_found")
 
 
 def test_untick_clears_the_step(app_h):

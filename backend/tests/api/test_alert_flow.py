@@ -108,7 +108,8 @@ def test_status_in_replay_mode(app_h):
     assert s == {"alert_source": "replay", "flags": {"AI_REWORD": False, "ACTIONS": False, "SIMULATE": False},
                  "undo_supported": False,
                  "server_time": "2026-11-01T04:00:00Z",
-                 "wazuh": {"api_ok": None, "indexer_ok": None, "agent_active": None, "last_alert_at": None}}
+                 "wazuh": {"api_ok": None, "indexer_ok": None, "agent_active": None, "last_alert_at": None},
+                 "simulation": None}       # v4: the attack simulation's outcome (null with SIMULATE off)
 
 
 # --- flags ---------------------------------------------------------------------------

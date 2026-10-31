@@ -1,0 +1,40 @@
+{
+  "id": "phish_doctor_email",
+  "title": "A fake invoice email takes over the doctor's email",
+  "attacker": {"ip": "203.0.113.77", "account": "drrao"},
+  "contain_on": ["CHANGE_PASSWORD"],
+  "sim_time_ms_multiplier": 1,
+  "phases": [
+    {
+      "at_ms": 0,
+      "label": "a fake invoice email reaches the doctor",
+      "alert": {
+        "rule": {"id": "61320", "level": 9, "description": "Email matches phishing indicators"},
+        "agent": {"id": "004", "name": "DOCTOR-PC", "ip": "192.168.1.22"},
+        "mail": {"from": "accounts@clinc-payments.in", "subject": "URGENT: unpaid invoice",
+                 "verdict": "phishing", "score": 86}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1}
+    },
+    {
+      "at_ms": 60000,
+      "label": "the password was typed into the fake page: someone signs in from outside",
+      "alert": {
+        "rule": {"id": "100310", "level": 10, "description": "Mailbox sign-in from an unfamiliar location"},
+        "agent": {"id": "004", "name": "DOCTOR-PC", "ip": "192.168.1.22"},
+        "data": {"win": {"eventdata": {"ipAddress": "203.0.113.77"}}}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1}
+    },
+    {
+      "at_ms": 180000,
+      "label": "the doctor's email sends fake payment requests to patients",
+      "alert": {
+        "rule": {"id": "100311", "level": 12, "description": "Mailbox sending to many external recipients"},
+        "agent": {"id": "004", "name": "DOCTOR-PC", "ip": "192.168.1.22"}
+      },
+      "shieldmate": {"count": 40, "window_minutes": 5},
+      "cancel_if": "CONTAINED"
+    }
+  ]
+}

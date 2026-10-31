@@ -9,13 +9,13 @@ import { explainCard } from "../lib/rephrase.js";
 
 const Ctx = createContext(null);
 
-export function RephraseProvider({ role, lang, children }) {
+export function RephraseProvider({ role, lang, drillCode = null, children }) {
   const [cards, setCards] = useState({});     // id -> { id, kind, title, text, alertId }, in on-screen order
   const [results, setResults] = useState({}); // id -> { state: "loading" | "done" | "err" | "off", text }
   const [open, setOpen] = useState(false);
   const [off, setOff] = useState(false);      // the server said not_enabled: stop offering the "?"
-  const live = useRef({ role, lang, cards });
-  live.current = { role, lang, cards };       // read by in-flight calls, so a poll can't send stale values
+  const live = useRef({ role, lang, drillCode, cards });
+  live.current = { role, lang, drillCode, cards };   // read by in-flight calls, so a poll can't send stale values
 
   const register = useCallback((c) => setCards((prev) => {
     const p = prev[c.id];

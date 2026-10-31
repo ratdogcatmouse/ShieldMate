@@ -12,6 +12,10 @@ integrity check only, so it defaults to None.
 Contract v2 (agreed by all four owners for the new frontend): step ticking, "That was me"
 and reopen, the IT support loop (IT panel + owner close), ending a drill early, the
 current-drill lookup and Backstage's skip-ahead. Each addition is marked "v2" below.
+
+Contract v4 (the three new drills, see docs/DECISIONS.md): four human-only action IDs
+(VERIFY_BY_CALLBACK, CHANGE_PASSWORD, STOP_PAYMENT, REPORT_1930) and the attack
+simulation's outcome on GET /status, so staff see how they did. Each is marked "v4".
 """
 from __future__ import annotations
 
@@ -31,6 +35,9 @@ Lang = Literal["en", "kn", "hi"]
 ActionId = Literal[
     "DONT_USE_DEVICE", "ISOLATE_NETWORK", "CALL_SAVED_IT", "NOTIFY_OWNER",
     "PRESERVE_EVIDENCE", "VERIFY_BACKUP", "REPORT_CERTIN", "START_DPDP_NOTE", "BLOCK_IP",
+    # v4: things a person does, never something ShieldMate executes (only BLOCK_IP is ever
+    # proposed or run; lessons/engine.py and actions/* keep it that way).
+    "VERIFY_BY_CALLBACK", "CHANGE_PASSWORD", "STOP_PAYMENT", "REPORT_1930",
 ]
 Severity = Literal["needs_you_now", "heads_up"]
 AlertStatus = Literal["new", "done", "filtered", "mine"]   # v2: mine = "That was me", paused 1 h
@@ -132,12 +139,38 @@ class WazuhHealth(Model):
     last_alert_at: str | None
 
 
+class SimContainedBy(Model):
+    """v4: the response that stopped a simulated attack. ``staff_id`` is null when the
+    owner's standing rule acted; the phones look the name up in /clinic."""
+    action: ActionId
+    staff_id: int | None
+    at: str
+
+
+class SimSummary(Model):
+    """v4: the latest attack simulation's outcome, for the screens the team sees.
+
+    ``stop_actions`` are the steps that would have stopped it, so a "spread" result can
+    say what to do next time. Null on /status when SIMULATE is off or nothing has run."""
+    script_id: str
+    title: str
+    status: Literal["running", "contained", "spread", "stopped", "expired"]
+    started_at: str
+    finished_at: str | None
+    elapsed_ms: int
+    phases_fired: int
+    phases_cancelled: int
+    stop_actions: list[ActionId]
+    contained_by: SimContainedBy | None
+
+
 class StatusResponse(Model):
     alert_source: AlertSource
     flags: Flags
     undo_supported: bool
     server_time: str
     wazuh: WazuhHealth
+    simulation: SimSummary | None = None    # v4
 
 
 # --- alerts --------------------------------------------------------------
@@ -312,7 +345,8 @@ class NotificationOut(Model):
     kind: Literal["info", "attack"]     # v3
     text: str
     created_at: str
-    # v3: only on an attack note, only while ACTIONS is on and there is a block to offer
+    # v3: only on an attack note (or the backup approver's escalation note, which asks them to
+    # decide), only while ACTIONS is on and there is a block to offer
     # (null for ransomware, which has no source IP, or a refused or withdrawn request).
     quick_action: QuickAction | None
 
@@ -716,6 +750,7 @@ ROUTES: list[Route] = [
 # Extra fixtures that are valid bodies of the models above (used by tests only).
 EXTRA_FIXTURES: dict[str, type[BaseModel]] = {
     "drill_view_finished.json": DrillView,
+    "status_simulation.json": StatusResponse,        # v4: a contained attack simulation
     "restore_latest_untested.json": RestoreRun,
     "action_proposed.json": ActionOut,
     "action_refused.json": ActionOut,

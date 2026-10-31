@@ -77,11 +77,6 @@ def _answers(db: Database, code: str, step_id: str | None = None) -> list[dict]:
     return [{**dict(r), "action_ids": json.loads(r["action_ids"])} for r in rows]
 
 
-def _role_key(role: str) -> str:
-    """front_desk/billing share the scenario's "staff" options; the owner gets "owner"."""
-    return "owner" if role == "owner" else "staff"
-
-
 def _step(row: Row, scenario: dict) -> dict | None:
     """The step the drill is on (or the last one once finished, for the results view)."""
     idx = max(0, min(row["step_index"], len(scenario["steps"]) - 1))
@@ -90,7 +85,7 @@ def _step(row: Row, scenario: dict) -> dict | None:
 
 def _steps_with_options(step: dict, players: list[dict]) -> list[dict]:
     """The joined players whose role has options at this step - exactly who must answer (T1.10)."""
-    return [p for p in players if step.get("options", {}).get(_role_key(p["role"]), [])]
+    return [p for p in players if models.options_for(step, p["role"])]
 
 
 def _insert_answer(db: Database, code: str, player_id: int, step_id: str, option_id: str,
@@ -178,7 +173,7 @@ def answer(db: Database, clock: Clock, code: str, player_id: int, step_id: str, 
                     (code, player_id))
     if player is None:
         raise ApiError("player_not_in_drill", "That player is not in this drill.", 404)
-    options = step.get("options", {}).get(_role_key(player["staff_role"]), [])
+    options = models.options_for(step, player["staff_role"])
     if not any(o["option_id"] == option_id for o in options):
         raise ApiError("invalid_option", "That option is not offered to your role.", 400)
     if db.one("SELECT 1 FROM drill_answers WHERE drill_code = ? AND player_id = ? AND step_id = ?",
@@ -332,14 +327,14 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
 
     # This player's options for the step (text only - the answer key stays hidden).
     options = [{"option_id": o["option_id"], "text": o["text"]}
-               for o in step.get("options", {}).get(_role_key(role), [])] if showing_step else []
+               for o in models.options_for(step, role)] if showing_step else []
 
     # My locked answer, with the feedback that is now safe to show.
     my_answer = None
     if showing_step:
         mine = next((a for a in _answers(db, code, step["step_id"]) if a["player_id"] == player_id), None)
         if mine is not None:
-            opt = next((o for o in step.get("options", {}).get(_role_key(role), [])
+            opt = next((o for o in models.options_for(step, role)
                         if o["option_id"] == mine["option_id"]), {})
             my_answer = {"option_id": mine["option_id"], "correct": bool(mine["correct"]),
                          "feedback": opt.get("feedback", ""), "actions": mine["action_ids"]}
@@ -355,7 +350,7 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
     if showing_step:
         answers = {a["player_id"]: a for a in _answers(db, code, step["step_id"])}
         for p in _players(db, code):
-            has = bool(step.get("options", {}).get(_role_key(p["role"]), []))
+            has = bool(models.options_for(step, p["role"]))
             answered = has and p["player_id"] in answers
             team_answered += int(answered)
             team_players.append({"player_id": p["player_id"], "name": p["name"], "role": p["role"],
@@ -370,7 +365,7 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
         answers = {a["player_id"]: a for a in _answers(db, code, step["step_id"])}
         answers_list = []
         for p in _players(db, code):
-            opts = step.get("options", {}).get(_role_key(p["role"]), [])
+            opts = models.options_for(step, p["role"])
             if not opts:
                 continue
             a = answers.get(p["player_id"])

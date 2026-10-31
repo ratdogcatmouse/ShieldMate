@@ -96,11 +96,14 @@ def process(alert: NormalisedAlert, db: Database, clock: Clock, *, lessons: Less
         if config.actions and lesson.get("proposed_action") == "BLOCK_IP":
             action_row_id = propose.propose(db, clock, alert_id, alert.source, alert.agent_name,
                                             alert.log_fields.get("source_ip"))
-        # Step 4a2 (v3): tell the people this concerns. Only a brand-new card gets here, so repeats
-        #          stay quiet. The notification carries the proposal so the phone can show a Block button.
+        # Step 4a2 (v3): tell the people this concerns (``notify.audience``, the same rule that decides
+        #          who sees the card). Only a brand-new card gets here, so repeats stay quiet. The
+        #          notification carries the proposal so the phone can show a Block button.
         new_row = db.one("SELECT * FROM alerts WHERE id = ?", (alert_id,))
+        book = impact.book_for(config.seed_path)
         notify.attack(db, now_text, alert_id=alert_id, agent_name=alert.agent_name,
-                      action_row_id=action_row_id, book=impact.book_for(config.seed_path),
+                      action_row_id=action_row_id, book=book,
+                      roles=notify.audience(lesson, alert.agent_name, book),
                       headline_for=lambda role: (card(lessons, new_row, role, "en") or {}).get("headline"))
         # Step 4b: a new password-guessing alert flips that PC's strip to "under attack"
         #          (via Lane 2's set_device_status; a no-op until it exists).
@@ -119,10 +122,26 @@ def _values(lessons: LessonBook, lesson: dict, row: Row) -> dict:
 
 
 def card(lessons: LessonBook, row: Row, role: str, lang: str) -> dict | None:
+    """The lesson's wording for ``role``, whoever the alert concerns. Use ``card_for`` to show it."""
     lesson = lessons.get(row["rule_id"])
     if lesson is None:
         return None
     return lessons.card_for(lesson, role, lang, _values(lessons, lesson, row), json.loads(row["log_fields"]))
+
+
+def concerns(lessons: LessonBook, row: Row, role: str, book: "impact.ImpactBook | None") -> bool:
+    """Whether this alert is ``role``'s to see and act on (``notify.audience``).
+
+    The owner always is: every lesson has owner wording (``LessonBook`` checks it).
+    """
+    lesson = lessons.get(row["rule_id"])
+    return lesson is not None and role in notify.audience(lesson, row["agent_name"], book)
+
+
+def card_for(lessons: LessonBook, row: Row, role: str, lang: str,
+             book: "impact.ImpactBook | None") -> dict | None:
+    """``role``'s card, or None when the alert doesn't concern that role or has no wording for it."""
+    return card(lessons, row, role, lang) if concerns(lessons, row, role, book) else None
 
 
 def _steps_done(db: Database, alert_id: int) -> dict[str, Row]:
@@ -132,12 +151,14 @@ def _steps_done(db: Database, alert_id: int) -> dict[str, Row]:
 
 def alert_out(db: Database, lessons: LessonBook, row: Row, role: str, lang: str,
               book: "impact.ImpactBook | None" = None) -> dict | None:
-    """The ``AlertOut`` shape for one role, or None if the lesson has no text for that role.
+    """The ``AlertOut`` shape for one role, or None if the alert doesn't concern that role
+    (``concerns``) or the lesson has no text for it.
 
-    With an impact book (routes pass it in) each alert also carries its ``impact``
-    (T7.03): what's at risk on this device, so the queue can show what to rush first.
+    The impact book (routes always pass it in) says whose computer the alert is on, and gives
+    each alert its ``impact`` (T7.03): what's at risk on this device, so the queue can show what
+    to rush first. Without it only the owner's routing is known, so only the owner gets a card.
     """
-    c = card(lessons, row, role, lang)
+    c = card_for(lessons, row, role, lang, book)
     if c is None:
         return None
     lesson = lessons.get(row["rule_id"])
@@ -210,13 +231,18 @@ def list_alerts(db: Database, lessons: LessonBook, role: str, lang: str,
 
 # --- staff actions on a card -------------------------------------------------------
 
-def _staff_and_alert(db: Database, alert_id: int, staff_id: int) -> tuple[dict, Row]:
-    """The acting staff member and the (non-filtered) alert, or the matching 400/404."""
+def _staff_and_alert(db: Database, lessons: LessonBook, alert_id: int, staff_id: int,
+                     book: "impact.ImpactBook | None") -> tuple[dict, Row]:
+    """The acting staff member and the (non-filtered) alert, or the matching 400/404.
+
+    An alert that doesn't concern this person (``concerns``) is a 404 to them, the same as on
+    their list: nobody can tick, "That was me" or Done an alert on somebody else's computer.
+    """
     staff = db.staff(staff_id)
     if staff is None:
         raise ApiError("invalid_request", "Unknown staff member.", 400)
     row = db.one("SELECT * FROM alerts WHERE id = ? AND status != 'filtered'", (alert_id,))
-    if row is None:
+    if row is None or card_for(lessons, row, staff["role"], "en", book) is None:
         raise ApiError("not_found", "No such alert.", 404)
     return staff, row
 
@@ -229,7 +255,7 @@ def _headline(lessons: LessonBook, row: Row, role: str, lang: str, alert_id: int
 def mark_done(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, staff_id: int,
               lang: str = "en", book: "impact.ImpactBook | None" = None) -> dict:
     """Staff tapped Done. Idempotent: a second tap changes nothing and sends no second notification."""
-    staff, row = _staff_and_alert(db, alert_id, staff_id)
+    staff, row = _staff_and_alert(db, lessons, alert_id, staff_id, book)
 
     done_event = dict(actor=staff_id, subject=("alert", alert_id), rule_id=row["rule_id"], lang=lang)
     if row["status"] == "done":
@@ -260,7 +286,7 @@ def set_step(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, act
     The step must be on this person's own card. Ticking CALL_SAVED_IT for the first time
     also starts the IT loop ("called"), which the IT contact's panel picks up.
     """
-    staff, row = _staff_and_alert(db, alert_id, staff_id)
+    staff, row = _staff_and_alert(db, lessons, alert_id, staff_id, book)
     if row["closed_at"] is not None:
         raise ApiError("already_closed", "This incident is already closed.", 409)
     body = lessons.get(row["rule_id"])["roles"].get(staff["role"]) or {"steps": []}
@@ -291,7 +317,7 @@ def say_mine(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, sta
     device strip goes back to OK unless a block is protecting it. A repeat of the same
     rule on the same PC within the hour reopens the card (``process``, step 2a).
     """
-    staff, row = _staff_and_alert(db, alert_id, staff_id)
+    staff, row = _staff_and_alert(db, lessons, alert_id, staff_id, book)
     if not lessons.get(row["rule_id"]).get("that_was_me"):
         raise ApiError("invalid_request", "This alert can't be marked as your own mistake.", 400)
     if row["closed_at"] is not None:
@@ -318,7 +344,7 @@ def say_mine(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, sta
 def reopen(db: Database, clock: Clock, config: Config, lessons: LessonBook, alert_id: int, staff_id: int,
            lang: str = "en", book: "impact.ImpactBook | None" = None) -> dict:
     """v2: "It wasn't all me": a paused alert goes back to open, exactly as a repeat would reopen it."""
-    staff, row = _staff_and_alert(db, alert_id, staff_id)
+    staff, row = _staff_and_alert(db, lessons, alert_id, staff_id, book)
     if row["status"] != "mine":
         raise ApiError("invalid_request", "Only a paused alert can be reopened.", 400)
     now_text = now_iso(clock)

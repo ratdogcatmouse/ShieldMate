@@ -78,7 +78,7 @@
     "rule_id": "61320",
     "lesson_id": "phishing_flagged",
     "severity": "heads_up",
-    "drill_scenario": null,
+    "drill_scenario": "phish_doctor_email",
     "proposed_action": null,
     "count_defaults": {"count": 1, "window_minutes": 1},
     "roles": {
@@ -90,35 +90,441 @@
           {"action": "PRESERVE_EVIDENCE", "text": "Do not delete the email or clear the log - keep it for IT."},
           {"action": "CALL_SAVED_IT", "text": "Call your IT contact (saved in ShieldMate)."}
         ],
-        "show_log_fields": [],
+        "show_log_fields": ["sender"],
         "translations": {}
       },
       "front_desk": {
         "headline": "A phishing email was flagged on {agent_name}.",
         "what_we_know": "{count} suspicious email(s) in {window_minutes} minute(s).",
-        "why": "If the link is opened, the doctor's account can be opened up.",
+        "why": "One clicked link can let someone into this computer and the clinic's accounts.",
         "steps": [
           {"action": "DONT_USE_DEVICE", "text": "Do not open the flagged email or its links."},
           {"action": "PRESERVE_EVIDENCE", "text": "Leave the email in place for IT."}
         ],
-        "show_log_fields": [],
+        "show_log_fields": ["sender"],
         "translations": {}
       },
       "billing": {
         "headline": "A phishing email was flagged on {agent_name}.",
         "what_we_know": "{count} suspicious email(s) in {window_minutes} minute(s).",
-        "why": "If the link is opened, the doctor's account can be opened up.",
+        "why": "One clicked link can let someone into this computer and the clinic's accounts.",
         "steps": [
           {"action": "DONT_USE_DEVICE", "text": "Do not open the flagged email or its links."},
           {"action": "PRESERVE_EVIDENCE", "text": "Leave the email in place for IT."}
         ],
-        "show_log_fields": [],
+        "show_log_fields": ["sender"],
         "translations": {}
       }
     },
     "fallback_reword": {
       "headline": "A phishing email was flagged on {agent_name}.",
       "why": "One clicked link can open the doctor's own account."
+    }
+  },
+  {
+    "rule_id": "100310",
+    "lesson_id": "email_account_taken",
+    "severity": "needs_you_now",
+    "drill_scenario": "phish_doctor_email",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 1,
+      "window_minutes": 1
+    },
+    "roles": {
+      "owner": {
+        "headline": "Someone else has signed in to your email.",
+        "what_we_know": "Your email was just opened from a place the clinic has never used. The password was probably typed into a fake page.",
+        "why": "Whoever has it can read your email and send messages to patients in the clinic's name.",
+        "steps": [
+          {
+            "action": "CHANGE_PASSWORD",
+            "text": "Change your email password now, from your phone or a different computer, not {agent_name}."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate) to check the account."
+          },
+          {
+            "action": "DONT_USE_DEVICE",
+            "text": "Don't use {agent_name} until IT says it's safe."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Someone else has got into your email.",
+      "why": "They can send messages to patients pretending to be the clinic."
+    }
+  },
+  {
+    "rule_id": "100311",
+    "lesson_id": "email_sending_to_patients",
+    "severity": "needs_you_now",
+    "drill_scenario": "phish_doctor_email",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 40,
+      "window_minutes": 5
+    },
+    "notify_roles": [
+      "front_desk",
+      "billing",
+      "owner"
+    ],
+    "roles": {
+      "owner": {
+        "headline": "Your email is sending messages to patients.",
+        "what_we_know": "{count} emails went out from your account in {window_minutes} minutes, asking patients to pay a fee.",
+        "why": "Patients may pay a scammer believing it's the clinic, and their details have been seen.",
+        "steps": [
+          {
+            "action": "CHANGE_PASSWORD",
+            "text": "Change your email password now, from your phone or a different computer."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate) to stop the emails."
+          },
+          {
+            "action": "START_DPDP_NOTE",
+            "text": "Start the patient-data breach record: patient details were seen."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "front_desk": {
+        "headline": "Patients may call about a fake payment message from the clinic.",
+        "what_we_know": "Dr. Rao's email has been sending messages asking patients to pay a fee. The messages are fake.",
+        "why": "Patients trust the clinic. A clear answer stops them losing money.",
+        "steps": [
+          {
+            "action": "PRESERVE_EVIDENCE",
+            "text": "Tell every caller the message is fake and not to pay. Write down who called."
+          },
+          {
+            "action": "NOTIFY_OWNER",
+            "text": "Tap Done: Dr. Rao is told."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "billing": {
+        "headline": "Patients may have paid a fake fee in the clinic's name.",
+        "what_we_know": "Dr. Rao's email has been sending messages asking patients to pay a fee. The messages are fake.",
+        "why": "The sooner a patient reports it, the better the chance of getting the money back.",
+        "steps": [
+          {
+            "action": "REPORT_1930",
+            "text": "If a patient says they paid, tell them to call 1930 now."
+          },
+          {
+            "action": "PRESERVE_EVIDENCE",
+            "text": "Write down every patient who says they paid."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Your email is sending fake payment requests to patients.",
+      "why": "Patients may pay a scammer thinking it's the clinic."
+    }
+  },
+  {
+    "rule_id": "100320",
+    "lesson_id": "remote_control_installed",
+    "severity": "needs_you_now",
+    "drill_scenario": "tech_support_call",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 1,
+      "window_minutes": 1
+    },
+    "roles": {
+      "front_desk": {
+        "headline": "A program that lets someone control this computer was installed on {agent_name}.",
+        "what_we_know": "It appeared a moment ago. If someone phoned and asked you to install it, that call was a scam.",
+        "why": "Whoever is on the other end can see and click everything on this computer, including billing and patient records.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Pull the network cable out of the back of {agent_name} (or turn its Wi-Fi off). Leave it switched on."
+          },
+          {
+            "action": "VERIFY_BY_CALLBACK",
+            "text": "If a caller asked you to install it, hang up. Only call back on numbers saved in ShieldMate."
+          },
+          {
+            "action": "NOTIFY_OWNER",
+            "text": "Tap Done: Dr. Rao is told."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "owner": {
+        "headline": "A remote-control program was installed on {agent_name}.",
+        "what_we_know": "Staff may have been tricked by a fake \"tech support\" phone call.",
+        "why": "Someone outside could control the computer used for check-in and billing.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Make sure {agent_name} is unplugged from the network. Leave it switched on."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate) to remove the program."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Someone may be able to control {agent_name} from outside.",
+      "why": "They could see billing and patient records."
+    }
+  },
+  {
+    "rule_id": "100321",
+    "lesson_id": "remote_control_active",
+    "severity": "needs_you_now",
+    "drill_scenario": "tech_support_call",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 1,
+      "window_minutes": 1
+    },
+    "roles": {
+      "front_desk": {
+        "headline": "Someone outside is controlling {agent_name} right now.",
+        "what_we_know": "The mouse may be moving by itself. This is the program from the fake support call.",
+        "why": "Every second it stays connected, they can open more.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Pull the network cable out now. Leave the computer switched on."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate)."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "owner": {
+        "headline": "Someone outside is controlling {agent_name} right now.",
+        "what_we_know": "A remote-control program installed after a fake support call is in use.",
+        "why": "They can open whatever that computer can open.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Make sure {agent_name} is unplugged from the network. Leave it switched on."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate) to remove the program."
+          },
+          {
+            "action": "CHANGE_PASSWORD",
+            "text": "Change passwords that were typed on {agent_name}, from a different device."
+          },
+          {
+            "action": "STOP_PAYMENT",
+            "text": "Ask the bank to hold payments until IT says it's safe, in case a banking password was typed on {agent_name}."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Someone outside is using {agent_name} right now.",
+      "why": "They can open whatever that computer can open."
+    }
+  },
+  {
+    "rule_id": "100322",
+    "lesson_id": "files_copied_out",
+    "severity": "needs_you_now",
+    "drill_scenario": "tech_support_call",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 120,
+      "window_minutes": 2
+    },
+    "roles": {
+      "owner": {
+        "headline": "Files are being copied out of {agent_name}.",
+        "what_we_know": "{count} files were sent to an outside address in {window_minutes} minutes.",
+        "why": "Patient files that leave the clinic count as a personal-data breach.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Make sure {agent_name} is unplugged from the network. Leave it switched on."
+          },
+          {
+            "action": "CALL_SAVED_IT",
+            "text": "Call your IT contact (saved in ShieldMate)."
+          },
+          {
+            "action": "REPORT_CERTIN",
+            "text": "Report to CERT-In within 6 hours."
+          },
+          {
+            "action": "START_DPDP_NOTE",
+            "text": "Start the patient-data breach record."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "front_desk": {
+        "headline": "Files are being copied out of {agent_name}.",
+        "what_we_know": "The program from the fake support call is sending files outside the clinic.",
+        "why": "Patient files may be leaving the clinic right now.",
+        "steps": [
+          {
+            "action": "ISOLATE_NETWORK",
+            "text": "Pull the network cable out now. Leave the computer switched on."
+          },
+          {
+            "action": "PRESERVE_EVIDENCE",
+            "text": "Write down the caller's number and what he asked for."
+          }
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Files are leaving {agent_name} for somewhere outside the clinic.",
+      "why": "Patient files leaving the clinic is a data breach."
+    }
+  },
+  {
+    "rule_id": "100330",
+    "lesson_id": "supplier_bank_change",
+    "severity": "needs_you_now",
+    "drill_scenario": "supplier_bank_fraud",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 1,
+      "window_minutes": 1
+    },
+    "notify_roles": [
+      "billing",
+      "owner"
+    ],
+    "roles": {
+      "billing": {
+        "headline": "An email asks the clinic to pay a supplier's new bank account.",
+        "what_we_know": "This is how supplier payment scams start. Look closely at the sender's address below: one letter or dash different is a common trick.",
+        "why": "Money sent to a scammer's account is very hard to get back.",
+        "steps": [
+          {
+            "action": "VERIFY_BY_CALLBACK",
+            "text": "Don't pay. Call the supplier on the number you already have, not one in the email."
+          },
+          {
+            "action": "NOTIFY_OWNER",
+            "text": "Tell Dr. Rao before any payment to new bank details."
+          }
+        ],
+        "show_log_fields": [
+          "sender"
+        ],
+        "translations": {}
+      },
+      "owner": {
+        "headline": "A supplier email asks to change their bank details.",
+        "what_we_know": "Change-of-bank emails are the most common way clinics lose money to scammers.",
+        "why": "Money sent to a scammer's account is very hard to get back.",
+        "steps": [
+          {
+            "action": "VERIFY_BY_CALLBACK",
+            "text": "Make sure nobody pays new bank details until the supplier is called on their old number."
+          }
+        ],
+        "show_log_fields": [
+          "sender"
+        ],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "A supplier email asks the clinic to pay a new bank account.",
+      "why": "It may be a scam; check by phone before paying."
+    }
+  },
+  {
+    "rule_id": "100331",
+    "lesson_id": "payment_to_new_account",
+    "severity": "needs_you_now",
+    "drill_scenario": "supplier_bank_fraud",
+    "proposed_action": null,
+    "count_defaults": {
+      "count": 1,
+      "window_minutes": 1
+    },
+    "notify_roles": [
+      "billing",
+      "owner"
+    ],
+    "roles": {
+      "billing": {
+        "headline": "A payment to the new bank account has been sent.",
+        "what_we_know": "The money went to the account in the supplier email. If it was a scam, the next hour matters most.",
+        "why": "The bank can often freeze money soon after it is paid, before it is moved on.",
+        "steps": [
+          {
+            "action": "STOP_PAYMENT",
+            "text": "Call the bank's fraud line now and ask them to stop the payment."
+          },
+          {
+            "action": "REPORT_1930",
+            "text": "Call 1930, the cyber-fraud helpline, or report at cybercrime.gov.in."
+          },
+          {
+            "action": "PRESERVE_EVIDENCE",
+            "text": "Keep the emails and the payment receipt."
+          }
+        ],
+        "show_log_fields": [
+          "sender"
+        ],
+        "translations": {}
+      },
+      "owner": {
+        "headline": "A payment went to a possible scammer's bank account.",
+        "what_we_know": "A payment went to the new bank details from the supplier email.",
+        "why": "The bank can often freeze money soon after it is paid.",
+        "steps": [
+          {
+            "action": "STOP_PAYMENT",
+            "text": "Call the bank's fraud line with Ravi now."
+          },
+          {
+            "action": "REPORT_1930",
+            "text": "Make sure it is reported on 1930 or cybercrime.gov.in."
+          }
+        ],
+        "show_log_fields": [
+          "sender"
+        ],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Money may have gone to a scammer's bank account.",
+      "why": "Calling the bank quickly can freeze it."
     }
   }
 ]

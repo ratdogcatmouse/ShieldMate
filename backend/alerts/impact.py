@@ -90,6 +90,17 @@ class ImpactBook:
                 and all(isinstance(b, (int, float)) for b in bands)
                 and bands[0] < bands[1] < bands[2]):
             raise ImpactError("impact.bands must be three ascending thresholds [low, medium, high]")
+        # Per-rule entries (v4 adds the optional "extra" and "at_risk"; "account" may name a role).
+        accounts = block.get("accounts") or {}
+        for rule_id, rule in (block.get("rules") or {}).items():
+            if rule.get("damage") not in damage:
+                raise ImpactError(f"impact.rules[{rule_id!r}].damage must be one of the damage states")
+            acct = rule.get("account", "none")
+            if acct not in ("device", "none") and acct not in accounts:
+                raise ImpactError(f"impact.rules[{rule_id!r}].account must be device, none or an accounts key")
+            extra = rule.get("extra", 0)
+            if not isinstance(extra, (int, float)) or extra < 0:
+                raise ImpactError(f"impact.rules[{rule_id!r}].extra must be a non-negative number")
         return cls(block, damage)
 
     # --- lookups -------------------------------------------------------------
@@ -99,12 +110,18 @@ class ImpactBook:
         return sum(int(self.data.get("services", {}).get(s.lower(), 0))
                    for s in (device.get("services") or []))
 
-    def account_weight(self, agent_name: str, account_mode: str) -> int:
-        """Which account the threat reaches: the device's account, or none (file events)."""
+    def account_key(self, agent_name: str, account_mode: str) -> str | None:
+        """Which account the threat reaches: the device's own, a named role (v4: supplier
+        fraud reaches billing wherever the email landed), or none (file events)."""
         if account_mode == "device":
-            key = (self.data.get("device_accounts") or {}).get(agent_name)
-            return int((self.data.get("accounts") or {}).get(key, 0))
-        return 0
+            return (self.data.get("device_accounts") or {}).get(agent_name)
+        if account_mode in (self.data.get("accounts") or {}):
+            return account_mode
+        return None
+
+    def account_weight(self, agent_name: str, account_mode: str) -> int:
+        key = self.account_key(agent_name, account_mode)
+        return int((self.data.get("accounts") or {}).get(key, 0)) if key else 0
 
     def damage_weight(self, state: str) -> int:
         return int(self._damage.get(state, 0))
@@ -148,13 +165,17 @@ def alert_out(book: ImpactBook | None, device: dict | None, rule_id: str,
     if book is None or book.data is None or device is None or status == "filtered":
         return None
     rule = book.rule_map(rule_id)
+    # "extra" (v4) is direct loss the device's data can't express, e.g. money sent to a fraudster.
     score = book.services_weight(device) * book.damage_weight(rule["damage"]) \
-        + book.account_weight(device["agent_name"], rule.get("account", "none"))
+        + book.account_weight(device["agent_name"], rule.get("account", "none")) \
+        + int(rule.get("extra", 0))
     if score == 0:
         return None
     level = book.band(score)
-    services = ", ".join(s.lower() for s in device.get("services") or []) or "its services"
-    account = (book.data.get("device_accounts") or {}).get(device["agent_name"])
+    # "at_risk" (v4) is seed wording, not log text, so it is as safe as the service names.
+    services = rule.get("at_risk") or ", ".join(s.lower() for s in device.get("services") or []) or "its services"
+    account = book.account_key(device["agent_name"], rule.get("account", "device")) \
+        or (book.data.get("device_accounts") or {}).get(device["agent_name"])
     why = f"{services} on {device['agent_name']}" + (f" ({account} account)" if account else "")
     return {"level": level, "score": score, "reason": f"{level.capitalize()} - {score}: {why}"}
 

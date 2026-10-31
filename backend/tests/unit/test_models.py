@@ -15,7 +15,8 @@ SCENARIOS_DIR = Path(__file__).resolve().parents[2] / "scenarios"
 
 def test_shipped_scenarios_validate():
     scenarios = models.load_scenarios(SCENARIOS_DIR)
-    assert set(scenarios) == {"ransomware_clinic", "password_guessing"}
+    assert set(scenarios) == {"ransomware_clinic", "password_guessing",
+                              "phish_doctor_email", "tech_support_call", "supplier_bank_fraud"}
     assert len(scenarios["ransomware_clinic"]["steps"]) == 4
     assert len(scenarios["password_guessing"]["steps"]) == 2
     # Both load, so the files pass their own T0.04 rules (unique step ids, one correct per role).

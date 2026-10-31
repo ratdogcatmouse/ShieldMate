@@ -21,13 +21,16 @@ export function buildQuestion(title, text) {
 // -> { state: "done" | "err" | "off", text }. Never throws: a failed card shows on its own card.
 // source "fallback" means the agent was unreachable and the server sent generic guidance
 // (not this card's words), so it is shown as a failure rather than as a rephrasing.
-export async function explainCard(card, { role, lang }) {
+// On a drill screen the drill's code goes along (drillCode), so the agent knows which drill; the
+// answer options are never sent, because a reworded option could give away the right one.
+export async function explainCard(card, { role, lang, drillCode }) {
   try {
     const r = await api.interpret({
       question: buildQuestion(card.title, card.text),
       role,
       lang,
       alert_id: card.alertId ?? null,
+      ...(drillCode ? { drill_code: drillCode } : {}),
     });
     if (r.source === "fallback" || !String(r.answer || "").trim()) return { state: "err", text: ERR_TEXT };
     return { state: "done", text: r.answer };

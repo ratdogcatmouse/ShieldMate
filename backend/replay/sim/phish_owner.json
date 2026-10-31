@@ -9,7 +9,7 @@
       "label": "suspicious mail lands in the doctor's inbox",
       "alert": {
         "rule": {"id": "61320", "level": 9, "description": "Email matches phishing indicators"},
-        "agent": {"id": "005", "name": "DOCTOR-PC", "ip": "192.168.1.23"},
+        "agent": {"id": "004", "name": "DOCTOR-PC", "ip": "192.168.1.22"},
         "data": {"win": {"system": {"eventID": "4625"},
                   "eventdata": {"targetUserName": "drrao", "ipAddress": "203.0.113.44"}}},
         "mail": {"from": "billing-support@clinc-billing.co", "subject": "Urgent: unpaid invoice",
@@ -22,7 +22,7 @@
       "label": "the link is opened - the doctor's PC is infected",
       "alert": {
         "rule": {"id": "61320", "level": 11, "description": "Email matches phishing indicators"},
-        "agent": {"id": "005", "name": "DOCTOR-PC", "ip": "192.168.1.23"},
+        "agent": {"id": "004", "name": "DOCTOR-PC", "ip": "192.168.1.22"},
         "data": {"win": {"system": {"eventID": "4688"},
                   "eventdata": {"targetUserName": "drrao", "ipAddress": "203.0.113.44"}}},
         "mail": {"from": "billing-support@clinc-billing.co", "subject": "Urgent: unpaid invoice",

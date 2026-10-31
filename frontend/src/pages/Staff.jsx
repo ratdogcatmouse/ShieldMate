@@ -5,9 +5,10 @@ import { Back, Calendar, Check, Phone, Shield } from "../components/Icons.jsx";
 import { NoteList } from "../components/Notifications.jsx";
 import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { StaffTabs } from "../components/Shells.jsx";
-import { Pill, StaleBanner, useAction, useToast } from "../components/ui.jsx";
+import { Pill, SimResult, StaleBanner, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { LANGS, LOG_FIELD_LABEL, TIP_OF_THE_WEEK, UI_TEXT } from "../lib/content.js";
+import { simResult } from "../lib/derive.js";
 import { alertFx, soundEnabled, soundReady, unlockAudio } from "../lib/fx.js";
 import { useNotifications } from "../lib/notifications.js";
 import { getLang, seenOnce, setLang } from "../lib/session.js";
@@ -34,12 +35,13 @@ export default function Staff({ view }) {
     const c = await api.getClinic();
     const me = c.staff.find((s) => s.id === staffId) || null;
     if (!me || me.role === "owner") return { c, me };
-    const [list, en, drill] = await Promise.all([
+    const [list, en, drill, status] = await Promise.all([
       api.getAlerts(me.role, { lang, includeClosed: view === "history" }),
       lang === "en" ? null : api.getAlerts(me.role, { lang: "en" }),
       api.getCurrentDrill(),
+      api.getStatus(),                      // v4: the practice attack's result, if one ran
     ]);
-    return { c, me, list, en, drill: drill.drill };
+    return { c, me, list, en, drill: drill.drill, sim: status.simulation };
   }, 2000, [staffId, view]);
   // A new language redraws in place (no blank screen): poll again with the new `lang`.
   const firstLang = useRef(lang);
@@ -259,6 +261,7 @@ function Today({ data, staffId, alerts, onDrill }) {
   const recent = alerts.filter((a) => a.status !== "new").slice(0, 3);
   return (
     <>
+      <SimResult result={simResult(data.sim, data.c)} />
       {drill ? (
         <button type="button" className="card tight outlined" style={{ textAlign: "left", cursor: "pointer", font: "inherit" }} onClick={() => onDrill(drill.code)}>
           <Pill tone="amber" noDot>Practice</Pill>

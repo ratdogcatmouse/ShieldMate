@@ -76,4 +76,6 @@ def get_status(request: Request):
         "undo_supported": ctx.config.undo_supported,
         "server_time": now_iso(ctx.clock),
         "wazuh": ctx.wazuh_health,       # all null in replay mode
+        # v4: the latest attack simulation's outcome, so the team's screens can show it.
+        "simulation": ctx.sim.summary() if ctx.sim is not None else None,
     }

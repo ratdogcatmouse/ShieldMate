@@ -4,7 +4,8 @@
 import * as api from "../lib/api.js";
 import { DEVICE_STATUS, ROLE_LABEL, stepShort } from "../lib/content.js";
 import {
-  activity, certinDue, deviceStates, ownerOf, passwordAlert, ransomwareAlert, sourceBadge, staffName,
+  activity, certinDue, deviceStates, otherAlerts, ownerOf, passwordAlert, ransomwareAlert, simResult, sourceBadge, staffName,
+  stepProgress,
 } from "../lib/derive.js";
 import { getPlayer, setPlayer } from "../lib/session.js";
 import { fmtTime, useNow } from "../lib/time.js";
@@ -39,17 +40,20 @@ async function drillView(owner) {
 
 async function load() {
   const clinic = await api.getClinic();
-  const [status, owner, staffList, actions, devices, notes, drill] = await Promise.all([
+  const [status, owner, frontDesk, billing, actions, devices, notes, drill] = await Promise.all([
     api.getStatus(),
     api.getAlerts("owner", { includeClosed: true }),
-    api.getAlerts("front_desk"),            // staff step progress for the people panel
+    // Each staff member's own list, for their step progress in the people panel.
+    api.getAlerts("front_desk"),
+    api.getAlerts("billing"),
     api.listOrEmpty(api.getActions(), "actions"),
     api.listOrEmpty(api.getDevices(), "devices"),
     api.getNotifications("owner"),
     drillView(ownerOf(clinic)).catch(() => null),
   ]);
   const open = owner.alerts.filter((a) => !a.it.closed_at);
-  return { clinic, status, alerts: open, feed: activity(clinic, owner.alerts, actions, notes.notifications), hidden: owner.hidden_count, staffAlerts: staffList.alerts, actions, devices,
+  return { clinic, status, alerts: open, feed: activity(clinic, owner.alerts, actions, notes.notifications), hidden: owner.hidden_count,
+           staffAlerts: { front_desk: frontDesk.alerts, billing: billing.alerts }, actions, devices,
            notes: notes.notifications, drill };
 }
 
@@ -61,6 +65,8 @@ export default function Mission() {
   const { clinic, drill } = data;
   const pw = passwordAlert(data.alerts.filter((a) => a.status !== "mine"));
   const rw = ransomwareAlert(data.alerts);
+  const other = otherAlerts(data.alerts)[0] || null;          // phishing, remote control, supplier fraud, ...
+  const sim = simResult(data.status.simulation, clinic);
   const act = pw?.action ? data.actions.find((x) => x.id === pw.action.id) : null;
   let devices = deviceStates(clinic, data.devices.length ? data.devices : null, data.alerts);
   if (drill && drill.status !== "finished" && drill.impact.length) {
@@ -79,7 +85,9 @@ export default function Mission() {
     : rw ? ["attack", "RANSOMWARE ON THE FILE SERVER"]
     : pw && act?.status === "failed" ? ["attack", "BLOCK DIDN'T TAKE EFFECT"]
     : pw && act?.status === "executed" ? ["blocked", "ATTACK BLOCKED"]
-    : pw ? ["attack", "ATTACK IN PROGRESS"] : ["ok", "ALL QUIET"];
+    : pw ? ["attack", "ATTACK IN PROGRESS"]
+    : other ? ["attack", other.severity === "heads_up" ? "SOMETHING TO CHECK" : "ATTACK IN PROGRESS"]
+    : sim?.tone === "green" ? ["blocked", "ATTACK STOPPED"] : ["ok", "ALL QUIET"];
   const badge = sourceBadge(data.status);
   const rule = clinic.clinic.standing_rule_block_ip;
 
@@ -111,7 +119,9 @@ export default function Mission() {
         </section>
         <div className="mc-side">
           {/* A finished drill keeps its score up until the next real alert. */}
-          {runningDrill || (drill?.status === "finished" && !pw && !rw) ? <DrillPanel v={drill} /> : <ClockPanel pw={pw} act={act} rw={rw} devices={devices} clinic={clinic} />}
+          {runningDrill || (drill?.status === "finished" && !pw && !rw && !other) ? <DrillPanel v={drill} />
+            : <ClockPanel pw={pw} act={act} rw={rw} other={other} devices={devices} clinic={clinic} />}
+          {!runningDrill && sim ? <SimPanel r={sim} /> : null}
           <People data={data} pw={pw} act={act} drill={runningDrill} />
           <section className="mc-panel" style={{ flex: 1, minHeight: 0 }}>
             <span className="mc-label">Live feed</span>
@@ -176,7 +186,7 @@ function FloorPlan({ devices, attack }) {
   );
 }
 
-function ClockPanel({ pw, act, rw, devices, clinic }) {
+function ClockPanel({ pw, act, rw, other, devices, clinic }) {
   if (rw) {
     const due = certinDue(rw);
     return (
@@ -206,11 +216,33 @@ function ClockPanel({ pw, act, rw, devices, clinic }) {
       </section>
     );
   }
+  if (other) {
+    // Any other open incident: how long it has been open, in the card's own words.
+    return (
+      <section className="mc-panel">
+        <span className="mc-label">Open since spotted</span>
+        <span className="mc-big" style={{ color: "#FCA5A5" }}><Stopwatch from={other.first_seen} stop={null} /></span>
+        <span style={{ color: "#A9B6CC" }}>{other.card.headline}</span>
+      </section>
+    );
+  }
   return (
     <section className="mc-panel">
       <span className="mc-label">Watching</span>
       <span className="mc-big" style={{ color: "#4ADE80" }}>{devices.filter((d) => d.status === "ok").length} / {devices.length}</span>
       <span style={{ color: "#A9B6CC" }}>computers reporting · nothing needs anyone right now</span>
+    </section>
+  );
+}
+
+// v4: how the team did against the practice attack (derive.simResult).
+function SimPanel({ r }) {
+  const color = { green: "#4ADE80", red: "#FCA5A5", grey: "#A9B6CC" }[r.tone];
+  return (
+    <section className="mc-panel" role="status">
+      <span className="mc-label">Practice attack · {r.what}</span>
+      <span style={{ fontSize: 30, fontWeight: 700, color }}>{r.title}</span>
+      <span style={{ color: "#A9B6CC", fontSize: 17 }}>{r.line}</span>
     </section>
   );
 }
@@ -243,7 +275,6 @@ function DrillPanel({ v }) {
 
 function People({ data, pw, act, drill }) {
   const { clinic } = data;
-  const staffPw = pw && data.staffAlerts.find((a) => a.id === pw.id);
   const rows = clinic.staff.map((p) => {
     let st = "All quiet";
     let col = "#22C55E";
@@ -256,11 +287,13 @@ function People({ data, pw, act, drill }) {
       if (p.role === "owner") {
         st = act ? (act.status === "proposed" ? "Deciding on the block" : act.status === "executed" ? "Block approved" : `Block ${act.status}`) : "Has the alert";
         col = act?.status === "executed" ? "#38BDF8" : "#FCD34D";
-      } else if (staffPw) {
-        const steps = staffPw.card.steps;
-        const d = steps.filter((x) => x.done).length;
-        st = d === steps.length ? `All ${steps.length} steps done` : `${d} of ${steps.length} steps done`;
-        col = d === steps.length ? "#22C55E" : "#FCD34D";
+      } else {
+        // This person's own card for the attack; someone whose computer it isn't stays "All quiet".
+        const prog = stepProgress(data.staffAlerts, p.role, pw.id);
+        if (prog) {
+          st = prog.done === prog.total ? `All ${prog.total} steps done` : `${prog.done} of ${prog.total} steps done`;
+          col = prog.done === prog.total ? "#22C55E" : "#FCD34D";
+        }
       }
     }
     return (

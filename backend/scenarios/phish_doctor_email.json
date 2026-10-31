@@ -1,0 +1,108 @@
+{
+  "scenario_id": "phish_doctor_email",
+  "title": "A fake invoice email takes over the doctor's email",
+  "steps": [
+    {
+      "step_id": "s1",
+      "phase": "detect",
+      "game_time": "10:05 AM",
+      "situation": "An email arrives: \"URGENT: unpaid invoice. Click here to view and pay today.\" It looks like it is from a supplier, but the sender's address has a spelling mistake.",
+      "devices": {"DOCTOR-PC": "ok"},
+      "options": {
+        "owner": [
+          {"option_id": "a", "text": "Click the link to see what the invoice is", "actions": [], "correct": false,
+           "feedback": "That link is how they get in. Never open a link in a surprise \"urgent\" email."},
+          {"option_id": "b", "text": "Don't click. Leave the email where it is and ask IT to look at it", "actions": ["PRESERVE_EVIDENCE", "CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. Not clicking stops it here, and IT can warn everyone else."},
+          {"option_id": "c", "text": "Delete the email so nobody else clicks it", "actions": [], "correct": false,
+           "feedback": "Deleting it loses the evidence IT needs. Leave it and tell IT."}
+        ],
+        "staff": [
+          {"option_id": "a", "text": "Open it to check whether it is for us", "actions": [], "correct": false,
+           "feedback": "Opening the link is exactly what the sender wants. Don't click anything in it."},
+          {"option_id": "b", "text": "Don't click. Tell Dr. Rao the same email came to you", "actions": ["NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. If it came to you too, it is aimed at the whole clinic."},
+          {"option_id": "c", "text": "Forward it to Dr. Rao so he can decide", "actions": [], "correct": false,
+           "feedback": "Forwarding passes the dangerous link on. Just tell him it came in."}
+        ]
+      }
+    },
+    {
+      "step_id": "s2",
+      "phase": "contain",
+      "game_time": "10:20 AM",
+      "situation": "Too late: earlier this morning Dr. Rao clicked the link and typed his email password into a page that looked like his email login. Now his password doesn't work.",
+      "devices": {"DOCTOR-PC": "infected"},
+      "options": {
+        "owner": [
+          {"option_id": "a", "text": "Change the password on the same computer, right now", "actions": [], "correct": false,
+           "feedback": "That computer may be watched now. Change the password from a different phone or computer."},
+          {"option_id": "b", "text": "Change the email password from a different phone or computer, then call IT", "actions": ["CHANGE_PASSWORD", "CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. A new password, typed somewhere safe, locks them out."},
+          {"option_id": "c", "text": "Wait and see if anything strange happens", "actions": [], "correct": false,
+           "feedback": "Whoever has the password can read and send email as you right now. Act now."}
+        ],
+        "staff": [
+          {"option_id": "a", "text": "Stop using the doctor's computer and call the saved IT contact", "actions": ["DONT_USE_DEVICE", "CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. Keep off that computer and get IT on the phone."},
+          {"option_id": "b", "text": "Try to log in to the doctor's email for him", "actions": [], "correct": false,
+           "feedback": "Never type the doctor's password anywhere. Leave the account to him and IT."}
+        ]
+      }
+    },
+    {
+      "step_id": "s3",
+      "phase": "recover",
+      "game_time": "11:00 AM",
+      "situation": "Patients start calling. They got a message \"from the clinic\" asking them to pay a pending lab fee online.",
+      "devices": {"DOCTOR-PC": "infected"},
+      "options": {
+        "front_desk": [
+          {"option_id": "a", "text": "Tell callers the message is fake, they must not pay, and write down who called", "actions": ["PRESERVE_EVIDENCE", "NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. A clear \"it's fake, don't pay\" protects patients, and your list helps the report."},
+          {"option_id": "b", "text": "Give them the clinic's own bank details so they can pay properly", "actions": [], "correct": false,
+           "feedback": "There is no lab fee. Tell them not to pay anything."},
+          {"option_id": "c", "text": "Say you don't know anything about it", "actions": [], "correct": false,
+           "feedback": "Patients trust the clinic. Tell them clearly it's fake and not to pay."}
+        ],
+        "billing": [
+          {"option_id": "a", "text": "Refund anyone who says they paid, from the clinic's account", "actions": [], "correct": false,
+           "feedback": "The money went to the scammer, not the clinic. Note their names; Dr. Rao decides about refunds."},
+          {"option_id": "b", "text": "Write down every patient who says they paid, and tell them to call 1930 now", "actions": ["PRESERVE_EVIDENCE", "REPORT_1930"], "correct": true,
+           "feedback": "Right. 1930 is the national cyber-fraud helpline. The sooner they call, the better the chance of getting the money back."},
+          {"option_id": "c", "text": "Ignore it: billing didn't send that message", "actions": [], "correct": false,
+           "feedback": "Patients are losing money in the clinic's name. Help them act fast."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Ask IT to check the email account for anything the attacker changed, and to turn on login codes sent to your phone", "actions": ["CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. Attackers often leave a setting that copies your email to them. IT can find it and remove it."},
+          {"option_id": "b", "text": "Open a new email address and keep using the old one too", "actions": [], "correct": false,
+           "feedback": "The old account stays in the attacker's hands until IT has checked it."}
+        ]
+      }
+    },
+    {
+      "step_id": "s4",
+      "phase": "report",
+      "game_time": "12:30 PM",
+      "situation": "Patients' names and phone numbers in the doctor's email were seen by the attacker.",
+      "devices": {"DOCTOR-PC": "isolated"},
+      "options": {
+        "owner": [
+          {"option_id": "a", "text": "No need to report: the clinic itself lost no money", "actions": [], "correct": false,
+           "feedback": "Patient details were exposed. That is a personal-data breach under the DPDP Act, even with no money lost."},
+          {"option_id": "b", "text": "Report to CERT-In within 6 hours and start the patient-data breach record", "actions": ["REPORT_CERTIN", "START_DPDP_NOTE"], "correct": true,
+           "feedback": "Right. Report now; the breach record covers the patients whose details were seen."},
+          {"option_id": "c", "text": "Post an apology on social media and leave it there", "actions": [], "correct": false,
+           "feedback": "Telling patients is good, but the formal reports come first: CERT-In within 6 hours."}
+        ],
+        "staff": [
+          {"option_id": "a", "text": "Write down what you saw and when, and give it to Dr. Rao", "actions": ["PRESERVE_EVIDENCE"], "correct": true,
+           "feedback": "Right. Your notes become the incident timeline."},
+          {"option_id": "b", "text": "Clear the call list so it doesn't worry anyone", "actions": [], "correct": false,
+           "feedback": "That list is evidence. Keep it and write down what you saw."}
+        ]
+      }
+    }
+  ]
+}

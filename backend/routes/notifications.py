@@ -44,14 +44,17 @@ def get_notifications(request: Request, role: Role | None = None, staff_id: int 
 
 
 def _quick_actions(ctx, rows) -> dict[int, dict]:
-    """v3: the Block button for each ``attack`` note that points at a live BLOCK_IP request, by note id.
+    """v3: the Block button for each note that asks someone to decide on a live BLOCK_IP request, by note id.
 
+    That is every ``attack`` note, and the escalation note to the backup approver (the only note
+    addressed to one person, ``to_staff_id``): it asks them to decide, so it needs the button too.
     Needs ACTIONS on (the actions routes are off without it). Only proposed, executed and expired
     requests are offered; a refused, declined or withdrawn one, or one with no source IP
-    (ransomware), gets no button. Plain ``info`` notes never do, even where they point at an action
-    (the standing-rule and escalation notes).
+    (ransomware), gets no button. Other ``info`` notes never do, even where they point at an action
+    (the standing-rule note to the owner).
     """
-    wanted = {r["id"]: r["action_row_id"] for r in rows if r["kind"] == "attack" and r["action_row_id"]}
+    wanted = {r["id"]: r["action_row_id"] for r in rows
+              if r["action_row_id"] and (r["kind"] == "attack" or r["to_staff_id"] is not None)}
     if not ctx.config.actions or not wanted:
         return {}
     ids = sorted(set(wanted.values()))

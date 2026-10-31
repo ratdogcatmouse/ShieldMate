@@ -17,7 +17,8 @@ def test_fill_leaves_unknown_braces_alone():
 
 def test_committed_lessons_load():
     book = LessonBook(RAW)
-    assert book.rule_ids == ["60204", "100201", "61320"]
+    assert book.rule_ids == ["60204", "100201", "61320",
+                             "100310", "100311", "100320", "100321", "100322", "100330", "100331"]
 
 
 def test_role_wording_differs_and_missing_role_is_omitted():
@@ -56,6 +57,8 @@ def test_empty_translations_give_english_card():
     lambda d: d[0]["roles"]["owner"].update(headline="{surprise}"),
     lambda d: d.append(copy.deepcopy(d[0])),
     lambda d: d[0].update(severity="loud"),
+    # Every lesson needs owner wording: the owner's screens and the IT panel show every alert.
+    lambda d: d[0]["roles"].pop("owner"),
 ])
 def test_invalid_lessons_are_rejected(mutate):
     data = copy.deepcopy(RAW)

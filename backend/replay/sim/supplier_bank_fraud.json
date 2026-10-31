@@ -1,0 +1,32 @@
+{
+  "id": "supplier_bank_fraud",
+  "title": "A fake supplier asks for payment to a new bank account",
+  "_note": "Demo only: Wazuh can't see bank payments, so this script has no live-mode equivalent. It fires on FILE-SERVER, the billing computer in the seed, so its cards reach Ravi and never the front desk.",
+  "attacker": {"account": "billing"},
+  "contain_on": ["VERIFY_BY_CALLBACK"],
+  "sim_time_ms_multiplier": 1,
+  "phases": [
+    {
+      "at_ms": 0,
+      "label": "a lookalike supplier email asks for payment to new bank details",
+      "alert": {
+        "rule": {"id": "100330", "level": 9, "description": "Payment-detail change request from a lookalike domain"},
+        "agent": {"id": "001", "name": "FILE-SERVER", "ip": "192.168.1.10"},
+        "mail": {"from": "accounts@shreelab-supplies.in", "subject": "Change of bank details - please pay today",
+                 "verdict": "suspicious", "score": 74}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1}
+    },
+    {
+      "at_ms": 120000,
+      "label": "the payment goes to the new account",
+      "alert": {
+        "rule": {"id": "100331", "level": 12, "description": "Payment to a newly added beneficiary"},
+        "agent": {"id": "001", "name": "FILE-SERVER", "ip": "192.168.1.10"},
+        "mail": {"from": "accounts@shreelab-supplies.in", "subject": "Change of bank details - please pay today"}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1},
+      "cancel_if": "CONTAINED"
+    }
+  ]
+}

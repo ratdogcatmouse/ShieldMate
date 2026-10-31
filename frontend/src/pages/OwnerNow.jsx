@@ -5,12 +5,12 @@ import { Link } from "react-router-dom";
 import { Check, Clock, Phone, Shield } from "../components/Icons.jsx";
 import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { OwnerShell } from "../components/Shells.jsx";
-import { Countdown, FeedTag, Pill, StatusPill, TimeLeft, useAction, useToast } from "../components/ui.jsx";
+import { Countdown, FeedTag, Pill, SimResult, StatusPill, TimeLeft, useAction, useToast } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { alertFx } from "../lib/fx.js";
 import {
-  activity, certinDue, decideBy, deviceStates, drillFor, fixNote, ownerOf, passwordAlert, ransomwareAlert,
-  restoreSince, sourceBadge, staffName,
+  activity, certinDue, decideBy, deviceStates, drillFor, fixNote, otherAlerts, ownerOf, passwordAlert, ransomwareAlert,
+  restoreSince, simResult, sourceBadge, staffName,
 } from "../lib/derive.js";
 import { deviceName } from "../lib/content.js";
 import { seenOnce } from "../lib/session.js";
@@ -72,7 +72,8 @@ export default function OwnerNow() {
       onDecline={() => doAct("decline", () => api.decline(act.id, owner.id))} />);
     urgent = true;
   } else if (act?.status === "executed") {
-    main.push(<BlockedCard key="blocked" act={act} busy={busy} onUndo={() => doAct("undo", () => api.undo(act.id, owner.id))} />);
+    main.push(<BlockedCard key="blocked" act={act} clinic={clinic} ownerId={owner.id} busy={busy}
+      onUndo={() => doAct("undo", () => api.undo(act.id, owner.id))} />);
   } else if (act && ["declined", "failed", "refused"].includes(act.status)) {
     first.push(<NotBlockedCard key="notblocked" act={act} clinic={clinic} />);
     urgent = true;
@@ -92,7 +93,17 @@ export default function OwnerNow() {
       })} />);
     urgent = true;
   }
-  for (const a of [rw, pw && pw.status !== "mine" ? pw : null].filter(Boolean)) {
+  // Every other incident (phishing, the remote-control and supplier-fraud attacks, ...): the
+  // card's own headline and a tickable checklist, so a tick here counts like one on a phone.
+  const others = otherAlerts(alerts);
+  for (const a of others) {
+    main.push(<IncidentHead key={`head-${a.id}`} a={a} />);
+    main.push(<Checklist key={`list-${a.id}`} a={a} restore={restore} busy={busy}
+      onTick={(s) => doAct(`tick-${a.id}-${s.action}`, () => api.setStep(a.id, s.action, owner.id, !s.done))}
+      onRestore={() => {}} />);
+    if (a.severity === "needs_you_now" && a.status === "new") urgent = true;
+  }
+  for (const a of [rw, pw && pw.status !== "mine" ? pw : null, ...others].filter(Boolean)) {
     main.push(<ItCard key={`it-${a.id}`} a={a} clinic={clinic} busy={busy} sendBack={sendBack} setSendBack={setSendBack}
       onConfirm={() => doAct(`confirm-${a.id}`, () => api.closeIncident(a.id, owner.id, true), "Incident closed")}
       onSendBack={() => doAct(`sendback-${a.id}`, async () => {
@@ -113,6 +124,7 @@ export default function OwnerNow() {
       </div>
       <div className="cols">
         <div className="col-main">
+          <SimResult result={simResult(data.status.simulation, clinic)} />
           {first}
           {main}
           {!first.length && !main.length ? (
@@ -210,8 +222,10 @@ function ApprovalCard({ act, alert, clinic, fresh, busy, onApprove, onDecline })
   );
 }
 
-function BlockedCard({ act, busy, onUndo }) {
-  const how = act.decided_via === "standing_rule" ? "by your standing rule" : "by you";
+function BlockedCard({ act, clinic, ownerId, busy, onUndo }) {
+  // Staff can approve too (the Block button on their phone, or Ravi as the backup approver).
+  const how = act.decided_via === "standing_rule" ? "by your standing rule"
+    : act.decided_by === ownerId ? "by you" : `by ${staffName(clinic, act.decided_by)}`;
   return (
     <article className="card" role="status">
       <Pill tone="green">Blocked · approved {how} at {fmtTime(act.decided_at)}</Pill>
@@ -259,7 +273,10 @@ function IncidentHead({ a }) {
   return (
     <Rephrasable id={`alert-${a.id}`} kind="Alert" title={a.card.headline} text={`${a.card.what_we_know} ${a.card.why}`} alertId={a.id}>
       <article className="card">
-        <div className="row"><Pill tone="red">Needs you now</Pill><span className="small muted">Started {fmtTime(a.first_seen)} · {ago(a.first_seen)}</span></div>
+        <div className="row">
+          {a.severity === "heads_up" ? <Pill tone="amber">Heads up</Pill> : <Pill tone="red">Needs you now</Pill>}
+          <span className="small muted">Started {fmtTime(a.first_seen)} · {ago(a.first_seen)}</span>
+        </div>
         <h1>{a.card.headline}</h1>
         <p className="ink-2">{a.card.what_we_know}</p>
       </article>

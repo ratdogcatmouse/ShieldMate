@@ -37,6 +37,15 @@ describe("explainCard", () => {
     });
   });
 
+  it("sends the drill code when the card is on a drill screen, and only then", async () => {
+    api.interpret.mockResolvedValue({ answer: "ok", source: "ai" });
+    await explainCard({ title: "Moment 1", text: "A call comes in." }, { ...who, drillCode: "4821" });
+    expect(api.interpret.mock.calls[0][0]).toMatchObject({ drill_code: "4821", alert_id: null });
+    api.interpret.mockClear();
+    await explainCard(card, who);
+    expect(api.interpret.mock.calls[0][0]).not.toHaveProperty("drill_code");
+  });
+
   it("sends alert_id null for a card with no alert", async () => {
     api.interpret.mockResolvedValue({ answer: "ok", source: "ai" });
     await explainCard({ title: "t", text: "x" }, who);

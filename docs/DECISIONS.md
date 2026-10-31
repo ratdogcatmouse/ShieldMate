@@ -52,7 +52,7 @@ These are small calls made while writing the frozen files. Reverse any of them b
 - **`devices.when_down` is a column** in `schema.sql`. The spec's seed has it but its table didn't, and the impact meter needs it.
 - **Replay counts use `failures`**, not `count`, in `replay/alerts.json` (kept unchanged from the design). The normaliser must map `shieldmate.failures` to `counts.count`.
 - **The owner's 60204 card has one step** ("Review the block request, or call your IT contact") instead of the spec's empty `steps: []`, so the card isn't blank when `ACTIONS` is off.
-- **Billing gets the 60204 card** (same wording as front desk), so Ravi's phone shows it too.
+- ~~**Billing gets the 60204 card**~~ (replaced 2026-11-01, see "Alert routing" below): Ravi no longer sees reception-PC alerts. The billing wording stays for when 60204 fires on FILE-SERVER, Ravi's computer.
 - **`PUT /clinic/standing-rule` returns the `clinic` object** (`ClinicOut`), reading "the clinic object from GET /clinic" literally.
 - **`RestoreCheck.failed_files` is optional**: the spec says it appears on the integrity check only, which conflicts with "every field is always present".
 - **Draft wording to review:** owner and billing text for rule 60204 and all text for rule 100201 in `lessons.json`. The design only specified the front-desk card.
@@ -62,7 +62,37 @@ These are small calls made while writing the frozen files. Reverse any of them b
   - **`EVENT_LOG` defaults on**, unlike the other flags, because it is the app's record rather than a feature. `EVENT_LOG=0` turns it off, and `/events` then answers `not_enabled`.
   - **Payloads hold ids, enums, counts and durations only**, from a per-type key list in `eventlog/catalogue.py`. Never logged: log text (`log_fields`/`raw`), notification text, reword output, staff names, PINs, tokens, request bodies or Wazuh responses. Refusals are logged as a code (`never_block`, `invalid_ipv4`, …), because the reason text quotes the untrusted IP.
 
+## Contract v4: three new drills (2026-11-01)
+
+Three real-world drills for non-technical staff, each as a learning drill (`backend/scenarios/`) and a test-mode attack script (`backend/replay/sim/`): `phish_doctor_email` (the doctor's email taken over by a fake invoice email), `tech_support_call` (a fake support call installs a remote-control program) and `supplier_bank_fraud` (a lookalike supplier email asks for payment to new bank details). Agreed by Ishaan and Cetas.
+
+- **Four new action IDs** (`contract.ActionId`): `VERIFY_BY_CALLBACK`, `CHANGE_PASSWORD`, `STOP_PAYMENT`, `REPORT_1930`. They are things a person does; nothing ever executes them. `proposed_action` still accepts only `BLOCK_IP`.
+- **`GET /status` gains `simulation`** (`SimSummary`, null when `SIMULATE` is off or nothing has run): the latest run's outcome, `stop_actions` and `contained_by` (action, staff id, time), so the owner screen, staff phones and mission control show how the team did. Fixture: `fixtures/status_simulation.json`.
+- **Per-role drill options:** a step may give `front_desk` or `billing` its own list, which replaces `staff` for that role only (`drills.models.options_for`, shared by the engine and scoring). Existing drill files are unchanged.
+- **`contain_on` in attack scripts:** the action IDs that stop the script. For those scripts, ticking that step on a card the run created (or a correct drill answer carrying it) contains the attack, and the first response is latched. The three original scripts have no `contain_on` and keep the original check exactly, so rehearsed demos don't change.
+- **Cards:** seven new rules (100310–100311, 100320–100322, 100330–100331) in `lessons.json`, all `proposed_action: null`, each linked to its drill. An optional `notify_roles` names who the alert concerns (see "Alert routing" below; supplier fraud now fires on FILE-SERVER). The phishing card 61320 now links to `phish_doctor_email` and shows the sender.
+- **Sender log field:** `normalise` copies an email alert's `mail.from` as `log_fields.sender`. It is untrusted text, like the username: shown as plain text, never sent to the AI.
+- **Impact:** seed rules may add `extra` (direct loss the device's data can't express, such as money sent) and `at_risk` (seed wording for the reason line), and `account` may name a role. Existing scores are unchanged.
+- **Owner screen:** incidents other than password guessing and ransomware (phishing included, which used to be missing) now show as a headline, a tickable checklist and the IT card.
+- `supplier_bank_fraud` is **demo only**: Wazuh can't see bank payments.
+
+## Alert routing: who gets which alert (2026-11-01, asked for by Ishaan)
+
+One rule, `alerts/notify.audience`, now decides both who sees an alert's card and who gets its attack notification. Before, cards went to every role with wording in `lessons.json`, whatever computer the alert was on, while notifications followed the computer, so Ravi got Meena's reception-PC cards without a notification.
+
+- **The computer decides.** An alert concerns the computer's account (seed `impact.device_accounts`: RECEPTION-PC is front desk's, FILE-SERVER is billing's, DOCTOR-PC is the owner's) plus the owner. A lesson's `notify_roles` can widen that on a shared computer (the owner's, or one the seed doesn't know), but never onto another staff member's computer: **Ravi never gets a RECEPTION-PC alert, and Meena never gets a FILE-SERVER alert.**
+- **The owner and the IT contact get every alert.** Every lesson must have owner wording (`LessonBook` refuses one without it), and the IT panel lists the owner's cards; it now chimes for every new or reopened alert, not only when staff call.
+- **Acting follows seeing.** Ticking a step, Done, "That was me", reopen and reword all answer `not_found` (404) for an alert that isn't the person's.
+- **Content changes:** 100311 (the doctor's mailbox scamming patients) names all three roles, so front desk and billing are now notified as well as shown the card. 100321 lost its billing card (it is a reception-PC alert); its "hold bank payments" step moved to the owner's card. 100331's owner card shows the sender. 61320's staff wording no longer mentions the doctor's account, since staff only see it for their own computer.
+- **Supplier fraud fires on FILE-SERVER** (`replay/sim/supplier_bank_fraud.json`), the billing computer, so its cards reach Ravi with no exception to the rule. Its impact is higher there (100330 scores 16, high; 100331 54, critical).
+- **The backup approver's escalation note gets the Block button** (`quick_action`; schema unchanged, `contract.py` comment updated) and names the computer, because Ravi can be asked to decide on a reception-PC block whose card he can't see. Owner PIN being off, his tap approves as any staff tap does.
+- The owner's "Blocked · approved by …" line names whoever approved, not always "you". Mission control's people panel reads each person's own cards.
+- Tests: `tests/api/test_alert_routing.py` (every rule on every computer), `tests/unit/test_notify_roles.py`, `frontend/e2e/routing.spec.js`.
+
 ## Still needs a human
+
+- Contract v4 sign-off from Abhiram and Kishaann (Ishaan and Cetas agreed).
+- Read-aloud review of the three new drills and seven new cards by a non-technical person, and the 1930 / cybercrime.gov.in / CERT-In / DPDP lines checked against the official guidance.
 
 - Seed values for live mode: `never_block` IPs and `wazuh_agent_id` must be replaced with the lab's real addresses and IDs (Kishaann). The attacker's IP must not be on `never_block`.
 - Kannada and Hindi text (`translations` is empty, so cards fall back to English).
@@ -78,7 +108,8 @@ These are small calls made while writing the frozen files. Reverse any of them b
 | Add Undo | make the unblock script work on the VM, then flip `undo_supported`; the route and error code already exist |
 | Block length, wait time, backup approver, never-block list | `backend/seed/clinic.json` |
 | Card wording, proposed action, add a rule | `backend/lessons/lessons.json` |
-| Add a drill | a new file in `backend/scenarios/` in the same format |
+| Add a drill | a new file in `backend/scenarios/` in the same format (a step may give `front_desk`/`billing` their own options), plus its entry in `SCENARIOS` and `STEP_SHORT` in `frontend/src/lib/content.js` |
+| Add a test-mode attack | a script in `backend/replay/sim/` (with `contain_on`), a card in `lessons.json` for every rule it fires, a rule entry in both seed files' `impact.rules`, and a row in `SCRIPTS` in `Backstage.jsx` |
 | Any route or field | `backend/contract.py` **and** its fixture, with all four owners agreeing |
 | Log a new kind of event | add it to `backend/eventlog/catalogue.py` and call `db.emit(...)` where it happens; a new `ui.*` type also goes in `contract.ClientEventType` |
 | Turn the event log off, move it, or include the 2 s polls | `EVENT_LOG`, `EVENTS_DB_PATH`, `EVENT_LOG_READS` in `backend/.env` |

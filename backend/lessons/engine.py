@@ -61,6 +61,15 @@ class LessonBook:
             raise LessonError(f"rule {rule}: bad severity {lesson['severity']}")
         if lesson.get("proposed_action") not in (None, "BLOCK_IP"):
             raise LessonError(f"rule {rule}: bad proposed_action")
+        # v4: optional, who the alert concerns (card and attack notification) when it isn't the
+        # device's own account + owner, e.g. the doctor's mailbox scamming patients concerns the whole
+        # team. alerts/notify.audience still keeps a staff member's computer to that staff member.
+        notify = lesson.get("notify_roles")
+        if notify is not None and (not isinstance(notify, list) or not notify or not set(notify) <= ROLES):
+            raise LessonError(f"rule {rule}: notify_roles must be a non-empty list of roles")
+        # The owner's screens and the IT contact's panel show every alert in the owner's wording.
+        if "owner" not in lesson["roles"]:
+            raise LessonError(f"rule {rule}: every lesson needs owner wording")
         for role, body in lesson["roles"].items():
             if role not in ROLES:
                 raise LessonError(f"rule {rule}: unknown role {role}")

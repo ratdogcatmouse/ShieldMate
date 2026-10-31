@@ -42,7 +42,14 @@
       "60204":  { "damage": "isolated", "account": "device" },
       "60106":  { "damage": "infected", "account": "device" },
       "61320":  { "damage": "infected", "account": "device" },
-      "100201": { "damage": "encrypted", "account": "none" }
+      "100201": { "damage": "encrypted", "account": "none" },
+      "100310": { "damage": "infected", "account": "device" },
+      "100311": { "damage": "encrypted", "account": "device", "extra": 4, "at_risk": "patient contact details and the clinic's name" },
+      "100320": { "damage": "infected", "account": "device", "extra": 4 },
+      "100321": { "damage": "encrypted", "account": "device", "extra": 8, "at_risk": "everything the reception computer can open" },
+      "100322": { "damage": "encrypted", "account": "device", "extra": 12, "at_risk": "patient files" },
+      "100330": { "damage": "isolated", "account": "billing", "at_risk": "clinic money" },
+      "100331": { "damage": "encrypted", "account": "billing", "extra": 12, "at_risk": "clinic money" }
     }
   }
 }

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { activity, certinDue, deviceStates, drillFor, passwordAlert, ransomwareAlert, restoreSince } from "./derive.js";
+import {
+  activity, certinDue, deviceStates, drillFor, itAlertKeys, otherAlerts, passwordAlert, ransomwareAlert, restoreSince, simResult,
+  stepProgress,
+} from "./derive.js";
 import { fmtTime, left, mmss, stopwatch } from "./time.js";
 
 const clinic = {
@@ -146,5 +149,93 @@ describe("time formatting", () => {
     expect(mmss(-3)).toBe("0:00");
     expect(stopwatch(65)).toBe("01:05");
     expect(left(Date.parse("2026-11-01T10:00:00Z"), Date.parse("2026-11-01T04:22:00Z"))).toBe("5 h 38 min left");
+  });
+});
+
+// v4: the attack simulation's outcome, as the team's screens word it.
+describe("simResult", () => {
+  const sim = (over) => ({
+    script_id: "supplier_bank_fraud", title: "A fake supplier asks for payment to a new bank account",
+    status: "contained", started_at: "2026-11-01T04:00:00Z", finished_at: "2026-11-01T04:02:00Z",
+    elapsed_ms: 120000, phases_fired: 1, phases_cancelled: 1, stop_actions: ["VERIFY_BY_CALLBACK"],
+    contained_by: { action: "VERIFY_BY_CALLBACK", staff_id: 1, at: "2026-11-01T04:01:05Z" }, ...over,
+  });
+
+  it("is null before anything ran and while it runs", () => {
+    expect(simResult(null, clinic)).toBeNull();
+    expect(simResult(sim({ status: "running", contained_by: null }), clinic)).toBeNull();
+  });
+
+  it("names who stopped it, with what, and how fast", () => {
+    const r = simResult(sim(), clinic);
+    expect(r).toMatchObject({ tone: "green", title: "Attack stopped in 1:05" });
+    expect(r.line).toBe("Meena: check by calling back on a number you already have. The next stage never happened.");
+  });
+
+  it("credits the standing rule when nobody tapped", () => {
+    const r = simResult(sim({ phases_cancelled: 2, contained_by: { action: "BLOCK_IP", staff_id: null, at: "2026-11-01T04:05:00Z" } }), clinic);
+    expect(r.line).toBe("The standing rule: block the attacking address. 2 later stages never happened.");
+  });
+
+  it("says what would have stopped a spread attack", () => {
+    const r = simResult(sim({ status: "spread", contained_by: null, stop_actions: ["BLOCK_IP", "ISOLATE_NETWORK"] }), clinic);
+    expect(r.tone).toBe("red");
+    expect(r.line).toBe("What would have stopped it: block the attacking address, or unplug the network, leave the computer on.");
+  });
+
+  it("calls a Backstage stop an early end", () => {
+    expect(simResult(sim({ status: "stopped", contained_by: null }), clinic)).toMatchObject({ tone: "grey", title: "Practice attack ended early" });
+  });
+});
+
+describe("otherAlerts", () => {
+  it("keeps open incidents that have no screen of their own", () => {
+    const list = [
+      alert({ id: 1 }),
+      alert({ id: 2, lesson_id: "ransomware" }),
+      alert({ id: 3, lesson_id: "supplier_bank_change" }),
+      alert({ id: 4, lesson_id: "phishing_flagged", it: { ...IT_NONE, closed_at: "2026-11-01T05:00:00Z" } }),
+    ];
+    expect(otherAlerts(list).map((a) => a.id)).toEqual([3]);
+  });
+});
+
+describe("stepProgress", () => {
+  const steps = [{ action: "DONT_USE_DEVICE", done: true }, { action: "CALL_SAVED_IT", done: false }];
+  const byRole = { front_desk: [alert({ id: 7, card: { headline: "x", steps } })], billing: [] };
+
+  it("reads a person's progress from their own role's card", () => {
+    expect(stepProgress(byRole, "front_desk", 7)).toEqual({ done: 1, total: 2 });
+  });
+
+  it("is null for someone the alert never reached (another person's computer)", () => {
+    expect(stepProgress(byRole, "billing", 7)).toBeNull();
+    expect(stepProgress(byRole, "front_desk", 8)).toBeNull();
+    expect(stepProgress({}, "billing", 7)).toBeNull();
+  });
+});
+
+describe("itAlertKeys", () => {
+  it("gives every open alert a key, so the IT panel chimes before anyone calls", () => {
+    expect(itAlertKeys([alert({ id: 1 }), alert({ id: 2, first_seen: "2026-11-01T05:00:00Z" })])).toEqual([
+      "it-new-1-2026-11-01T04:00:00Z", "it-new-2-2026-11-01T05:00:00Z",
+    ]);
+  });
+
+  it("adds a key for an incoming call, and a fresh one when the alert reopens", () => {
+    const called = alert({ it: { ...IT_NONE, status: "called", called_at: "2026-11-01T04:01:00Z" } });
+    expect(itAlertKeys([called])).toEqual(["it-new-1-2026-11-01T04:00:00Z", "it-call-1-2026-11-01T04:01:00Z"]);
+    const reopened = alert({ reopened: true, mine_at: "2026-11-01T04:02:00Z" });
+    expect(itAlertKeys([reopened])).toEqual(["it-new-1-2026-11-01T04:00:00Z-r-2026-11-01T04:02:00Z"]);
+  });
+
+  it("never repeats a key after a Reset restarts the ids, because the time differs", () => {
+    const before = itAlertKeys([alert({ id: 1 })]);
+    const after = itAlertKeys([alert({ id: 1, first_seen: "2026-11-01T06:00:00Z" })]);
+    expect(after).not.toEqual(before);
+  });
+
+  it("is empty when nothing is open", () => {
+    expect(itAlertKeys([])).toEqual([]);
   });
 });

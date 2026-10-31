@@ -37,6 +37,11 @@ export const ACTION_LABEL = {
   REPORT_CERTIN: "Report to CERT-In within 6 hours",
   START_DPDP_NOTE: "Start the patient-data breach record",
   BLOCK_IP: "Block the attacking address",
+  // v4: the three new drills' habits.
+  VERIFY_BY_CALLBACK: "Check by calling back on a number you already have",
+  CHANGE_PASSWORD: "Change the password from a different, safe device",
+  STOP_PAYMENT: "Call the bank right away to stop the payment",
+  REPORT_1930: "Report it on 1930 or cybercrime.gov.in",
 };
 
 // The staff card's buttons and headings. Kannada and Hindi are DRAFTS: a fluent speaker must
@@ -56,6 +61,7 @@ export const LANGS = [
 export const LOG_FIELD_LABEL = {
   username_tried: "Username tried, exactly as recorded",
   source_ip: "Attacking address",
+  sender: "Sent from (check every letter)",
 };
 
 // --- drills ---
@@ -66,6 +72,9 @@ export const PHASE_LABEL = { detect: "Spot it", contain: "Contain it", recover: 
 export const STEP_SHORT = {
   ransomware_clinic: { s1: "Files locking", s2: "Fake IT number", s3: "The backup", s4: "Patient records" },
   password_guessing: { s1: "Wrong passwords", s2: "Same address" },
+  phish_doctor_email: { s1: "Fake invoice", s2: "Password typed", s3: "Patients calling", s4: "Patient details" },
+  tech_support_call: { s1: "The phone call", s2: "Mouse moving", s3: "OTP request", s4: "Reporting" },
+  supplier_bank_fraud: { s1: "New bank details", s2: "Pushy caller", s3: "Money sent", s4: "Reporting" },
 };
 export const stepShort = (scenarioId, step) =>
   STEP_SHORT[scenarioId]?.[step.step_id] ?? PHASE_LABEL[step.phase];
@@ -74,6 +83,9 @@ export const stepShort = (scenarioId, step) =>
 export const SCENARIOS = [
   { id: "ransomware_clinic", title: "Ransomware at the clinic", minutes: 6 },
   { id: "password_guessing", title: "Someone is guessing a password", minutes: 3 },
+  { id: "phish_doctor_email", title: "A fake invoice email takes over the doctor's email", minutes: 6 },
+  { id: "tech_support_call", title: "A fake \"tech support\" phone call", minutes: 6 },
+  { id: "supplier_bank_fraud", title: "A fake supplier asks for payment to a new bank account", minutes: 5 },
 ];
 
 // SAMPLE DATA for the retest reveal: last month's ransomware drill. Always labelled
@@ -105,6 +117,38 @@ export const IT_PLAYBOOK = {
     "Restore from the last backup that passed ShieldMate's restore check, onto a cleaned machine",
     "Change all clinic passwords and remove the always-plugged-in backup drive",
   ],
+  phishing_flagged: [
+    "Block the sender's domain in the mail system and remove the email from every inbox",
+    "Ask who clicked the link; anyone who typed a password changes it from another device",
+  ],
+  email_account_taken: [
+    "Reset the mailbox password and sign out every session",
+    "Remove any forwarding rules or new devices the attacker added; turn on two-step login",
+  ],
+  email_sending_to_patients: [
+    "Stop outgoing mail from the account and list who was sent the fake request",
+    "Help the owner word a warning to patients from a known-good channel",
+  ],
+  remote_control_installed: [
+    "Uninstall the remote-access tool and check for any other one installed with it",
+    "Block remote-access tools on clinic PCs unless IT installed them",
+  ],
+  remote_control_active: [
+    "Keep the reception computer off the network until the tool is removed",
+    "Change every password typed on it, from another device",
+  ],
+  files_copied_out: [
+    "Find out which folders were sent out, for the CERT-In and DPDP reports",
+    "Keep the reception computer off the network; don't switch it off",
+  ],
+  supplier_bank_change: [
+    "Block the lookalike domain in the mail system",
+    "Help the owner set a rule: bank-detail changes need a call on a known number",
+  ],
+  payment_to_new_account: [
+    "Help Ravi with the bank's fraud process and the cybercrime.gov.in complaint",
+    "Check the mailbox for how the fake email got in",
+  ],
 };
 
 // Wazuh rule descriptions for the IT panel's technical details.
@@ -112,6 +156,13 @@ export const RULE_DESC = {
   "60204": "multiple failed Windows logons",
   "100201": "mass file changes (ransomware pattern)",
   "61320": "phishing email flagged",
+  "100310": "mailbox sign-in from an unfamiliar location",
+  "100311": "mailbox sending to many outside addresses",
+  "100320": "remote-access tool installed",
+  "100321": "inbound remote-access session",
+  "100322": "bulk file transfer to an outside address",
+  "100330": "payment-detail change from a lookalike domain",
+  "100331": "payment to a newly added account",
 };
 
 export const TIP_OF_THE_WEEK =

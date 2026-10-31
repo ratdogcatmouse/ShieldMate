@@ -36,7 +36,9 @@ def post_done(alert_id: int, body: DoneRequest, request: Request, lang: Lang = "
 def post_reword(alert_id: int, body: RewordRequest, request: Request):
     ctx = request.app.state.ctx
     row = ctx.db.one("SELECT * FROM alerts WHERE id = ? AND status != 'filtered'", (alert_id,))
-    c = pipeline.card(ctx.lessons, row, body.role, body.lang) if row else None
+    # Only an alert this role can see on its own list can be reworded for it.
+    c = pipeline.card_for(ctx.lessons, row, body.role, body.lang,
+                          impact.book_for(ctx.config.seed_path)) if row else None
     if c is None:
         raise ApiError("not_found", "No such alert.", 404)
     lesson = ctx.lessons.get(row["rule_id"])

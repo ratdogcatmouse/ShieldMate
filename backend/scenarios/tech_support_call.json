@@ -1,0 +1,106 @@
+{
+  "scenario_id": "tech_support_call",
+  "title": "A fake \"tech support\" phone call",
+  "steps": [
+    {
+      "step_id": "s1",
+      "phase": "detect",
+      "game_time": "3:10 PM",
+      "situation": "A caller says he is from the company that makes the clinic's billing software: \"Your licence ends today. Please install AnyDesk so I can renew it for you.\" He is polite and knows the clinic's name.",
+      "devices": {"RECEPTION-PC": "ok"},
+      "options": {
+        "front_desk": [
+          {"option_id": "a", "text": "Install it: he knows our clinic, so he must be genuine", "actions": [], "correct": false,
+           "feedback": "Anyone can find a clinic's name online. Real companies don't ask you to install things on a surprise call."},
+          {"option_id": "b", "text": "Say you'll call back, hang up, and call the number saved in ShieldMate", "actions": ["VERIFY_BY_CALLBACK", "CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. Call back on a number you already have, never one the caller gives you."},
+          {"option_id": "c", "text": "Ask him for his number so you can call him back", "actions": [], "correct": false,
+           "feedback": "A number from the caller goes straight back to the scammer. Use the one saved in ShieldMate."}
+        ],
+        "billing": [
+          {"option_id": "a", "text": "Tell Meena to go ahead: keeping the billing software running matters", "actions": [], "correct": false,
+           "feedback": "The software can wait two minutes. Check first."},
+          {"option_id": "b", "text": "Tell Meena to hang up and check with the saved IT contact first", "actions": ["VERIFY_BY_CALLBACK"], "correct": true,
+           "feedback": "Right. One call to a number you already have tells you if it's real."}
+        ]
+      }
+    },
+    {
+      "step_id": "s2",
+      "phase": "contain",
+      "game_time": "3:25 PM",
+      "situation": "Earlier this week someone did install it. Now the mouse on the reception computer is moving by itself and the billing screen is open.",
+      "devices": {"RECEPTION-PC": "infected"},
+      "options": {
+        "front_desk": [
+          {"option_id": "a", "text": "Switch the computer off at the wall", "actions": [], "correct": false,
+           "feedback": "Switching off loses evidence IT needs. Pull out the network cable instead and leave it on."},
+          {"option_id": "b", "text": "Pull out the network cable (or turn Wi-Fi off) and leave the computer on", "actions": ["ISOLATE_NETWORK"], "correct": true,
+           "feedback": "Right. With the cable out, they can't control it any more, and the evidence stays."},
+          {"option_id": "c", "text": "Watch what they do so you can tell IT later", "actions": [], "correct": false,
+           "feedback": "Every second it is connected, they can open more. Cut the network first."}
+        ],
+        "billing": [
+          {"option_id": "a", "text": "Stop using the reception computer and tell Dr. Rao", "actions": ["DONT_USE_DEVICE", "NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. Keep off it and make sure the owner knows."},
+          {"option_id": "b", "text": "Check the bank account on your phone using the same password", "actions": [], "correct": false,
+           "feedback": "If they watched that password being typed, they have it too. Wait for IT."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Call the saved IT contact and ask them to remove the program", "actions": ["CALL_SAVED_IT"], "correct": true,
+           "feedback": "Right. IT removes the program and checks what else it touched."},
+          {"option_id": "b", "text": "Call the number the caller gave and ask them to stop", "actions": [], "correct": false,
+           "feedback": "That number is the scammer's. Only use contacts saved in ShieldMate."}
+        ]
+      }
+    },
+    {
+      "step_id": "s3",
+      "phase": "recover",
+      "game_time": "3:40 PM",
+      "situation": "The caller rings back: \"To finish the renewal, read me the OTP code that just came to your phone.\"",
+      "devices": {"RECEPTION-PC": "isolated"},
+      "options": {
+        "front_desk": [
+          {"option_id": "a", "text": "Read out the code: it's only to finish the renewal", "actions": [], "correct": false,
+           "feedback": "An OTP code is a key to a bank account or email. Nobody genuine ever asks you to read one out."},
+          {"option_id": "b", "text": "Hang up. Never share an OTP code, and tell Dr. Rao", "actions": ["NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. Hanging up is never rude when someone asks for a code."}
+        ],
+        "billing": [
+          {"option_id": "a", "text": "Keep using online banking as usual: the cable is out now", "actions": [], "correct": false,
+           "feedback": "They may already have the banking password. Change it from a different computer first."},
+          {"option_id": "b", "text": "Call the bank to stop any payments, then change the banking password from a different computer", "actions": ["STOP_PAYMENT", "CHANGE_PASSWORD"], "correct": true,
+           "feedback": "Right. The bank can hold payments while the password is changed somewhere safe."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Plug the network cable back in now that the caller has gone", "actions": [], "correct": false,
+           "feedback": "Wait until IT has removed the program, or they can connect again."},
+          {"option_id": "b", "text": "Change every password typed on the reception computer, from a different device", "actions": ["CHANGE_PASSWORD"], "correct": true,
+           "feedback": "Right. Anything typed there may have been seen."}
+        ]
+      }
+    },
+    {
+      "step_id": "s4",
+      "phase": "report",
+      "game_time": "5:00 PM",
+      "situation": "IT has removed the program. Nobody is sure what the caller looked at.",
+      "devices": {"RECEPTION-PC": "isolated"},
+      "options": {
+        "staff": [
+          {"option_id": "a", "text": "Write down the caller's number, the times, and what he asked for, and give it to Dr. Rao", "actions": ["PRESERVE_EVIDENCE"], "correct": true,
+           "feedback": "Right. Those details are what the report needs."},
+          {"option_id": "b", "text": "Forget about it: IT has fixed it", "actions": [], "correct": false,
+           "feedback": "Fixed isn't the end. Write it down while you remember it."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Don't report: no money was lost", "actions": [], "correct": false,
+           "feedback": "Someone controlled a clinic computer that can open patient records. That must be reported, even with no money lost."},
+          {"option_id": "b", "text": "Report the scam on 1930 or cybercrime.gov.in, and to CERT-In within 6 hours", "actions": ["REPORT_1930", "REPORT_CERTIN"], "correct": true,
+           "feedback": "Right. Reporting helps stop the same caller tricking the next clinic."}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "scenario_id": "supplier_bank_fraud",
+  "title": "A fake supplier asks for payment to a new bank account",
+  "steps": [
+    {
+      "step_id": "s1",
+      "phase": "detect",
+      "game_time": "11:15 AM",
+      "situation": "An email from \"Shree Lab Supplies\" says: \"We have changed banks. Please pay this month's ₹1,80,000 invoice to our new account today.\" It came from shreelab-supplies.in. Last month's emails came from shreelabsupplies.in.",
+      "options": {
+        "billing": [
+          {"option_id": "a", "text": "Pay it to the new account: it's our regular supplier and the amount is right", "actions": [], "correct": false,
+           "feedback": "Scammers copy real invoices. A change of bank details is exactly when to check."},
+          {"option_id": "b", "text": "Don't pay yet. Call the supplier on the number you already have and ask", "actions": ["VERIFY_BY_CALLBACK"], "correct": true,
+           "feedback": "Right. A two-minute call on a number you already had stops this scam."},
+          {"option_id": "c", "text": "Reply to the email and ask them to confirm", "actions": [], "correct": false,
+           "feedback": "Your reply goes to the scammer, who will happily \"confirm\"."}
+        ]
+      }
+    },
+    {
+      "step_id": "s2",
+      "phase": "contain",
+      "game_time": "11:30 AM",
+      "situation": "The \"supplier\" phones the clinic: \"Deliveries stop tomorrow unless you pay today. Don't call our old number, it's switched off.\"",
+      "options": {
+        "billing": [
+          {"option_id": "a", "text": "Pay now so deliveries don't stop", "actions": [], "correct": false,
+           "feedback": "Rushing you is the trick. A real supplier will wait for a quick check."},
+          {"option_id": "b", "text": "Still don't pay. Check with a supplier contact you already have, and tell Dr. Rao", "actions": ["VERIFY_BY_CALLBACK", "NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. \"Don't call our old number\" is a warning sign on its own."},
+          {"option_id": "c", "text": "Pay half now as a compromise", "actions": [], "correct": false,
+           "feedback": "Half to a scammer is still lost. Check first, pay nothing."}
+        ],
+        "front_desk": [
+          {"option_id": "a", "text": "Give the caller Ravi's mobile number so he can sort it out quickly", "actions": [], "correct": false,
+           "feedback": "Don't hand out staff details to a caller nobody has checked."},
+          {"option_id": "b", "text": "Take a message and tell Ravi and Dr. Rao the caller is pushing for payment", "actions": ["NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. Pressure to pay fast is worth passing on straight away."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Tell Ravi to pay: you don't want trouble with the supplier", "actions": [], "correct": false,
+           "feedback": "A real supplier won't stop deliveries over a two-minute check."},
+          {"option_id": "b", "text": "Tell Ravi: no payment to new bank details without your OK and a call to the supplier's old number", "actions": ["VERIFY_BY_CALLBACK"], "correct": true,
+           "feedback": "Right. A simple rule like that stops this scam every time."}
+        ]
+      }
+    },
+    {
+      "step_id": "s3",
+      "phase": "recover",
+      "game_time": "12:10 PM",
+      "situation": "Ravi finds that a colleague paid ₹1,80,000 to the new account yesterday, after an email just like this one.",
+      "options": {
+        "billing": [
+          {"option_id": "a", "text": "Email the \"supplier\" asking for the money back", "actions": [], "correct": false,
+           "feedback": "They won't give it back. The bank and 1930 can freeze it; email can't."},
+          {"option_id": "b", "text": "Call the bank right now to stop the payment, then call 1930", "actions": ["STOP_PAYMENT", "REPORT_1930"], "correct": true,
+           "feedback": "Right. Soon after a payment, the bank and 1930 can often freeze the money before it is moved on."},
+          {"option_id": "c", "text": "Wait until tomorrow to see if the real supplier asks for payment", "actions": [], "correct": false,
+           "feedback": "Every hour makes the money harder to freeze. Call the bank now."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Keep it quiet to avoid embarrassment", "actions": [], "correct": false,
+           "feedback": "Speed matters more than embarrassment. The bank can only freeze money it hears about."},
+          {"option_id": "b", "text": "Call the bank's fraud line with Ravi now and give them whatever they ask for", "actions": ["STOP_PAYMENT"], "correct": true,
+           "feedback": "Right. The account holder calling the bank speeds things up."}
+        ]
+      }
+    },
+    {
+      "step_id": "s4",
+      "phase": "report",
+      "game_time": "2:00 PM",
+      "situation": "The bank has frozen part of the money.",
+      "options": {
+        "billing": [
+          {"option_id": "a", "text": "Delete the scam emails so nobody pays by mistake", "actions": [], "correct": false,
+           "feedback": "Those emails are the evidence. Keep them."},
+          {"option_id": "b", "text": "Keep the emails and the payment receipt, and file a complaint at cybercrime.gov.in", "actions": ["PRESERVE_EVIDENCE", "REPORT_1930"], "correct": true,
+           "feedback": "Right. The complaint helps the bank and police recover the rest."}
+        ],
+        "front_desk": [
+          {"option_id": "a", "text": "Write down when the caller rang and what he said, for Dr. Rao", "actions": ["PRESERVE_EVIDENCE"], "correct": true,
+           "feedback": "Right. Your notes add to the complaint."},
+          {"option_id": "b", "text": "Nothing to do: it was a billing problem", "actions": [], "correct": false,
+           "feedback": "You spoke to the caller. What you remember is evidence."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Nothing more to do: the bank has it now", "actions": [], "correct": false,
+           "feedback": "The complaint is what helps recover the rest of the money. Report it."},
+          {"option_id": "b", "text": "Make sure the complaint is filed, and warn the real supplier their name was used", "actions": ["REPORT_1930"], "correct": true,
+           "feedback": "Right. The real supplier can warn their other customers too."}
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "tech_support_call",
+  "title": "A fake \"tech support\" call installs a remote-control program",
+  "attacker": {"ip": "198.51.100.23", "account": "frontdesk"},
+  "contain_on": ["ISOLATE_NETWORK"],
+  "sim_time_ms_multiplier": 1,
+  "phases": [
+    {
+      "at_ms": 0,
+      "label": "a remote-control program is installed on the reception computer",
+      "alert": {
+        "rule": {"id": "100320", "level": 10, "description": "Remote access tool installed"},
+        "agent": {"id": "003", "name": "RECEPTION-PC", "ip": "192.168.1.21"}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1}
+    },
+    {
+      "at_ms": 90000,
+      "label": "someone outside takes control of the reception computer",
+      "alert": {
+        "rule": {"id": "100321", "level": 12, "description": "Inbound remote access session established"},
+        "agent": {"id": "003", "name": "RECEPTION-PC", "ip": "192.168.1.21"}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1},
+      "cancel_if": "CONTAINED"
+    },
+    {
+      "at_ms": 180000,
+      "label": "files are copied out of the clinic",
+      "alert": {
+        "rule": {"id": "100322", "level": 12, "description": "Bulk file transfer to an external address"},
+        "agent": {"id": "003", "name": "RECEPTION-PC", "ip": "192.168.1.21"}
+      },
+      "shieldmate": {"count": 120, "window_minutes": 2},
+      "cancel_if": "CONTAINED"
+    }
+  ]
+}

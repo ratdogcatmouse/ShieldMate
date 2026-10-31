@@ -61,6 +61,18 @@ export function Pill({ tone, small, noDot, children, className = "" }) {
   );
 }
 
+// v4: how the team did against a practice attack (derive.simResult), on the owner and staff screens.
+export function SimResult({ result }) {
+  if (!result) return null;
+  return (
+    <section className="card tight" role="status" aria-label="Practice attack result">
+      <Pill tone={result.tone} noDot={result.tone === "grey"}>Practice attack · {result.title}</Pill>
+      <span className="bold">{result.what}</span>
+      <span className="ink-2">{result.line}</span>
+    </section>
+  );
+}
+
 export function StatusPill({ status, label }) {
   const s = DEVICE_STATUS[status] || DEVICE_STATUS.ok;
   return <Pill tone={s.tone} small>{label || s.label}</Pill>;

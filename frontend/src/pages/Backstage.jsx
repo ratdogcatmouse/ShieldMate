@@ -7,6 +7,7 @@ import { clearSeen, getBackstageToken, setBackstageToken } from "../lib/session.
 import { track } from "../lib/telemetry.js";
 import { fmtTime, serverNow, syncServerTime } from "../lib/time.js";
 import { usePoll } from "../lib/usePoll.js";
+import { simResult } from "../lib/derive.js";
 
 const REPLAYS = [
   ["password_guessing", "Password guessing", (n) => n === 0
@@ -18,6 +19,10 @@ const SCRIPTS = [
   ["ransom_wave", "Ransomware wave: reception PC to the file server"],
   ["phish_owner", "Phishing aimed at the doctor's PC"],
   ["credential_sprawl", "Credential theft and lateral movement"],
+  // v4: the three new drills' attacks. Ticking the right card step stops them.
+  ["phish_doctor_email", "Fake invoice email, account taken over · stop: change password"],
+  ["tech_support_call", "Fake tech-support call, remote control · stop: unplug the network"],
+  ["supplier_bank_fraud", "Fake supplier bank details (demo only) · stop: call back to check"],
 ];
 
 export default function Backstage() {
@@ -74,6 +79,8 @@ export default function Backstage() {
   const stopSim = () => run("sim-stop", async () => { await api.simulateStop(); note("simulation stopped"); await refresh(); });
 
   const st = data?.status;
+  const simOn = !!st?.flags.SIMULATE;
+  const teamSees = st ? simResult(st.simulation, data.clinic) : null;   // what the phones show after a run
   const firstStaff = data?.clinic.staff.find((s) => s.role !== "owner");
   return (
     <div className="backstage">
@@ -122,21 +129,23 @@ export default function Backstage() {
           <button type="button" className="btn btn-bs" disabled={!!busy} onClick={doSkip}>Skip 5 min</button>
         </div>
 
-        {st?.flags.SIMULATE ? (
-          <section className="bs-card" style={{ display: "block" }}>
-            <span className="tiny bold" style={{ letterSpacing: "0.06em", color: "#9DB4D3" }}>ATTACK SIMULATION</span>
-            {data.sim && data.sim.status === "running" ? (
+        {st ? (
+          <section className="bs-card" style={{ display: "block" }} aria-label="Attack simulation">
+            <span className="tiny bold" style={{ letterSpacing: "0.06em", color: "#9DB4D3" }}>ATTACK SIMULATION · TEST MODE</span>
+            {simOn && data.sim && data.sim.status === "running" ? (
               <div className="row-between" style={{ marginTop: 8 }}>
                 <span className="sub">Running {data.sim.script_id} · {data.sim.phases_fired} phases so far</span>
                 <button type="button" className="btn btn-bs-danger" disabled={!!busy} onClick={stopSim}>Stop</button>
               </div>
             ) : (
               <div className="stack-sm" style={{ marginTop: 8 }}>
-                {data?.sim ? <span className="sub">Last run: {data.sim.script_id} · {data.sim.status}{data.sim.outcome_reason ? ` (${data.sim.outcome_reason})` : ""}</span> : null}
+                {!simOn ? <span className="sub">Practice attacks are switched off. Start the server with SIMULATE=1 (in backend/.env) to run them.</span> : null}
+                {simOn && data?.sim ? <span className="sub">Last run: {data.sim.script_id} · {data.sim.status}{data.sim.outcome_reason ? ` (${data.sim.outcome_reason})` : ""}</span> : null}
+                {simOn && teamSees ? <span className="sub">Team sees: {teamSees.title}. {teamSees.line}</span> : null}
                 {SCRIPTS.map(([id, title]) => (
                   <div key={id} className="row-between">
                     <span>{title}</span>
-                    <button type="button" className="btn btn-bs" disabled={!!busy} onClick={() => doSim(id)}>Play</button>
+                    <button type="button" className="btn btn-bs" disabled={!!busy || !simOn} onClick={() => doSim(id)}>Play</button>
                   </div>
                 ))}
               </div>

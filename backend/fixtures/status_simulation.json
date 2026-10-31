@@ -1,0 +1,19 @@
+{
+  "alert_source": "replay",
+  "flags": {"AI_REWORD": false, "ACTIONS": false, "SIMULATE": true},
+  "undo_supported": false,
+  "server_time": "2026-11-01T04:14:00Z",
+  "wazuh": {"api_ok": null, "indexer_ok": null, "agent_active": null, "last_alert_at": null},
+  "simulation": {
+    "script_id": "supplier_bank_fraud",
+    "title": "Fake supplier asks for payment to a new bank account",
+    "status": "contained",
+    "started_at": "2026-11-01T04:10:00Z",
+    "finished_at": "2026-11-01T04:12:00Z",
+    "elapsed_ms": 120000,
+    "phases_fired": 1,
+    "phases_cancelled": 1,
+    "stop_actions": ["VERIFY_BY_CALLBACK"],
+    "contained_by": {"action": "VERIFY_BY_CALLBACK", "staff_id": 2, "at": "2026-11-01T04:11:05Z"}
+  }
+}

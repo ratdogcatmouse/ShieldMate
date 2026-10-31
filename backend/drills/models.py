@@ -18,7 +18,10 @@ _ACTION_IDS = set(get_args(ActionId))
 # Spec: the only trigger a scenario option may carry.
 _ALLOWED_TRIGGERS = {"restore_check"}
 # "staff" in the file covers the two non-owner roles; the owner gets their own list.
+# A step may also give one non-owner role its own list ("front_desk" or "billing"), which
+# then replaces "staff" for that role only (e.g. Ravi's payment choices in supplier_bank_fraud).
 _STAFF_ROLES = ("front_desk", "billing")
+_ROLE_KEYS = ("staff", "owner") + _STAFF_ROLES
 
 
 class ScenarioError(ValueError):
@@ -71,7 +74,7 @@ def validate_scenario(data: dict, device_names: set[str] | None = None) -> None:
         # vocabulary, triggers from the allowed set, exactly one correct.
         for role_key, options in (step.get("options") or {}).items():
             where = f"{label}/{role_key}"
-            if role_key not in ("staff", "owner"):
+            if role_key not in _ROLE_KEYS:
                 raise ScenarioError(f"{where}: unknown role key")
             n_correct = 0
             seen_opts: set[str] = set()
@@ -89,6 +92,21 @@ def validate_scenario(data: dict, device_names: set[str] | None = None) -> None:
             # A role that has options must have exactly one correct one (T0.04).
             if options and n_correct != 1:
                 raise ScenarioError(f"{where}: a role with options needs exactly one correct option, got {n_correct}")
+
+
+def options_for(step: dict, role: str) -> list[dict]:
+    """The options a player of ``role`` sees at ``step`` (empty when the role has none).
+
+    The owner reads "owner"; front_desk/billing read their own key when the step has one,
+    else the shared "staff" list. The engine and scoring both call this, so who-sees-what
+    can never differ between the phone and the results screen.
+    """
+    options = step.get("options") or {}
+    if role == "owner":
+        return options.get("owner", [])
+    if role in options:
+        return options[role]
+    return options.get("staff", [])
 
 
 def option_triggers(option: dict) -> set[str]:

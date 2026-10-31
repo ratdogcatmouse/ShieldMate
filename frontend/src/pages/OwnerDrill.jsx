@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ImpactPills, Options, missedText, playerTotal } from "../components/Drill.jsx";
+import { Rephrasable, RephraseProvider } from "../components/Rephrase.jsx";
 import { OwnerShell } from "../components/Shells.jsx";
 import { Pill, Retest, StatusPill, useAction } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
@@ -77,9 +78,11 @@ export default function OwnerDrill() {
     );
   }
   return (
-    <OwnerShell clinicName={data?.clinic.clinic.name} ownerName={data?.owner?.name} stale={stale}>
-      {body}
-    </OwnerShell>
+    <RephraseProvider role="owner" lang="en" drillCode={v?.code}>
+      <OwnerShell clinicName={data?.clinic.clinic.name} ownerName={data?.owner?.name} stale={stale}>
+        {body}
+      </OwnerShell>
+    </RephraseProvider>
   );
 }
 
@@ -156,7 +159,9 @@ function Moment({ v, restore, busy, onAnswer, onAdvance, onEnd, onRestore }) {
       <div className="owner-head">
         <div>
           <span className="small muted">{v.title} · Moment {v.step_index + 1} of {v.step_count} · {st.game_time} · {PHASE_LABEL[st.phase]}</span>
-          <h1 style={{ fontSize: 24, lineHeight: 1.3 }}>{st.situation}</h1>
+          <Rephrasable id={`moment-${st.step_id}`} kind="This moment" title={`Moment ${v.step_index + 1}`} text={st.situation}>
+            <h1 style={{ fontSize: 24, lineHeight: 1.3 }}>{st.situation}</h1>
+          </Rephrasable>
         </div>
         <Pill tone="amber" noDot>Practice · code <span className="mono">{v.code}</span></Pill>
       </div>
@@ -168,10 +173,12 @@ function Moment({ v, restore, busy, onAnswer, onAdvance, onEnd, onRestore }) {
               <span className="section-label">Your answer (owner's decision)</span>
               <Options view={v} onAnswer={onAnswer} disabled={!!busy} letters="ABC" />
               {v.my_answer ? (
-                <section className="card tight">
-                  <span className="bold">{v.my_answer.correct ? "Right." : "Not quite."}</span>
-                  <span>{v.my_answer.feedback}</span>
-                </section>
+                <Rephrasable id={`why-${st.step_id}`} kind="Why" title={v.my_answer.correct ? "Right." : "Not quite."} text={v.my_answer.feedback}>
+                  <section className="card tight">
+                    <span className="bold">{v.my_answer.correct ? "Right." : "Not quite."}</span>
+                    <span>{v.my_answer.feedback}</span>
+                  </section>
+                </Rephrasable>
               ) : null}
             </>
           ) : (

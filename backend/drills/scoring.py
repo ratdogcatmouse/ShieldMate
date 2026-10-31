@@ -9,18 +9,14 @@ from __future__ import annotations
 from typing import get_args
 
 from contract import Phase
+from drills.models import options_for
 
 PHASES = list(get_args(Phase))           # ["detect", "contain", "recover", "report"]
 
 
-def _role_key(role: str) -> str:
-    """front_desk/billing answer the scenario's "staff" options; owner the "owner" ones."""
-    return "owner" if role == "owner" else "staff"
-
-
 def _correct_option(scenario: dict, step: dict, role: str) -> dict | None:
     """The option this role should have picked at this step (None when the role has no options)."""
-    options = step.get("options", {}).get(_role_key(role), [])
+    options = options_for(step, role)
     return next((o for o in options if o.get("correct") is True), None)
 
 

@@ -14,7 +14,7 @@ class NormalisedAlert:
     level: int
     agent_name: str
     timestamp: str                                           # ISO UTC
-    log_fields: dict[str, str] = field(default_factory=dict)  # verbatim: username_tried, source_ip
+    log_fields: dict[str, str] = field(default_factory=dict)  # verbatim: username_tried, source_ip, sender
     counts: dict[str, int] = field(default_factory=dict)      # count, window_minutes, files_renamed
     raw: dict = field(default_factory=dict)
 
@@ -33,6 +33,11 @@ def normalise(raw: RawAlert, now: str) -> NormalisedAlert:
         log_fields["username_tried"] = str(eventdata["targetUserName"])
     if "ipAddress" in eventdata:
         log_fields["source_ip"] = str(eventdata["ipAddress"])
+    # v4: an email alert's sender, so staff can see a lookalike address one letter off.
+    # Attacker-controlled text like the rest: shown as plain text, never sent to the AI.
+    mail = alert.get("mail") or {}
+    if "from" in mail:
+        log_fields["sender"] = str(mail["from"])
 
     # Counts for the card placeholders, taken from the optional shieldmate block.
     # DECISIONS departure #3: the replay file says "failures"; the card placeholder is {count}.
