@@ -3,6 +3,9 @@
 One connection is shared across threads (``check_same_thread=False``) behind an RLock,
 so the request handlers and the 10 s background task never interleave statements.
 Writes go through ``transaction()``. Only the owning modules call this (routes never do SQL).
+
+``emit()`` is how every module records an event in the event log (eventlog/), which
+lives in its own file; ``main.build_context`` plugs the real log in as ``db.events``.
 """
 from __future__ import annotations
 
@@ -15,6 +18,8 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from config import Config
+from eventlog import catalogue
+from eventlog.log import Event, NullEventLog
 
 # Children first, so foreign keys never block a delete (T0.07).
 RUNTIME_TABLES = [
@@ -33,6 +38,8 @@ class Database:
         self.conn.execute("PRAGMA journal_mode = WAL")
         self.conn.execute("PRAGMA foreign_keys = ON")
         self._depth = 0
+        self.events = NullEventLog()
+        self._pending: list[Event] = []     # events emitted inside the open transaction
 
     # --- helpers -----------------------------------------------------------
 
@@ -53,7 +60,11 @@ class Database:
 
     @contextmanager
     def transaction(self) -> Iterator[None]:
-        """BEGIN/COMMIT (ROLLBACK on error). Nested use joins the outer transaction."""
+        """BEGIN/COMMIT (ROLLBACK on error). Nested use joins the outer transaction.
+
+        Events emitted inside are recorded only after the outer COMMIT, and dropped on ROLLBACK.
+        """
+        committed: list[Event] = []
         with self.lock:
             outer = self._depth == 0
             if outer:
@@ -65,11 +76,38 @@ class Database:
                 self._depth -= 1
                 if outer:
                     self.conn.execute("ROLLBACK")
+                    self._pending.clear()
                 raise
             else:
                 self._depth -= 1
                 if outer:
+                    committed, self._pending = self._pending, []
                     self.conn.execute("COMMIT")
+        for ev in committed:              # outside the lock: the event log has its own
+            self.events.record(ev)
+
+    def emit(self, type_: str, *, actor: int | None = None, subject: tuple[str, object] | None = None,
+             origin: str = "server", session: str | None = None, **data) -> None:
+        """Record one event (types and keys: eventlog/catalogue.py). ``actor`` is a staff id.
+
+        Inside a transaction the event waits for COMMIT, so the log never shows a write
+        that was rolled back. Taking the lock first means only the thread holding the
+        transaction sees ``_depth > 0``; anyone else waits and then records directly.
+        """
+        data = catalogue.clean(type_, data, strict=origin == "server")
+        if not self.events.enabled:
+            return
+        with self.lock:
+            role = None
+            if actor is not None:
+                row = self.conn.execute("SELECT role FROM staff WHERE id = ?", (actor,)).fetchone()
+                role = row["role"] if row else None
+            ev = self.events.event(type_, origin=origin, actor_staff_id=actor, actor_role=role,
+                                   subject=subject, session=session, data=data)
+            if self._depth:
+                self._pending.append(ev)
+                return
+        self.events.record(ev)
 
     def close(self) -> None:
         with self.lock:
@@ -118,14 +156,19 @@ class Database:
         self.execute(
             "UPDATE clinic SET standing_rule_block_ip = ?, standing_rule_set_by = ?,"
             " standing_rule_set_at = ? WHERE id = 1", (int(enabled), staff_id, when))
+        self.emit("clinic.standing_rule_set", actor=staff_id, enabled=enabled)
 
     def add_notification(self, text: str, created_at: str, *, alert_id: int | None = None,
                          action_row_id: int | None = None, from_staff_id: int | None = None,
                          to_role: str | None = None, to_staff_id: int | None = None) -> int:
-        return self.execute(
+        note_id = self.execute(
             "INSERT INTO notifications (alert_id, action_row_id, from_staff_id, to_role,"
             " to_staff_id, text, created_at) VALUES (?,?,?,?,?,?,?)",
             (alert_id, action_row_id, from_staff_id, to_role, to_staff_id, text, created_at))
+        # Every notification passes through here; its text holds names, so only the ids are logged.
+        self.emit("notification.sent", actor=from_staff_id, subject=("notification", note_id),
+                  alert_id=alert_id, action_row_id=action_row_id, to_role=to_role, to_staff_id=to_staff_id)
+        return note_id
 
     # --- schema, seed, reset -----------------------------------------------
 
@@ -177,6 +220,8 @@ class Database:
         # 3. Outside the DB: fresh synthetic backup (Lane 2's generator, if present) and an empty sandbox.
         _regenerate_backup()
         _empty_dir(config.restore_sandbox_dir)
+        # 4. The event log keeps everything; a new epoch tells the reused alert/action ids apart.
+        self.emit("demo.reset", epoch=self.events.bump_epoch())
 
 
 def mark_device(db: Database, agent_name: str, status: str, when: str) -> None:

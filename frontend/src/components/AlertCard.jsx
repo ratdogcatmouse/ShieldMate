@@ -1,5 +1,5 @@
 import { fmtTime } from "../format.js";
-import { Pill, SimulatedPill } from "./Badge.jsx";
+import { ImpactPill, Pill, SimulatedPill } from "./Badge.jsx";
 import FromTheLog from "./FromTheLog.jsx";
 import Steps from "./Steps.jsx";
 
@@ -18,6 +18,7 @@ export default function AlertCard({ alert, it, onDone, busy, handled }) {
         ) : (
           <Pill tone="green">Handled · {fmtTime(alert.last_seen)}</Pill>
         )}
+        {open && <ImpactPill impact={alert.impact} />}
         {alert.count > 1 && <span className="small bold muted">Seen {alert.count} times</span>}
         <h1>{card.headline}</h1>
         <p className="ink-2">{card.what_we_know}</p>
@@ -30,7 +31,11 @@ export default function AlertCard({ alert, it, onDone, busy, handled }) {
             <h2 style={{ fontSize: 18 }}>Do these now</h2>
             <span className="small muted">{card.steps.length} steps</span>
           </div>
-          <Steps steps={card.steps} call={it && { name: it.it_contact_name, phone: it.it_contact_phone }} />
+          <Steps
+            steps={card.steps}
+            call={it && { name: it.it_contact_name, phone: it.it_contact_phone }}
+            alertId={alert.id}
+          />
         </>
       )}
 
@@ -38,7 +43,7 @@ export default function AlertCard({ alert, it, onDone, busy, handled }) {
         <strong>Why this matters:</strong> {card.why}
       </p>
 
-      <FromTheLog fields={card.log_fields} />
+      <FromTheLog fields={card.log_fields} alertId={alert.id} />
 
       {open ? (
         <div className="stack-sm" style={{ marginTop: 6 }}>

@@ -1,8 +1,9 @@
 import { Icon } from "../icons.jsx";
+import { track } from "../telemetry.js";
 
 // "Do these now": numbered steps. Action IDs never change in translated steps.
-// `call` is {name, phone} for the CALL_SAVED_IT step's call button.
-export default function Steps({ steps, call, callLabel = "Call" }) {
+// `call` is {name, phone} for the CALL_SAVED_IT step's call button; `alertId` is for the event log.
+export default function Steps({ steps, call, callLabel = "Call", alertId = null }) {
   if (!steps || steps.length === 0) return null;
   return (
     <div className="steps">
@@ -14,7 +15,11 @@ export default function Steps({ steps, call, callLabel = "Call" }) {
             <span className="text">{step.text}</span>
           </div>
           {step.action === "CALL_SAVED_IT" && call?.phone && (
-            <a className="btn btn-tint call" href={`tel:${call.phone.replace(/\s/g, "")}`}>
+            <a
+              className="btn btn-tint call"
+              href={`tel:${call.phone.replace(/\s/g, "")}`}
+              onClick={() => track("ui.call_it_tapped", { alert_id: alertId })}
+            >
               <Icon name="phone" /> {callLabel} {call.name}
             </a>
           )}

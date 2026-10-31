@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { API_MODE, getClinic } from "../api.js";
 import { usePoll } from "../usePoll.js";
 import { setStaff } from "../session.js";
+import { track } from "../telemetry.js";
 import { ROLE_LABEL } from "../format.js";
 import { Icon } from "../icons.jsx";
 import QrCode from "../components/QrCode.jsx";
@@ -15,6 +16,7 @@ export default function Start() {
 
   const pick = (person) => {
     setStaff({ id: person.id, name: person.name, role: person.role });
+    track("ui.person_picked", { role: person.role }, person.id);
     navigate(person.role === "owner" ? "/owner" : `/staff/${person.id}`);
   };
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Literal, NamedTuple
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Model(BaseModel):
@@ -490,6 +490,33 @@ class SimStatusResult(Model):
     run: SimRunOut | None
 
 
+# --- event log: the phones' UI events (flag EVENT_LOG) ---------------------
+# Same names as the ui.* entries in eventlog/catalogue.py, which lists each one's data keys.
+
+ClientEventType = Literal[
+    "ui.page_view", "ui.person_picked", "ui.lang_changed", "ui.log_details_opened",
+    "ui.call_it_tapped", "ui.drill_join_submitted", "ui.reset_armed", "ui.api_error", "ui.app_error",
+]
+
+
+class ClientEvent(Model):
+    type: ClientEventType
+    client_ts: str | None
+    path: str | None
+    staff_id: int | None              # whoever the page is acting as, if anyone
+    data: dict[str, str | int | float | bool | None]
+
+
+class EventsRequest(Model):
+    # In the body, not a header: navigator.sendBeacon (used when a tab closes) can't set headers.
+    session_id: str = Field(pattern=r"^[A-Za-z0-9-]{1,64}$")
+    events: list[ClientEvent] = Field(max_length=50)
+
+
+class EventsAccepted(Model):
+    accepted: int
+
+
 # --- route index ---------------------------------------------------------
 
 class Route(NamedTuple):
@@ -531,6 +558,7 @@ ROUTES: list[Route] = [
     Route("POST", "/demo/simulate/{script_id}", None, SimStartResult, "demo_simulate_start.json", who="backstage", flag="SIMULATE"),
     Route("POST", "/demo/simulate/stop", None, SimStatusResult, "demo_simulate_stop.json", who="backstage", flag="SIMULATE"),
     Route("GET", "/demo/simulate", None, SimStatusResult, "demo_simulate_status.json", who="backstage", flag="SIMULATE"),
+    Route("POST", "/events", EventsRequest, EventsAccepted, "events_accepted.json", flag="EVENT_LOG"),
 ]
 
 # Extra fixtures that are valid bodies of the models above (used by tests only).

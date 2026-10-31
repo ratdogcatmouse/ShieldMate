@@ -33,7 +33,7 @@ def post_replay(alert_type: str, request: Request):
         outcome = pipeline.process(normalise(raw, now), ctx.db, ctx.clock,
                                    lessons=ctx.lessons, config=ctx.config)
         tally[outcome] += 1
-    return {
+    result = {
         "alert_type": alert_type,
         "click": click,
         "injected": len(batch),
@@ -42,6 +42,8 @@ def post_replay(alert_type: str, request: Request):
         "filtered": tally["filtered"],
         "clicks_left": replay.clicks_left(alert_type),
     }
+    ctx.db.emit("demo.replay", **{k: v for k, v in result.items() if k != "clicks_left"})
+    return result
 
 
 @router.post("/demo/reset", response_model=ResetResult)

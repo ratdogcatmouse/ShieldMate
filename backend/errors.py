@@ -30,7 +30,9 @@ class ApiError(Exception):
         self.status = status
 
 
-def _body(code: str, message: str, status: int) -> JSONResponse:
+def _body(request: Request, code: str, message: str, status: int) -> JSONResponse:
+    # The event middleware reads the code back for its request.completed event.
+    request.state.error_code = code
     return JSONResponse(status_code=status, content={"error": code, "message": message})
 
 
@@ -38,33 +40,34 @@ def install_handlers(app: FastAPI) -> None:
     """Register one handler per failure kind so every error leaves as {"error", "message"}."""
     # Our own deliberate errors.
     @app.exception_handler(ApiError)
-    async def _api_error(_: Request, exc: ApiError):
-        return _body(exc.code, exc.message, exc.status)
+    async def _api_error(request: Request, exc: ApiError):
+        return _body(request, exc.code, exc.message, exc.status)
 
     @app.exception_handler(RequestValidationError)
-    async def _validation(_: Request, exc: RequestValidationError):
+    async def _validation(request: Request, exc: RequestValidationError):
         # The spec's 422 override: bad body or query is invalid_request / 400.
         first = exc.errors()[0] if exc.errors() else {}
         where = ".".join(str(p) for p in first.get("loc", ()) if p not in ("body", "query"))
         message = "The request was not valid" + (f" ({where}: {first.get('msg')})." if where else ".")
-        return _body("invalid_request", message, 400)
+        return _body(request, "invalid_request", message, 400)
 
     @app.exception_handler(OverflowError)
-    async def _too_big(_: Request, exc: OverflowError):
+    async def _too_big(request: Request, exc: OverflowError):
         # An id too large for SQLite's 64-bit integer (e.g. /alerts/99999999999999999999/done): the
         # caller's mistake, not a server fault.
-        return _body("invalid_request", "That number is too large.", 400)
+        return _body(request, "invalid_request", "That number is too large.", 400)
 
     @app.exception_handler(StarletteHTTPException)
-    async def _http(_: Request, exc: StarletteHTTPException):
+    async def _http(request: Request, exc: StarletteHTTPException):
         if exc.status_code == 404:
-            return _body("not_found", "Not found.", 404)
-        return _body("invalid_request", "The request was not valid.", exc.status_code)
+            return _body(request, "not_found", "Not found.", 404)
+        return _body(request, "invalid_request", "The request was not valid.", exc.status_code)
 
+    # The event middleware has already logged error.unhandled on the way out (it sits inside this one).
     @app.exception_handler(Exception)
-    async def _unexpected(_: Request, exc: Exception):
+    async def _unexpected(request: Request, exc: Exception):
         log.exception("unhandled error", exc_info=exc)
-        return _body("internal_error", "Something went wrong on the server.", 500)
+        return _body(request, "internal_error", "Something went wrong on the server.", 500)
 
 
 # --- dependencies shared by the route files ---------------------------------------

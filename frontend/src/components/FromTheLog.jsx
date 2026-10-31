@@ -1,10 +1,15 @@
+import { track } from "../telemetry.js";
+
 // log_fields are copied verbatim from alerts and may hold hostile text.
-// Plain text nodes only; never dangerouslySetInnerHTML.
-export default function FromTheLog({ fields }) {
+// Plain text nodes only; never dangerouslySetInnerHTML. (The event log gets the alert id, never the text.)
+export default function FromTheLog({ fields, alertId }) {
   const entries = Object.entries(fields || {});
   if (entries.length === 0) return null;
   return (
-    <details className="log">
+    <details
+      className="log"
+      onToggle={(e) => e.currentTarget.open && track("ui.log_details_opened", { alert_id: alertId ?? null })}
+    >
       <summary>Details from the log</summary>
       <div className="body">
         {entries.map(([key, value]) => (

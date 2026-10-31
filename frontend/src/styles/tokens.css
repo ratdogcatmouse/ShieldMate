@@ -278,6 +278,7 @@ table.simple tbody th { font-weight: 400; }
 .backstage .inner { max-width: 720px; margin: 0 auto; padding: 24px 18px; display: flex; flex-direction: column; gap: 16px; }
 .bs-card { background: #1A2A42; border: 1px solid #2E4566; border-radius: 14px; padding: 14px 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
 .bs-card .sub { font-size: 14px; color: #B7C6DA; }
+.bs-input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 10px; border: 1px solid #2E4566; background: transparent; color: #E1E9F3; font: inherit; }
 .btn-bs { background: #4C8DF0; color: var(--night); }
 .btn-bs-danger { background: transparent; border: 1px solid #F29B8F; color: #F6B7AE; }
 .bs-log { font-family: var(--mono); font-size: 13px; line-height: 1.7; color: #E1E9F3; }

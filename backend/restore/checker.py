@@ -89,6 +89,10 @@ def run(db: Database, clock: Clock, config: Config) -> dict:
         "INSERT INTO restore_runs (started_at, result, backup_age_hours, files_total, files_ok, exposed, details)"
         " VALUES (?,?,?,?,?,?,?)",
         (iso(now), result, round(age_hours, 1), total, ok, int(exposed), details))
+    # Counts and check names only; the failed file names stay in restore_runs.
+    db.emit("restore.run", subject=("restore_run", run_id), result=result, files_ok=ok, files_total=total,
+            backup_age_hours=round(age_hours, 1), exposed=exposed,
+            failed_checks=[c["check"] for c in checks if not c["passed"]])
     return view(db, run_id, config)
 
 

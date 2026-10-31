@@ -18,7 +18,7 @@ import random
 from pathlib import Path
 from sqlite3 import Row
 
-from clock import Clock, now_iso
+from clock import Clock, now_iso, parse_iso
 from db import Database
 from drills import models, scoring
 from errors import ApiError
@@ -127,6 +127,8 @@ def create(db: Database, clock: Clock, scenario_id: str, host_staff_id: int,
                (code, host_staff_id, now_text))
     player_id = db.one("SELECT id FROM drill_players WHERE drill_code = ? AND staff_id = ?",
                        (code, host_staff_id))["id"]
+    db.emit("drill.created", actor=host_staff_id, subject=("drill", code), scenario_id=scenario_id,
+            source_alert_id=source_alert_id, player_id=player_id)
     return {"code": code, "player_id": player_id, "status": "lobby"}
 
 
@@ -141,9 +143,11 @@ def join(db: Database, clock: Clock, code: str, staff_id: int) -> dict:
     existing = db.one("SELECT id FROM drill_players WHERE drill_code = ? AND staff_id = ?",
                       (code, staff_id))
     if existing:
+        db.emit("drill.joined", actor=staff_id, subject=("drill", code), player_id=existing["id"], rejoin=True)
         return {"player_id": existing["id"], "code": code, "status": row["status"]}
     player_id = db.execute("INSERT INTO drill_players (drill_code, staff_id, joined_at) VALUES (?,?,?)",
                            (code, staff_id, now_iso(clock)))
+    db.emit("drill.joined", actor=staff_id, subject=("drill", code), player_id=player_id, rejoin=False)
     return {"player_id": player_id, "code": code, "status": row["status"]}
 
 
@@ -180,9 +184,15 @@ def answer(db: Database, clock: Clock, code: str, player_id: int, step_id: str, 
               (code, player_id, step_id)):
         raise ApiError("already_answered", "You already answered this step.", 409)
     opt = next(o for o in options if o["option_id"] == option_id)
+    # How long the player took to decide: the drill's main measure for later analysis.
+    latency_ms = int((clock.now() - parse_iso(row["step_opened_at"])).total_seconds() * 1000) \
+        if row["step_opened_at"] else None
     with db.transaction():
         _insert_answer(db, code, player_id, step_id, option_id, opt.get("actions", []),
                        int(opt.get("correct", False)), now_iso(clock))
+        db.emit("drill.answered", actor=player["staff_id"], subject=("drill", code), player_id=player_id,
+                step_id=step_id, option_id=option_id, correct=bool(opt.get("correct", False)),
+                latency_ms=latency_ms)
         _auto_close(db, row, step)
     return {"option_id": option_id, "correct": bool(opt.get("correct", False)),
             "feedback": opt.get("feedback", ""), "actions": opt.get("actions", [])}
@@ -193,6 +203,8 @@ def _auto_close(db: Database, row: Row, step: dict) -> None:
     if all(p["player_id"] in {a["player_id"] for a in _answers(db, row["code"], step["step_id"])}
            for p in _steps_with_options(step, _players(db, row["code"]))):
         db.execute("UPDATE drills SET status = 'review' WHERE code = ?", (row["code"],))
+        db.emit("drill.advanced", subject=("drill", row["code"]), from_status="open", to_status="review",
+                step_index=row["step_index"], missed=0, auto=True)
 
 
 # --- advance (host only) ----------------------------------------------------------
@@ -217,24 +229,32 @@ def advance(db: Database, clock: Clock, code: str, player_id: int,
         raise ApiError("not_host", "Only the drill host can move the team on.", 403)
     scenario = reg.get(row["scenario_id"])
     now_text = now_iso(clock)
+    missed = 0
     with db.transaction():
         if row["status"] == "lobby":
+            to_status, step_index = "open", 0
             db.execute("UPDATE drills SET status = 'open', step_index = 0, step_opened_at = ? WHERE code = ?",
                        (now_text, code))
         elif row["status"] == "open":
             # Owner closes early: unanswered options-havers are recorded as wrong with no option.
+            to_status, step_index = "review", row["step_index"]
             step = _step(row, scenario)
             answered = {a["player_id"] for a in _answers(db, code, step["step_id"])}
             for p in _steps_with_options(step, _players(db, code)):
                 if p["player_id"] not in answered:
                     _insert_answer(db, code, p["player_id"], step["step_id"], "", [], 0, now_text)
+                    missed += 1
             db.execute("UPDATE drills SET status = 'review' WHERE code = ?", (code,))
         else:  # review
             if row["step_index"] >= len(scenario["steps"]) - 1:
+                to_status, step_index = "finished", row["step_index"]
                 db.execute("UPDATE drills SET status = 'finished' WHERE code = ?", (code,))
             else:
+                to_status, step_index = "open", row["step_index"] + 1
                 db.execute("UPDATE drills SET status = 'open', step_index = step_index + 1,"
                            " step_opened_at = ? WHERE code = ?", (now_text, code))
+        db.emit("drill.advanced", actor=player["staff_id"], subject=("drill", code), from_status=row["status"],
+                to_status=to_status, step_index=step_index, missed=missed, auto=False)
     return view(db, code, player_id, reg)
 
 

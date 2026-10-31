@@ -10,8 +10,11 @@ PY  := backend/.venv/bin/python
 API ?= http://localhost:8000
 # Extra pytest arguments, e.g. `make test ARGS="tests/unit/test_filter.py -k name"`.
 ARGS ?=
+# `make events`: which event log to read and how many of the newest entries to show.
+EVENTS ?= backend/shieldmate-events.db
+N ?= 50
 
-.PHONY: help install start dev fresh build test smoke e2e reset status clean
+.PHONY: help install start dev fresh build test smoke e2e reset status events clean
 
 help: ## List the targets
 	@grep -hE '^[a-z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
@@ -49,6 +52,12 @@ reset: ## Reset the running demo to its starting state (POST /api/demo/reset)
 status: ## Show the running backend's /api/status
 	curl -fsS $(API)/api/status
 	@echo
+
+events: ## Show the newest event-log entries, oldest first (N=50, EVENTS=backend/shieldmate-events.db)
+	@test -f $(EVENTS) || { echo "No event log at $(EVENTS) yet: start the backend first."; exit 1; }
+	@$(PY) -c 'import sqlite3, sys; \
+	rows = sqlite3.connect(sys.argv[1]).execute("SELECT id, ts, epoch, type, actor_staff_id, subject_type, subject_id, session_id, data FROM events ORDER BY id DESC LIMIT ?", (int(sys.argv[2]),)).fetchall(); \
+	[print(*("-" if v is None else v for v in r), sep="  ") for r in reversed(rows)]' $(EVENTS) $(N)
 
 clean: ## Delete the built frontend (frontend/dist); keeps node_modules, the venv and the DB
 	rm -rf frontend/dist

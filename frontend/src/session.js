@@ -6,6 +6,8 @@ const KEYS = {
   drill: "sm.drill",
   notifSince: "sm.notif_since",
   ownerPin: "sm.owner_pin", // sessionStorage: cleared when the tab closes
+  session: "sm.session", // sessionStorage: one id per tab for the event log
+  backstageToken: "sm.backstage_token", // sessionStorage: only needed once BACKSTAGE_TOKEN is set
 };
 
 function read(store, key) {
@@ -60,3 +62,22 @@ export const clearNotifSince = () => write("localStorage", KEYS.notifSince, null
 
 export const getOwnerPin = () => read("sessionStorage", KEYS.ownerPin);
 export const setOwnerPin = (pin) => write("sessionStorage", KEYS.ownerPin, pin);
+
+// Sent as X-Backstage-Token on /demo/* calls. Empty while the server's BACKSTAGE_TOKEN is unset.
+export const getBackstageToken = () => read("sessionStorage", KEYS.backstageToken);
+export const setBackstageToken = (token) => write("sessionStorage", KEYS.backstageToken, token || null);
+
+// The event log's session: a reload keeps it, a new tab gets a new one. Kept in memory too,
+// for when storage throws. Hex from getRandomValues, because crypto.randomUUID needs HTTPS
+// and the demo runs over plain http on the hotspot.
+let memorySession = null;
+export function getSessionId() {
+  let id = read("sessionStorage", KEYS.session) || memorySession;
+  if (!id) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    id = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    write("sessionStorage", KEYS.session, id);
+  }
+  memorySession = id;
+  return id;
+}

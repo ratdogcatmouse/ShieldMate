@@ -5,6 +5,18 @@ export function Pill({ tone = "grey", dot = true, small, children }) {
   );
 }
 
+// How much is at risk (backend impact priority). `impact` is {level, score, reason} or null.
+const IMPACT_TONE = { low: "grey", medium: "amber", high: "red", critical: "red" };
+const IMPACT_LABEL = { low: "Low impact", medium: "Medium impact", high: "High impact", critical: "Critical impact" };
+export function ImpactPill({ impact }) {
+  if (!impact) return null;
+  return (
+    <Pill tone={IMPACT_TONE[impact.level] || "grey"} small>
+      {IMPACT_LABEL[impact.level] || impact.level}
+    </Pill>
+  );
+}
+
 export const SimulatedPill = () => <span className="pill pill-sim">Simulated action</span>;
 export const SimulatedBackupPill = () => <span className="pill pill-sim">Simulated backup</span>;
 

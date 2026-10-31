@@ -14,7 +14,7 @@ import json
 from datetime import timedelta
 from sqlite3 import Row
 
-from actions.targets import check_target
+from actions.targets import classify
 from actions.wazuh_client import UndoNotSupported, WazuhClient, WazuhUnavailable
 from clock import Clock, iso, now_iso, parse_iso
 from config import Config
@@ -33,12 +33,19 @@ def approval_deadline(row: Row, approval_timeout_minutes: int):
 def propose(db: Database, clock: Clock, alert_id: int, source: str, agent_name: str,
             ip: str | None) -> int:
     """Create the BLOCK_IP proposal for a new alert. A bad target is stored as ``refused`` (decision 17)."""
-    ok, reason = check_target(ip, db.clinic()["never_block"])
-    return db.execute(
+    code, reason = classify(ip, db.clinic()["never_block"])
+    simulated = source == "replay"
+    row_id = db.execute(
         "INSERT INTO actions (alert_id, action_id, target_ip, agent_name, simulated, status,"
         " refused_reason, proposed_at) VALUES (?, 'BLOCK_IP', ?, ?, ?, ?, ?, ?)",
-        (alert_id, ip, agent_name, int(source == "replay"),
-         "proposed" if ok else "refused", reason, now_iso(clock)))
+        (alert_id, ip, agent_name, int(simulated),
+         "proposed" if code is None else "refused", reason, now_iso(clock)))
+    if code is None:
+        db.emit("action.proposed", subject=("action", row_id), alert_id=alert_id, agent_name=agent_name,
+                simulated=simulated)
+    else:
+        db.emit("action.refused", subject=("action", row_id), alert_id=alert_id, stage="propose", reason=code)
+    return row_id
 
 
 def get(db: Database, action_id: int) -> Row:
@@ -65,9 +72,11 @@ def execute(db: Database, clock: Clock, config: Config, client: WazuhClient, row
     now = clock.now()
     clinic = db.clinic()
     # Block A: safety re-check at execution time (the list could have changed since proposing).
-    ok, reason = check_target(row["target_ip"], clinic["never_block"])
-    if not ok:
+    code, reason = classify(row["target_ip"], clinic["never_block"])
+    if code is not None:
         db.execute("UPDATE actions SET status='refused', refused_reason=? WHERE id=?", (reason, row["id"]))
+        db.emit("action.refused", actor=staff_id, subject=("action", row["id"]), alert_id=row["alert_id"],
+                stage="execute", reason=code)
         raise ApiError("target_refused", f"ShieldMate won't block that address: {reason}.", 409)
 
     # Block B: the only place a block can reach Wazuh. Simulated (replayed) alerts skip it entirely,
@@ -84,18 +93,23 @@ def execute(db: Database, clock: Clock, config: Config, client: WazuhClient, row
 
     # Block C: record the outcome first (failed, or executed with the block's expiry and the device
     # turned "protected"), then raise any error, so the action log always shows what happened.
+    # The event carries the outcome only; wazuh_response stays in the actions table.
+    event = dict(actor=staff_id, subject=("action", row["id"]), alert_id=row["alert_id"], via=via,
+                 simulated=bool(row["simulated"]))
     with db.transaction():
         if failure:
             db.execute(
                 "UPDATE actions SET status='failed', decided_by=?, decided_via=?, decided_at=?,"
                 " wazuh_response=? WHERE id=?",
                 (staff_id, via, iso(now), json.dumps(response), row["id"]))
+            db.emit("action.failed", **event, error=failure.code)
         else:
+            expires_at = iso(now + timedelta(minutes=clinic["block_minutes"]))
             db.execute(
                 "UPDATE actions SET status='executed', decided_by=?, decided_via=?, decided_at=?,"
                 " expires_at=?, wazuh_response=? WHERE id=?",
-                (staff_id, via, iso(now), iso(now + timedelta(minutes=clinic["block_minutes"])),
-                 json.dumps(response), row["id"]))
+                (staff_id, via, iso(now), expires_at, json.dumps(response), row["id"]))
+            db.emit("action.executed", **event, expires_at=expires_at)
             mark_device(db, row["agent_name"], "protected", iso(now))
     if failure:
         raise failure
@@ -125,6 +139,7 @@ def decline(db: Database, clock: Clock, action_id: int, staff_id: int) -> Row:
         raise ApiError("action_not_pending", "This request has already been answered.", 409)
     db.execute("UPDATE actions SET status='declined', decided_by=?, decided_via='tap', decided_at=?"
                " WHERE id=?", (staff_id, now_iso(clock), action_id))
+    db.emit("action.declined", actor=staff_id, subject=("action", action_id), alert_id=row["alert_id"])
     return get(db, action_id)
 
 
@@ -145,6 +160,8 @@ def undo(db: Database, clock: Clock, config: Config, client: WazuhClient,
     now = now_iso(clock)
     with db.transaction():
         db.execute("UPDATE actions SET status='undone' WHERE id=?", (action_id,))
+        db.emit("action.undone", actor=staff_id, subject=("action", action_id), alert_id=row["alert_id"],
+                simulated=bool(row["simulated"]))
         if active_block(db, row["agent_name"], now) is None:
             mark_device(db, row["agent_name"], "ok", now)
     return get(db, action_id)

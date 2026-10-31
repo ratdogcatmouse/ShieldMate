@@ -3,6 +3,7 @@ backend/demo_backup/originals/
 backend/demo_backup/backup/
 backend/restore_sandbox/
 backend/shieldmate.db*
+backend/*-events.db*
 
 # Python & Node defaults
 __pycache__/

@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getAlerts, getClinic, getNotifications, joinDrill, markDone } from "../api.js";
 import { usePoll } from "../usePoll.js";
 import { clearNotifSince, getLang, getNotifSince, setDrill, setLang, setNotifSince } from "../session.js";
+import { track } from "../telemetry.js";
 import { fmtTime } from "../format.js";
 import { Icon } from "../icons.jsx";
 import AlertCard from "../components/AlertCard.jsx";
@@ -56,6 +57,7 @@ export default function Staff() {
   const recent = list.filter((a) => a !== shown && a.status !== "new").slice(0, 3);
 
   const pickLang = (l) => {
+    if (l !== lang) track("ui.lang_changed", { lang: l, from_lang: lang });
     setLang(l);
     setLangState(l);
   };
@@ -76,6 +78,8 @@ export default function Staff() {
   const join = async (e) => {
     e.preventDefault();
     setActionError(null);
+    // Typed text: only a well-formed 4-digit code is worth logging.
+    track("ui.drill_join_submitted", { code: /^\d{4}$/.test(code) ? code : null });
     try {
       const res = await joinDrill(code, person.id);
       setDrill({ code: res.code, player_id: res.player_id });

@@ -8,7 +8,7 @@ The backend app code is **implemented** (both backend lanes): Lane 1 (Ishaan) co
 foundation and the alert/action/lesson pipeline; Lane 2 (Cetas) covers drills, the restore
 check, the device strip and the demo backup. What is still missing: the frontend build,
 Kishaann's live-mode pieces (`ingest/wazuh.py`, the real `RealWazuhClient`), and `lab/`.
-The full suite is green: `cd backend && python -m pytest -q` (211 tests).
+The full suite is green: `cd backend && python -m pytest -q` (272 tests).
 
 The contract and demo content are frozen and validated against the Testing Plan's T0.04–T0.06 rules:
 
@@ -86,6 +86,15 @@ FastAPI serves both the JSON API (all under `/api`) and the built React app (fal
 
 **Restore check** (`restore/checker.py`): copies the backup into `restore_sandbox/` (the only folder it may write to), compares sha256 against `manifest.json`, and checks age and "always connected" exposure. `demo_backup/make.py` regenerates the synthetic 50-file backup (2 altered, 9 days old) on every reset; `--good` builds a passing backup for tests.
 
+**Event log** (`eventlog/`, flag `EVENT_LOG`, on by default): an append-only record of everything that happens, kept for later analysis.
+- **Storage:** its own SQLite file (`backend/shieldmate-events.db`, beside `DB_PATH`), never wiped by Reset. Reset bumps an `epoch` instead, because alert and action ids restart from 1.
+- **Server events:** every module records through `db.emit(type, actor=staff_id, subject=(kind, id), **data)`.
+  - Inside `db.transaction()` the event waits for COMMIT and is dropped on ROLLBACK.
+  - Allowed types and data keys are listed in `eventlog/catalogue.py`. An unlisted one fails an assert.
+  - A bare `Database` has a `NullEventLog`; `main.build_context` plugs in the real one.
+- **Request events:** `eventlog/middleware.py` gives each `/api` call a `request_id`, reads the phone's `X-Session-Id`, and emits `request.completed` for writes and errors (successful GETs only with `EVENT_LOG_READS`).
+- **Frontend events:** the phones batch `ui.*` events to `POST /api/events` via `frontend/src/telemetry.js`.
+
 **Frontend** (React + Vite + react-router, no login): `api.js` has one function per contract route and throws `ApiError {status, error, message}`. `usePoll` keeps the last good data on failure (`stale: true`), pauses on hidden tabs and never overlaps requests. `session.js` keeps identity and drill membership in `localStorage` (every access wrapped in try/catch because Safari private mode throws).
 
 ## Conventions that cut across files
@@ -97,6 +106,7 @@ FastAPI serves both the JSON API (all under `/api`) and the built React app (fal
 - **Wire format:** IDs are SQLite ints except drill codes (4-digit strings) and Wazuh rule IDs (strings). Times are ISO 8601 UTC with `Z`. Lists are wrapped in an object (`{"alerts": [...]}`), every field is always present (`null`, never missing), booleans are real booleans. Errors are always `{"error": "<code>", "message": "..."}`; the default FastAPI 422 is overridden to `invalid_request`/400.
 - **Feature flags default off** (`AI_REWORD`, `ACTIONS`, `ALERT_SOURCE=replay`). A flagged-off route returns `not_enabled` (404).
 - **Untrusted log text:** `log_fields` (e.g. `username_tried`, `source_ip`) are copied verbatim from alerts and the replay data deliberately contains a prompt-injection string. The frontend renders them as plain text nodes only, never `dangerouslySetInnerHTML`. The AI reword guard may receive only the already-filled `headline` and `why`, never log text, and falls back unless output is ≤ 200 chars with no changed numbers, new digits or links.
+- **Event payloads never hold free text.** Log ids, enums, counts and durations only. Never log `log_fields`/`raw`, notification text, reword output, staff names, PINs, tokens or Wazuh responses. A refusal is logged as `targets.classify`'s code, not its reason text, because that text quotes the IP.
 - **Wazuh credentials never leave the server**; TLS verification uses `WAZUH_CA_CERT` and is never turned off. `lab/` is never imported by the app.
 - Kannada/Hindi translations apply to the alert card only, with per-string English fallback. Action IDs in translated steps never change.
 - add comments wherever necessary, and add testing modules

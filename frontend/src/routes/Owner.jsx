@@ -11,7 +11,7 @@ import { Icon } from "../icons.jsx";
 import ApprovalCard, { DecidedCard } from "../components/ApprovalCard.jsx";
 import DeviceStrip from "../components/DeviceStrip.jsx";
 import RestoreResult from "../components/RestoreResult.jsx";
-import { ErrorBanner, Pill, StaleBanner } from "../components/Badge.jsx";
+import { ErrorBanner, ImpactPill, Pill, StaleBanner } from "../components/Badge.jsx";
 
 function AlertBlock({ alert, onPractise, restore, onRestore, restoring }) {
   const { card } = alert;
@@ -21,11 +21,13 @@ function AlertBlock({ alert, onPractise, restore, onRestore, restoring }) {
       <article className="card">
         <div className="row">
           <Pill tone="red">Needs you now</Pill>
+          <ImpactPill impact={alert.impact} />
           <span className="small muted">Started {fmtTime(alert.first_seen)}</span>
         </div>
         <h1>{card.headline}</h1>
         <p className="ink-2">{card.what_we_know}</p>
         <p className="small muted">{card.why}</p>
+        {alert.impact?.reason && <p className="small muted">{alert.impact.reason}</p>}
       </article>
       {card.steps.length > 0 && (
         <section className="card" aria-label="What has to happen">
@@ -68,7 +70,8 @@ export default function Owner() {
   const [actionError, setActionError] = useState(null);
 
   const clinic = usePoll(getClinic, 30000);
-  const alerts = usePoll(() => getAlerts("owner", lang), 2000, [lang]);
+  // The owner sees the highest-impact alert first; staff phones keep newest-first.
+  const alerts = usePoll(() => getAlerts("owner", lang, "impact"), 2000, [lang]);
   const notifs = usePoll(() => getNotifications("owner", null, 0), 2000);
   const restore = usePoll(getRestoreLatest, 2000);
   const status = usePoll(getStatus, 5000);

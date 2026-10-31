@@ -23,6 +23,8 @@ from alerts.normalise import normalise
 from clock import Clock, RealClock, now_iso
 from config import Config, Context
 from errors import ApiError, install_handlers
+from eventlog.log import EventLog
+from eventlog.middleware import RequestEvents
 from ingest.replay import ReplaySource
 from lessons.engine import LessonBook
 from lessons.providers import get_provider
@@ -34,7 +36,7 @@ INGEST_TICK_SECONDS = 5        # live Wazuh poll
 
 # Routers owned by the other backend lane. Mounted only if they exist yet.
 LANE_TWO_ROUTERS = ("drills", "restore", "devices")
-LANE_ONE_ROUTERS = ("clinic", "alerts", "notifications", "actions", "demo")
+LANE_ONE_ROUTERS = ("clinic", "alerts", "notifications", "actions", "demo", "events")
 
 
 def _optional(module: str, attr: str):
@@ -61,6 +63,8 @@ def _ensure_demo_backup(config: Config) -> None:
 def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
                   reword_provider=None) -> Context:
     db = database.connect(config)
+    if config.event_log:
+        db.events = EventLog(config.events_path, clock)
     _ensure_demo_backup(config)
     replay = ReplaySource(config.replay_path, clock)
     # Alert source: replay by default; the Wazuh poller only if ALERT_SOURCE=wazuh and Kishaann's class exists.
@@ -69,6 +73,7 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
         wazuh_source = _optional("ingest.wazuh", "WazuhSource")
         if wazuh_source is None:
             log.warning("ALERT_SOURCE=wazuh but ingest/wazuh.py has no WazuhSource yet; staying on replay")
+            db.emit("system.source_fallback", reason="no_wazuh_source", exc_type=None)
         else:
             live = wazuh_source(config, clock)
     # Attack simulation (T8): when SIMULATE is on, the in-app simulator becomes the live
@@ -93,6 +98,7 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
                 log.warning(f"ALERT_SOURCE=wazuh but the Wazuh client is misconfigured "
                             f"({type(exc).__name__}: {exc}); staying on the replay source "
                             f"and the fake client until the lab is fixed.")
+                db.emit("system.source_fallback", reason="client_misconfigured", exc_type=type(exc).__name__)
                 live, client = None, FakeWazuhClient()
         if client is None:
             client = FakeWazuhClient()
@@ -110,8 +116,12 @@ async def _timeout_loop(ctx: Context, every: float) -> None:
         await asyncio.sleep(every)
         try:
             await asyncio.to_thread(timeout.run_once, ctx.db, ctx.clock, ctx.config, ctx.wazuh)
-        except Exception:                      # never let one bad pass kill the loop
+        except Exception as exc:               # never let one bad pass kill the loop
             log.exception("timeout pass failed")
+            ctx.db.emit("system.loop_failed", loop="timeout", exc_type=type(exc).__name__)
+
+
+HEALTH_KEYS = ("api_ok", "indexer_ok", "agent_active")     # last_alert_at moves on every alert: not a change
 
 
 async def _ingest_loop(ctx: Context, every: float) -> None:
@@ -121,16 +131,22 @@ async def _ingest_loop(ctx: Context, every: float) -> None:
             try:                                   # one malformed alert must not drop the rest of the batch
                 pipeline.process(normalise(raw, now_iso(ctx.clock)), ctx.db, ctx.clock,
                                  lessons=ctx.lessons, config=ctx.config)
-            except Exception:
+            except Exception as exc:
                 log.exception("skipped a malformed alert")
+                ctx.db.emit("system.loop_failed", loop="ingest_alert", exc_type=type(exc).__name__)
+        before = {k: ctx.wazuh_health.get(k) for k in HEALTH_KEYS}
         ctx.wazuh_health.update(ctx.wazuh.health())
+        after = {k: ctx.wazuh_health.get(k) for k in HEALTH_KEYS}
+        if after != before:
+            ctx.db.emit("system.wazuh_health_changed", **after)
 
     while True:
         await asyncio.sleep(every)
         try:
             await asyncio.to_thread(cycle)
-        except Exception:
+        except Exception as exc:
             log.exception("ingest cycle failed")
+            ctx.db.emit("system.loop_failed", loop="ingest", exc_type=type(exc).__name__)
 
 
 def create_app(config: Config | None = None, clock: Clock | None = None, wazuh_client=None,
@@ -148,16 +164,23 @@ def create_app(config: Config | None = None, clock: Clock | None = None, wazuh_c
             tasks.append(asyncio.create_task(_timeout_loop(ctx, TIMEOUT_TICK_SECONDS)))
             if (config.alert_source == "wazuh" and ctx.source is not ctx.replay) or ctx.sim is not None:
                 tasks.append(asyncio.create_task(_ingest_loop(ctx, INGEST_TICK_SECONDS)))
+        # Flags only: the config also holds the PIN, tokens and Wazuh passwords.
+        ctx.db.emit("system.started", alert_source=config.alert_source, actions=config.actions,
+                    ai_reword=config.ai_reword, ai_provider=config.ai_provider,
+                    undo_supported=config.undo_supported, event_log_reads=config.event_log_reads)
         try:
             yield
         finally:
             for t in tasks:
                 t.cancel()
+            ctx.db.emit("system.stopped")
             ctx.db.close()
+            ctx.db.events.close()
 
     app = FastAPI(title="ShieldMate", lifespan=lifespan)
     app.state.ctx = ctx
     install_handlers(app)
+    app.add_middleware(RequestEvents, ctx=ctx)
 
     # Mount every router under /api. A missing Lane 1 router is a bug (fail loudly); a missing
     # Lane 2 router just means that lane hasn't landed yet (skip it).

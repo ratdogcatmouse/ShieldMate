@@ -39,4 +39,8 @@ def post_reword(alert_id: int, body: RewordRequest, request: Request):
     lesson = ctx.lessons.get(row["rule_id"])
     values = pipeline._values(ctx.lessons, lesson, row)
     # The provider only ever sees the two filled strings, never log_fields (T3.01).
-    return guard.reword(ctx.reword_provider, c["headline"], c["why"], lesson, values)
+    result = guard.reword(ctx.reword_provider, c["headline"], c["why"], lesson, values)
+    # Which way it went, never the wording itself.
+    ctx.db.emit("alert.reworded", subject=("alert", alert_id), role=body.role, lang=body.lang,
+                source=result["source"])
+    return result

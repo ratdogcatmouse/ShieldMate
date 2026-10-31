@@ -8,7 +8,7 @@ This replaces the owner letters in the Build Spec.
 
 | Person | Owns |
 |---|---|
-| **Ishaan** (backend core) | `main.py`, `config.py`, `db.py`, `errors.py`, `clock.py`, `tests/conftest.py`, contract tests; routes `clinic`, `alerts`, `notifications`, `actions`, `demo`; `alerts/*`, `lessons/*`, `actions/propose.py`, `targets.py`, `timeout.py`; `ingest/source.py`, `ingest/replay.py` |
+| **Ishaan** (backend core) | `main.py`, `config.py`, `db.py`, `errors.py`, `clock.py`, `tests/conftest.py`, contract tests; routes `clinic`, `alerts`, `notifications`, `actions`, `demo`, `events`; `alerts/*`, `lessons/*`, `actions/propose.py`, `targets.py`, `timeout.py`; `ingest/source.py`, `ingest/replay.py`; `eventlog/*` (the frontend's `telemetry.js` is Abhiram's) |
 | **Cetas** (backend features) | `drills/*`, `scenarios/*`, `restore/*`, `demo_backup/*`; routes `drills`, `restore`, `devices`. Takes over `lessons/*` if Ishaan falls behind |
 | **Abhiram** (frontend) | all of `frontend/`, `start.sh`, `Makefile`, translations, the backup video |
 | **Kishaann** (Wazuh) | `lab/*`, `actions/wazuh_client.py` (real client **and** `FakeWazuhClient`), `ingest/wazuh.py` |
@@ -56,6 +56,11 @@ These are small calls made while writing the frozen files. Reverse any of them b
 - **`PUT /clinic/standing-rule` returns the `clinic` object** (`ClinicOut`), reading "the clinic object from GET /clinic" literally.
 - **`RestoreCheck.failed_files` is optional**: the spec says it appears on the integrity check only, which conflicts with "every field is always present".
 - **Draft wording to review:** owner and billing text for rule 60204 and all text for rule 100201 in `lessons.json`. The design only specified the front-desk card.
+- **An event log was added after the freeze** (`backend/eventlog/`), recording everything that happens (user actions, alerts, actions, drills, restore checks, resets, errors, background loops) for later analysis. Four calls came with it:
+  - **Its own SQLite file**, `backend/shieldmate-events.db` (beside `DB_PATH`; `EVENTS_DB_PATH` moves it), with one `events` table. `schema.sql` keeps its ten tables, and Reset never wipes the log: it starts a new `epoch` instead, because alert and action ids restart from 1.
+  - **One new route, `POST /events`** (`contract.py` `EventsRequest`/`EventsAccepted`, `fixtures/events_accepted.json`), for the phones' UI events. This is a contract change, so the four owners need to agree to it.
+  - **`EVENT_LOG` defaults on**, unlike the other flags, because it is the app's record rather than a feature. `EVENT_LOG=0` turns it off, and `/events` then answers `not_enabled`.
+  - **Payloads hold ids, enums, counts and durations only**, from a per-type key list in `eventlog/catalogue.py`. Never logged: log text (`log_fields`/`raw`), notification text, reword output, staff names, PINs, tokens, request bodies or Wazuh responses. Refusals are logged as a code (`never_block`, `invalid_ipv4`, …), because the reason text quotes the untrusted IP.
 
 ## Still needs a human
 
@@ -75,3 +80,5 @@ These are small calls made while writing the frozen files. Reverse any of them b
 | Card wording, proposed action, add a rule | `backend/lessons/lessons.json` |
 | Add a drill | a new file in `backend/scenarios/` in the same format |
 | Any route or field | `backend/contract.py` **and** its fixture, with all four owners agreeing |
+| Log a new kind of event | add it to `backend/eventlog/catalogue.py` and call `db.emit(...)` where it happens; a new `ui.*` type also goes in `contract.ClientEventType` |
+| Turn the event log off, move it, or include the 2 s polls | `EVENT_LOG`, `EVENTS_DB_PATH`, `EVENT_LOG_READS` in `backend/.env` |

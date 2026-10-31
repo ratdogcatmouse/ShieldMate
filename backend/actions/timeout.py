@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from actions import propose
 from actions.wazuh_client import WazuhClient
-from clock import Clock, iso, now_iso
+from clock import Clock, iso, parse_iso
 from config import Config
 from db import Database, mark_device
 from errors import ApiError
@@ -43,6 +43,8 @@ def run_once(db: Database, clock: Clock, config: Config, client: WazuhClient) ->
     for row in db.query("SELECT * FROM actions WHERE status = 'executed' AND expires_at <= ? ORDER BY id", (now_text,)):
         with db.transaction():
             db.execute("UPDATE actions SET status = 'expired' WHERE id = ?", (row["id"],))
+            db.emit("action.expired", subject=("action", row["id"]), alert_id=row["alert_id"],
+                    agent_name=row["agent_name"])
             if propose.active_block(db, row["agent_name"], now_text) is None:
                 mark_device(db, row["agent_name"], "ok", now_text)
         out["expired"] += 1
@@ -62,4 +64,7 @@ def _escalate(db: Database, clinic: dict, action, now_text: str) -> bool:
     db.add_notification(
         f"{owner} hasn't answered: please decide or call {clinic['it_contact_name']} on {clinic['it_contact_phone']}.",
         now_text, alert_id=action["alert_id"], action_row_id=action["id"], to_staff_id=backup["id"])
+    waited = (parse_iso(now_text) - parse_iso(action["proposed_at"])).total_seconds()
+    db.emit("action.escalated", subject=("action", action["id"]), alert_id=action["alert_id"],
+            to_staff_id=backup["id"], waited_s=int(waited))
     return True

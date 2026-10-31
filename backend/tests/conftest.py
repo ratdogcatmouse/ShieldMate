@@ -10,6 +10,8 @@ so tests import ``alerts.filter``, ``main`` etc. the same way the app does.
 """
 from __future__ import annotations
 
+import json
+import sqlite3
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -62,6 +64,16 @@ class Harness:
 
     def put(self, path, **kw):
         return self.client.put("/api" + path, **kw)
+
+    def events(self, prefix: str = "") -> list[dict]:
+        """This app's event log, oldest first, with ``data`` decoded; ``prefix`` filters by type."""
+        conn = sqlite3.connect(self.config.events_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute("SELECT * FROM events WHERE type LIKE ? ORDER BY id", (prefix + "%",)).fetchall()
+        finally:
+            conn.close()
+        return [{**dict(r), "data": json.loads(r["data"])} for r in rows]
 
 
 @pytest.fixture

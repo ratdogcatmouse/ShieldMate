@@ -31,6 +31,7 @@ def set_device_status(db: Database, agent_name: str, status: str, when: str) -> 
         return
     db.execute("UPDATE devices SET status = ?, status_changed_at = ? WHERE agent_name = ?",
                (status, when, agent_name))
+    db.emit("device.status_changed", subject=("device", agent_name), from_status=row["status"], to_status=status)
 
 
 @router.get("/devices", response_model=DevicesResponse,

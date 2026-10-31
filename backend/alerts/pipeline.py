@@ -41,21 +41,27 @@ def process(alert: NormalisedAlert, db: Database, clock: Clock, *, lessons: Less
         # Step 1: filter. Noise is stored (not dropped) so "N routine events hidden" can be counted.
         if should_filter(alert, lesson):
             # Kept (status 'filtered') so the screen can say "N routine events hidden".
-            db.execute(
+            alert_id = db.execute(
                 "INSERT INTO alerts (source, external_id, rule_id, level, agent_name, group_key, count,"
                 " lesson_id, status, log_fields, raw, first_seen, last_seen)"
                 " VALUES (?,?,?,?,?,?,1,?, 'filtered', ?,?,?,?)",
                 (alert.source, alert.external_id, alert.rule_id, alert.level, alert.agent_name,
                  alert.group_key, lesson["lesson_id"] if lesson else None, logs_text, raw_text,
                  now_text, now_text))
+            db.emit("alert.filtered", subject=("alert", alert_id), rule_id=alert.rule_id, level=alert.level,
+                    agent_name=alert.agent_name, source=alert.source,
+                    reason="no_lesson" if lesson is None else "low_level")
             return "filtered"
 
         # Step 2: group. Same rule+PC within 10 min updates the open card instead of making a new one.
         existing = find_group(db, alert, now)
         if existing is not None:
+            count = next_count(existing["count"], alert)
             db.execute(
                 "UPDATE alerts SET count = ?, last_seen = ?, raw = ?, log_fields = ? WHERE id = ?",
-                (next_count(existing["count"], alert), now_text, raw_text, logs_text, existing["id"]))
+                (count, now_text, raw_text, logs_text, existing["id"]))
+            db.emit("alert.grouped", subject=("alert", existing["id"]), rule_id=alert.rule_id,
+                    agent_name=alert.agent_name, source=alert.source, count=count)
             return "grouped"
 
         # Step 3: store a brand-new card.
@@ -67,6 +73,8 @@ def process(alert: NormalisedAlert, db: Database, clock: Clock, *, lessons: Less
             " VALUES (?,?,?,?,?,?,?,?, 'new', ?,?,?,?)",
             (alert.source, alert.external_id, alert.rule_id, alert.level, alert.agent_name,
              alert.group_key, count, lesson["lesson_id"], logs_text, raw_text, now_text, now_text))
+        db.emit("alert.created", subject=("alert", alert_id), rule_id=alert.rule_id, level=alert.level,
+                agent_name=alert.agent_name, source=alert.source, lesson_id=lesson["lesson_id"], count=count)
 
         # Step 4a: with ACTIONS on, a lesson that proposes BLOCK_IP creates an approval request.
         #          (Ransomware's lesson has proposed_action null, so it proposes nothing.)
@@ -161,7 +169,11 @@ def mark_done(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, st
     if row is None:
         raise ApiError("not_found", "No such alert.", 404)
 
-    if row["status"] != "done":
+    done_event = dict(actor=staff_id, subject=("alert", alert_id), rule_id=row["rule_id"], lang=lang)
+    if row["status"] == "done":
+        # A repeat tap changes nothing, but repeat taps are worth seeing in the analysis.
+        db.emit("alert.done", **done_event, already_done=True)
+    else:
         now_text = now_iso(clock)
         c = card(lessons, row, staff["role"], lang) or card(lessons, row, "owner", lang)
         headline = c["headline"] if c else f"alert {alert_id}"
@@ -170,6 +182,7 @@ def mark_done(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, st
         prefix = impact.notification_prefix(impact.alert_out(book, device, row["rule_id"], row["status"]))
         with db.transaction():
             db.execute("UPDATE alerts SET status='done', done_by=? WHERE id=?", (staff_id, alert_id))
+            db.emit("alert.done", **done_event, already_done=False)
             db.add_notification(f"{prefix}{staff['name']} handled: {headline}", now_text,
                                 alert_id=alert_id, from_staff_id=staff_id, to_role="owner")
             # Password-guessing device goes back to OK unless a block is protecting it (T4.10).

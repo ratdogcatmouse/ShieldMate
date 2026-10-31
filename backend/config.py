@@ -79,6 +79,10 @@ class Config:
     simulate: bool = False
     sim_dir: Path = BACKEND_DIR / "replay" / "sim"
     sim_time_limit_ms: int = 600_000      # 10 sim-minutes; a run longer than this expires
+    # Event log (eventlog/). On by default: it is the app's record of what happened, not a feature.
+    event_log: bool = True
+    events_db_path: Path | None = None      # None = next to db_path, e.g. backend/shieldmate-events.db
+    event_log_reads: bool = False           # also log successful GETs (the 2 s polls; noisy)
     # Frozen data files. Kept on the config so tests can point at copies.
     seed_path: Path = BACKEND_DIR / "seed" / "clinic.json"
     lessons_path: Path = BACKEND_DIR / "lessons" / "lessons.json"
@@ -123,15 +127,24 @@ class Config:
             simulate=_flag(env.get("SIMULATE")),
             sim_dir=_path(env["SIM_DIR"]) if env.get("SIM_DIR") else d.sim_dir,
             sim_time_limit_ms=int(env.get("SIM_TIME_LIMIT_MS") or d.sim_time_limit_ms),
+            event_log=_flag(env.get("EVENT_LOG") or "1"),
+            events_db_path=_path(env["EVENTS_DB_PATH"]) if env.get("EVENTS_DB_PATH") else d.events_db_path,
+            event_log_reads=_flag(env.get("EVENT_LOG_READS")),
         )
+
+    @property
+    def events_path(self) -> Path:
+        """Where the event log lives. By default it sits beside the main DB, so each test's temp DB gets its own."""
+        return self.events_db_path or self.db_path.with_name(f"{self.db_path.stem}-events.db")
 
     def with_(self, **changes) -> "Config":
         """Copy with some fields changed (used by tests)."""
         return replace(self, **changes)
 
     def flag(self, name: str) -> bool:
-        """Look up a feature flag by its env-var name (``AI_REWORD`` / ``ACTIONS`` / ``SIMULATE``)."""
-        return {"AI_REWORD": self.ai_reword, "ACTIONS": self.actions, "SIMULATE": self.simulate}[name]
+        """Look up a feature flag by its env-var name (``AI_REWORD``, ``ACTIONS``, ``SIMULATE`` or ``EVENT_LOG``)."""
+        return {"AI_REWORD": self.ai_reword, "ACTIONS": self.actions, "SIMULATE": self.simulate,
+                "EVENT_LOG": self.event_log}[name]
 
 
 @dataclass
