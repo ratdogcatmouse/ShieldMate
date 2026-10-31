@@ -72,5 +72,52 @@
       "headline": "Files on {agent_name} are being locked, which looks like ransomware.",
       "why": "Locked files can stop appointments, billing and patient records."
     }
+  },
+  {
+    "rule_id": "61320",
+    "lesson_id": "phishing_flagged",
+    "severity": "heads_up",
+    "drill_scenario": null,
+    "proposed_action": null,
+    "count_defaults": {"count": 1, "window_minutes": 1},
+    "roles": {
+      "owner": {
+        "headline": "A phishing email was flagged on {agent_name}.",
+        "what_we_know": "{count} suspicious email(s) in {window_minutes} minute(s). Treat it as phishing until IT says otherwise.",
+        "why": "One clicked link can open the doctor's own account - the most important one in the clinic.",
+        "steps": [
+          {"action": "PRESERVE_EVIDENCE", "text": "Do not delete the email or clear the log - keep it for IT."},
+          {"action": "CALL_SAVED_IT", "text": "Call your IT contact (saved in ShieldMate)."}
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "front_desk": {
+        "headline": "A phishing email was flagged on {agent_name}.",
+        "what_we_know": "{count} suspicious email(s) in {window_minutes} minute(s).",
+        "why": "If the link is opened, the doctor's account can be opened up.",
+        "steps": [
+          {"action": "DONT_USE_DEVICE", "text": "Do not open the flagged email or its links."},
+          {"action": "PRESERVE_EVIDENCE", "text": "Leave the email in place for IT."}
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      },
+      "billing": {
+        "headline": "A phishing email was flagged on {agent_name}.",
+        "what_we_know": "{count} suspicious email(s) in {window_minutes} minute(s).",
+        "why": "If the link is opened, the doctor's account can be opened up.",
+        "steps": [
+          {"action": "DONT_USE_DEVICE", "text": "Do not open the flagged email or its links."},
+          {"action": "PRESERVE_EVIDENCE", "text": "Leave the email in place for IT."}
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "A phishing email was flagged on {agent_name}.",
+      "why": "One clicked link can open the doctor's own account."
+    }
   }
 ]

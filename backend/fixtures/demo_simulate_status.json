@@ -1,0 +1,13 @@
+{
+  "run": {
+    "id": 1,
+    "script_id": "phish_owner",
+    "status": "contained",
+    "outcome_reason": "team contained it; 1 escalation(s) avoided",
+    "started_at": "2026-11-01T04:00:00Z",
+    "finished_at": "2026-11-01T04:03:00Z",
+    "phases_fired": 1,
+    "phases_cancelled": 1,
+    "elapsed_ms": 180000
+  }
+}

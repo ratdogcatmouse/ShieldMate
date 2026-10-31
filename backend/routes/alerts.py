@@ -1,9 +1,11 @@
 """GET /alerts, POST /alerts/{id}/done, POST /alerts/{id}/reword."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Request
+from typing import Literal
 
-from alerts import pipeline
+from fastapi import APIRouter, Depends, Query, Request
+
+from alerts import impact, pipeline
 from contract import AlertOut, AlertsResponse, DoneRequest, Lang, RewordRequest, RewordResponse, Role
 from errors import ApiError, require_flag
 from lessons import reword as guard
@@ -12,15 +14,18 @@ router = APIRouter()
 
 
 @router.get("/alerts", response_model=AlertsResponse)
-def get_alerts(request: Request, role: Role, lang: Lang = "en"):
+def get_alerts(request: Request, role: Role, lang: Lang = "en",
+               sort: Literal["time", "impact"] = Query("time")):
     ctx = request.app.state.ctx
-    return pipeline.list_alerts(ctx.db, ctx.lessons, role, lang)
+    book = impact.book_for(ctx.config.seed_path)
+    return pipeline.list_alerts(ctx.db, ctx.lessons, role, lang, book=book, sort=sort)
 
 
 @router.post("/alerts/{alert_id}/done", response_model=AlertOut)
 def post_done(alert_id: int, body: DoneRequest, request: Request, lang: Lang = "en"):
     ctx = request.app.state.ctx
-    return pipeline.mark_done(ctx.db, ctx.clock, ctx.lessons, alert_id, body.staff_id, lang)
+    book = impact.book_for(ctx.config.seed_path)
+    return pipeline.mark_done(ctx.db, ctx.clock, ctx.lessons, alert_id, body.staff_id, lang, book=book)
 
 
 @router.post("/alerts/{alert_id}/reword", response_model=RewordResponse,

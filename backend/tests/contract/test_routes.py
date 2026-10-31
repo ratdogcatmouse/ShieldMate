@@ -26,13 +26,18 @@ def lane_one(route) -> bool:
 
 
 def fill_path(path: str, **ids) -> str:
-    return path.replace("{id}", str(ids["id"])).replace("{alert_type}", "password_guessing")
+    return (path.replace("{id}", str(ids["id"]))
+                .replace("{alert_type}", "password_guessing")
+                .replace("{script_id}", "ransom_wave"))
 
 
 @pytest.mark.parametrize("route", [r for r in ROUTES if lane_one(r)], ids=lambda r: f"{r.method} {r.path}")
 def test_live_response_validates_against_contract(make_app, route):
     # Undo is off by default (decision 9); turn it on just to see the undone body's shape.
-    h = make_app(actions=True, ai_reword=True, undo_supported=route.path.endswith("/undo"))
+    # SIMULATE is on so the /demo/simulate routes are live; the sim source and the
+    # replay button coexist, so the other lane-1 routes behave exactly as before.
+    h = make_app(actions=True, ai_reword=True, simulate=True,
+                 undo_supported=route.path.endswith("/undo"))
     h.reset()
     h.inject("password_guessing")                              # alert 2, action 1
     if route.path.endswith("/undo"):

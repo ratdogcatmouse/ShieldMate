@@ -17,6 +17,7 @@ if TYPE_CHECKING:  # only for type hints; avoids import cycles
     from clock import Clock
     from db import Database
     from ingest.replay import ReplaySource
+    from ingest.simulator import Simulator
     from ingest.source import AlertSource
     from lessons.engine import LessonBook
     from lessons.providers import RewordProvider
@@ -73,6 +74,11 @@ class Config:
     wazuh_ar_command: str = "netsh3600"
     wazuh_timeout_seconds: float = 5.0
     ai_provider: str = "none"
+    # Attack simulation (roadmap T8): the in-app attacker that generates Wazuh-shaped
+    # alerts from a script. Default off - the replay demo stays the stage fallback.
+    simulate: bool = False
+    sim_dir: Path = BACKEND_DIR / "replay" / "sim"
+    sim_time_limit_ms: int = 600_000      # 10 sim-minutes; a run longer than this expires
     # Frozen data files. Kept on the config so tests can point at copies.
     seed_path: Path = BACKEND_DIR / "seed" / "clinic.json"
     lessons_path: Path = BACKEND_DIR / "lessons" / "lessons.json"
@@ -114,6 +120,9 @@ class Config:
             wazuh_ar_command=env.get("WAZUH_AR_COMMAND") or d.wazuh_ar_command,
             wazuh_timeout_seconds=float(env.get("WAZUH_TIMEOUT_SECONDS") or d.wazuh_timeout_seconds),
             ai_provider=env.get("AI_PROVIDER") or d.ai_provider,
+            simulate=_flag(env.get("SIMULATE")),
+            sim_dir=_path(env["SIM_DIR"]) if env.get("SIM_DIR") else d.sim_dir,
+            sim_time_limit_ms=int(env.get("SIM_TIME_LIMIT_MS") or d.sim_time_limit_ms),
         )
 
     def with_(self, **changes) -> "Config":
@@ -121,8 +130,8 @@ class Config:
         return replace(self, **changes)
 
     def flag(self, name: str) -> bool:
-        """Look up a feature flag by its env-var name (``AI_REWORD`` or ``ACTIONS``)."""
-        return {"AI_REWORD": self.ai_reword, "ACTIONS": self.actions}[name]
+        """Look up a feature flag by its env-var name (``AI_REWORD`` / ``ACTIONS`` / ``SIMULATE``)."""
+        return {"AI_REWORD": self.ai_reword, "ACTIONS": self.actions, "SIMULATE": self.simulate}[name]
 
 
 @dataclass
@@ -140,6 +149,7 @@ class Context:
     wazuh: "WazuhClient"
     lessons: "LessonBook"
     reword_provider: "RewordProvider"
+    sim: "Simulator | None" = None # the in-app attack simulator (SIMULATE flag; None when off)
     # Last Wazuh health snapshot for /status (all None in replay mode).
     wazuh_health: dict = field(default_factory=lambda: {
         "api_ok": None, "indexer_ok": None, "agent_active": None, "last_alert_at": None})

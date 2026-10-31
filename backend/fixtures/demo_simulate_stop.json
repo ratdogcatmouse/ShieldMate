@@ -1,0 +1,13 @@
+{
+  "run": {
+    "id": 1,
+    "script_id": "ransom_wave",
+    "status": "stopped",
+    "outcome_reason": "stopped by Backstage",
+    "started_at": "2026-11-01T04:00:00Z",
+    "finished_at": "2026-11-01T04:01:00Z",
+    "phases_fired": 1,
+    "phases_cancelled": 0,
+    "elapsed_ms": 60000
+  }
+}

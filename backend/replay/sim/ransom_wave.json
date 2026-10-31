@@ -1,0 +1,43 @@
+{
+  "id": "ransom_wave",
+  "title": "Ransomware wave: reception PC to the file server",
+  "attacker": {"ip": "192.168.1.57", "account": "frontdesk"},
+  "sim_time_ms_multiplier": 5,
+  "phases": [
+    {
+      "at_ms": 0,
+      "label": "password storm on the reception PC",
+      "alert": {
+        "rule": {"id": "60204", "level": 10, "description": "Multiple Windows Logon Failures"},
+        "agent": {"id": "003", "name": "RECEPTION-PC", "ip": "192.168.1.21"},
+        "data": {"win": {"system": {"eventID": "4625"},
+                  "eventdata": {"targetUserName": "frontdesk", "ipAddress": "192.168.1.57", "logonType": "3"}}}
+      },
+      "shieldmate": {"failures": 8, "window_minutes": 4}
+    },
+    {
+      "at_ms": 30000,
+      "label": "first login succeeds",
+      "alert": {
+        "rule": {"id": "60106", "level": 3, "description": "Windows Logon Success"},
+        "agent": {"id": "003", "name": "RECEPTION-PC", "ip": "192.168.1.21"},
+        "data": {"win": {"system": {"eventID": "4624"},
+                  "eventdata": {"targetUserName": "frontdesk", "logonType": "2"}}}
+      },
+      "cancel_if": "CONTAINED"
+    },
+    {
+      "at_ms": 60000,
+      "label": "encryption on the file server",
+      "alert": {
+        "rule": {"id": "100201", "level": 12, "description": "Possible ransomware: many files renamed to .locked"},
+        "agent": {"id": "001", "name": "FILE-SERVER", "ip": "192.168.1.10"},
+        "data": {"win": {"system": {"eventID": "4624"},
+                  "eventdata": {"targetUserName": "frontdesk"}}},
+        "syscheck": {"path": "D:\\Shared\\Appointments\\oct_2026.xlsx.locked", "event": "added"}
+      },
+      "shieldmate": {"files_renamed": 37, "window_minutes": 1},
+      "cancel_if": "CONTAINED"
+    }
+  ]
+}

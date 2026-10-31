@@ -71,6 +71,14 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
             log.warning("ALERT_SOURCE=wazuh but ingest/wazuh.py has no WazuhSource yet; staying on replay")
         else:
             live = wazuh_source(config, clock)
+    # Attack simulation (T8): when SIMULATE is on, the in-app simulator becomes the live
+    # source - it *generates* Wazuh-shaped alerts from a script instead of polling a lab.
+    # Replay is kept on ctx.replay so the stage fallback buttons still work alongside it.
+    sim = None
+    if config.simulate and source is None:
+        from ingest.simulator import Simulator
+        sim = Simulator(config, db, clock)
+        live = sim
     # Wazuh client: the fake unless live mode and a real client exists. Simulated actions bypass it anyway.
     client = wazuh_client
     if client is None:
@@ -93,6 +101,7 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
         source=live or replay, replay=replay, wazuh=client,
         lessons=LessonBook.load(config.lessons_path),
         reword_provider=reword_provider or get_provider(config.ai_provider),
+        sim=sim,
     )
 
 
@@ -137,7 +146,7 @@ def create_app(config: Config | None = None, clock: Clock | None = None, wazuh_c
         tasks = []
         if background:
             tasks.append(asyncio.create_task(_timeout_loop(ctx, TIMEOUT_TICK_SECONDS)))
-            if config.alert_source == "wazuh" and ctx.source is not ctx.replay:
+            if (config.alert_source == "wazuh" and ctx.source is not ctx.replay) or ctx.sim is not None:
                 tasks.append(asyncio.create_task(_ingest_loop(ctx, INGEST_TICK_SECONDS)))
         try:
             yield

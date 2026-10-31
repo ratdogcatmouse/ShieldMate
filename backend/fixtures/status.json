@@ -1,6 +1,6 @@
 {
   "alert_source": "replay",
-  "flags": {"AI_REWORD": false, "ACTIONS": true},
+  "flags": {"AI_REWORD": false, "ACTIONS": true, "SIMULATE": false},
   "undo_supported": false,
   "server_time": "2026-11-01T04:10:00Z",
   "wazuh": {"api_ok": null, "indexer_ok": null, "agent_active": null, "last_alert_at": null}

@@ -19,7 +19,7 @@ from config import Config
 # Children first, so foreign keys never block a delete (T0.07).
 RUNTIME_TABLES = [
     "actions", "drill_answers", "drill_players", "drills",
-    "restore_runs", "notifications", "alerts",
+    "restore_runs", "sim_runs", "notifications", "alerts",
 ]
 
 
@@ -98,6 +98,20 @@ class Database:
             d["when_down"] = json.loads(d["when_down"])
             out.append(d)
         return out
+
+    def device(self, agent_name: str) -> dict | None:
+        """One device with its JSON columns decoded (services/when_down) - None when absent.
+
+        The impact book (roadmap T7) reads ``device["services"]`` as a list, so it must be
+        the decoded shape, not the raw row.
+        """
+        row = self.one("SELECT * FROM devices WHERE agent_name = ?", (agent_name,))
+        if row is None:
+            return None
+        d = dict(row)
+        d["services"] = json.loads(d["services"])
+        d["when_down"] = json.loads(d["when_down"])
+        return d
 
     def set_standing_rule(self, enabled: bool, staff_id: int, when: str) -> None:
         """Record the owner's standing rule and who/when set it (T4.09), on or off."""
@@ -205,6 +219,7 @@ def connect(config: Config) -> Database:
     """Open the DB, create the schema if needed and seed it if empty."""
     config.db_path.parent.mkdir(parents=True, exist_ok=True)
     db = Database(config.db_path)
+    db.seed_path = config.seed_path     # for the impact book (roadmap T7); None in bare tests
     db.init_schema(config.schema_path)
     if db.one("SELECT 1 FROM clinic") is None:
         db.load_seed(config.seed_path)

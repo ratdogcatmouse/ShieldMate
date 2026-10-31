@@ -1,4 +1,4 @@
-"""POST /demo/replay/{alert_type} and POST /demo/reset (Backstage)."""
+"""POST /demo/replay/{alert_type}, POST /demo/reset, and the attack-simulation routes (T8)."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, Request
 from alerts import pipeline
 from alerts.normalise import normalise
 from clock import now_iso
-from contract import ReplayResult, ResetResult
-from errors import ApiError, require_backstage
+from contract import ReplayResult, ResetResult, SimStartResult, SimStatusResult
+from errors import ApiError, require_backstage, require_flag
 from ingest.replay import ReplayExhausted
+from ingest.simulator import SimScriptError
 
 router = APIRouter(dependencies=[Depends(require_backstage)])
 
@@ -48,4 +49,45 @@ def post_reset(request: Request):
     ctx = request.app.state.ctx
     ctx.db.reset(ctx.config)
     ctx.replay.reset_state()
+    if ctx.sim is not None:            # the simulator's in-memory run is dropped; sim_runs cleared by the DB
+        ctx.sim.reset_state()
     return {"ok": True, "reset_at": now_iso(ctx.clock)}
+
+
+# --- Attack simulation (T8): Backstage presses Play, the script runs in the background. ---
+# Route order matters: the literal /stop must be registered before /{script_id} or it is
+# matched by the path param (Starlette routes in registration order).
+
+_SIM_DEPENDS = [Depends(require_flag("SIMULATE"))]
+
+
+@router.post("/demo/simulate/stop", response_model=SimStatusResult, dependencies=_SIM_DEPENDS)
+def post_simulate_stop(request: Request):
+    ctx = request.app.state.ctx
+    if ctx.sim is None:
+        raise ApiError("invalid_request", "Simulation is not enabled.", 400)
+    return {"run": ctx.sim.stop()}
+
+
+@router.post("/demo/simulate/{script_id}", response_model=SimStartResult, dependencies=_SIM_DEPENDS)
+def post_simulate_start(script_id: str, request: Request):
+    ctx = request.app.state.ctx
+    sim = ctx.sim
+    if sim is None:
+        raise ApiError("invalid_request", "Simulation is not enabled.", 400)
+    # Only one run at a time: a running attack has to be stopped or let finish first.
+    current = sim.run_out()
+    if current is not None and current["status"] == "running":
+        raise ApiError("invalid_request", "A simulation is already running.", 409)
+    try:
+        return sim.start(script_id)
+    except SimScriptError as exc:
+        raise ApiError("invalid_request", str(exc), 400)
+
+
+@router.get("/demo/simulate", response_model=SimStatusResult, dependencies=_SIM_DEPENDS)
+def get_simulate(request: Request):
+    ctx = request.app.state.ctx
+    if ctx.sim is None:
+        raise ApiError("invalid_request", "Simulation is not enabled.", 400)
+    return {"run": ctx.sim.run_out()}

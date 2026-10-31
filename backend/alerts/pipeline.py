@@ -10,6 +10,7 @@ from sqlite3 import Row
 from typing import Literal
 
 from actions import propose
+from alerts import impact
 from alerts.filter import should_filter
 from alerts.group import find_group, next_count
 from alerts.normalise import NormalisedAlert
@@ -95,14 +96,20 @@ def card(lessons: LessonBook, row: Row, role: str, lang: str) -> dict | None:
     return lessons.card_for(lesson, role, lang, _values(lessons, lesson, row), json.loads(row["log_fields"]))
 
 
-def alert_out(db: Database, lessons: LessonBook, row: Row, role: str, lang: str) -> dict | None:
-    """The ``AlertOut`` shape for one role, or None if the lesson has no text for that role."""
+def alert_out(db: Database, lessons: LessonBook, row: Row, role: str, lang: str,
+              book: "impact.ImpactBook | None" = None) -> dict | None:
+    """The ``AlertOut`` shape for one role, or None if the lesson has no text for that role.
+
+    With an impact book (routes pass it in) each alert also carries its ``impact``
+    (T7.03): what's at risk on this device, so the queue can show what to rush first.
+    """
     c = card(lessons, row, role, lang)
     if c is None:
         return None
     lesson = lessons.get(row["rule_id"])
     act = db.one("SELECT id, status, simulated FROM actions WHERE alert_id = ? ORDER BY id DESC LIMIT 1",
                  (row["id"],))
+    device = db.device(row["agent_name"])           # JSON-decoded: the impact book reads services as a list
     return {
         "id": row["id"],
         "source": row["source"],
@@ -119,19 +126,33 @@ def alert_out(db: Database, lessons: LessonBook, row: Row, role: str, lang: str)
         "card": c,
         "action": None if act is None else {"id": act["id"], "status": act["status"],
                                             "simulated": bool(act["simulated"])},
+        "impact": impact.alert_out(book, device, row["rule_id"], row["status"]),
     }
 
 
-def list_alerts(db: Database, lessons: LessonBook, role: str, lang: str) -> dict:
-    """Every non-filtered alert, newest ``last_seen`` first, plus the hidden-event count."""
+def list_alerts(db: Database, lessons: LessonBook, role: str, lang: str,
+                book: "impact.ImpactBook | None" = None, sort: str = "time") -> dict:
+    """Every non-filtered alert, plus the hidden-event count.
+
+    ``sort`` (T7.05): "time" is newest ``last_seen`` first (the default, unchanged);
+    "impact" leads with the highest impact score so the most dangerous card is on top.
+    """
+    alerts = []
     rows = db.query("SELECT * FROM alerts WHERE status != 'filtered' ORDER BY last_seen DESC, id DESC")
-    alerts = [a for a in (alert_out(db, lessons, r, role, lang) for r in rows) if a is not None]
+    for r in rows:
+        a = alert_out(db, lessons, r, role, lang, book=book)
+        if a is not None:
+            alerts.append(a)
+    if sort == "impact":
+        # Highest score first; no-impact (None) cards sink to the bottom. Stable within
+        # a score, so equal cards keep their newest-first order.
+        alerts.sort(key=lambda a: -((a["impact"] or {}).get("score", 0)))
     hidden = db.one("SELECT count(*) AS n FROM alerts WHERE status = 'filtered'")["n"]
     return {"hidden_count": hidden, "alerts": alerts}
 
 
 def mark_done(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, staff_id: int,
-              lang: str = "en") -> dict:
+              lang: str = "en", book: "impact.ImpactBook | None" = None) -> dict:
     """Staff tapped Done. Idempotent: a second tap changes nothing and sends no second notification."""
     staff = db.staff(staff_id)
     if staff is None:
@@ -144,15 +165,18 @@ def mark_done(db: Database, clock: Clock, lessons: LessonBook, alert_id: int, st
         now_text = now_iso(clock)
         c = card(lessons, row, staff["role"], lang) or card(lessons, row, "owner", lang)
         headline = c["headline"] if c else f"alert {alert_id}"
+        # A high/critical alert is marked in the owner notification (roadmap 2.3).
+        device = db.device(row["agent_name"])
+        prefix = impact.notification_prefix(impact.alert_out(book, device, row["rule_id"], row["status"]))
         with db.transaction():
             db.execute("UPDATE alerts SET status='done', done_by=? WHERE id=?", (staff_id, alert_id))
-            db.add_notification(f"{staff['name']} handled: {headline}", now_text,
+            db.add_notification(f"{prefix}{staff['name']} handled: {headline}", now_text,
                                 alert_id=alert_id, from_staff_id=staff_id, to_role="owner")
             # Password-guessing device goes back to OK unless a block is protecting it (T4.10).
             if row["rule_id"] == "60204" and propose.active_block(db, row["agent_name"], now_text) is None:
                 mark_device(db, row["agent_name"], "ok", now_text)
         row = db.one("SELECT * FROM alerts WHERE id = ?", (alert_id,))
-    out = alert_out(db, lessons, row, staff["role"], lang)
+    out = alert_out(db, lessons, row, staff["role"], lang, book=book)
     if out is None:        # this role has no card for the alert; fall back to the owner's wording
-        out = alert_out(db, lessons, row, "owner", lang)
+        out = alert_out(db, lessons, row, "owner", lang, book=book)
     return out

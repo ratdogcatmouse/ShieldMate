@@ -330,7 +330,8 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
         host_pid = _player_id_for_staff(db, code, row["host_staff_id"])
         results = scoring.results(scenario, _players(db, code), all_answers,
                                   restore_result=latest["result"] if latest else None,
-                                  host_player_id=host_pid)
+                                  host_player_id=host_pid,
+                                  book=_impact_book(db), devices=db.devices())
 
     return {
         "code": code,
@@ -357,6 +358,15 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
         "can_advance": is_host and row["status"] in ("lobby", "open", "review"),
         "results": results,
     }
+
+
+def _impact_book(db: Database):
+    """The seed's impact book for the results screen (T7.06), or None in a bare test DB."""
+    seed = getattr(db, "seed_path", None)
+    if seed is None:
+        return None
+    from alerts import impact as impact_mod
+    return impact_mod.book_for(seed)
 
 
 def _impact(db: Database, step: dict) -> list[dict]:

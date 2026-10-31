@@ -11,6 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 
 from actions import propose
+from alerts import impact
 from clock import now_iso
 from contract import DevicesResponse
 from db import Database
@@ -39,6 +40,7 @@ def get_devices(request: Request):
     ctx = request.app.state.ctx
     db, clock = ctx.db, ctx.clock
     now_text = now_iso(clock)
+    book = impact.book_for(ctx.config.seed_path)
     devices = []
     for d in db.devices():
         block_row = propose.active_block(db, d["agent_name"], now_text)
@@ -53,5 +55,7 @@ def get_devices(request: Request):
                 "target_ip": block_row["target_ip"],
                 "expires_at": block_row["expires_at"],
             },
+            # Open exposure at a glance (T7.04): only an under_attack device carries one.
+            "impact": impact.device_strip(book, d),
         })
     return {"devices": devices}

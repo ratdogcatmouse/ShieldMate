@@ -1,0 +1,35 @@
+{
+  "id": "phish_owner",
+  "title": "Phishing aimed at the doctor's PC",
+  "attacker": {"ip": "203.0.113.44", "account": "phish"},
+  "sim_time_ms_multiplier": 4,
+  "phases": [
+    {
+      "at_ms": 0,
+      "label": "suspicious mail lands in the doctor's inbox",
+      "alert": {
+        "rule": {"id": "61320", "level": 9, "description": "Email matches phishing indicators"},
+        "agent": {"id": "005", "name": "DOCTOR-PC", "ip": "192.168.1.23"},
+        "data": {"win": {"system": {"eventID": "4625"},
+                  "eventdata": {"targetUserName": "drrao", "ipAddress": "203.0.113.44"}}},
+        "mail": {"from": "billing-support@clinc-billing.co", "subject": "Urgent: unpaid invoice",
+                 "verdict": "phishing", "score": 82}
+      },
+      "shieldmate": {"count": 1, "window_minutes": 1}
+    },
+    {
+      "at_ms": 45000,
+      "label": "the link is opened - the doctor's PC is infected",
+      "alert": {
+        "rule": {"id": "61320", "level": 11, "description": "Email matches phishing indicators"},
+        "agent": {"id": "005", "name": "DOCTOR-PC", "ip": "192.168.1.23"},
+        "data": {"win": {"system": {"eventID": "4688"},
+                  "eventdata": {"targetUserName": "drrao", "ipAddress": "203.0.113.44"}}},
+        "mail": {"from": "billing-support@clinc-billing.co", "subject": "Urgent: unpaid invoice",
+                 "verdict": "phishing", "score": 82}
+      },
+      "shieldmate": {"count": 2, "window_minutes": 1},
+      "cancel_if": "CONTAINED"
+    }
+  ]
+}

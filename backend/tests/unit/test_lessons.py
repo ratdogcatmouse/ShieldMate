@@ -17,7 +17,7 @@ def test_fill_leaves_unknown_braces_alone():
 
 def test_committed_lessons_load():
     book = LessonBook(RAW)
-    assert book.rule_ids == ["60204", "100201"]
+    assert book.rule_ids == ["60204", "100201", "61320"]
 
 
 def test_role_wording_differs_and_missing_role_is_omitted():

@@ -26,7 +26,9 @@ def _correct_option(scenario: dict, step: dict, role: str) -> dict | None:
 
 def results(scenario: dict, players: list[dict], answers: list[dict],
             restore_result: str | None = None,
-            host_player_id: int | None = None) -> dict:
+            host_player_id: int | None = None,
+            book: "object | None" = None,
+            devices: list[dict] | None = None) -> dict:
     """The finished drill's ``DrillResults``.
 
     ``players``: one dict per joined player ({player_id, name, role}); ``answers``: one
@@ -37,7 +39,12 @@ def results(scenario: dict, players: list[dict], answers: list[dict],
     ``drill_view_finished.json`` shows no host row): with ``host_player_id`` set the
     host gets no row, and the host's *unanswered* steps contribute nothing to the team
     tally - only the steps the host did answer count.
+
+    ``book`` + ``devices`` (impact, T7.06): when both are given, each player's row also
+    carries ``top_missed_impact`` - the highest impact of the steps they got wrong or
+    skipped, so the end screen shows not just *how many* but *what* they overlooked.
     """
+    from alerts import impact as _impact
     steps = scenario["steps"]
     by_key: dict[tuple[int, str], dict] = {(a["player_id"], a["step_id"]): a for a in answers}
     shown = [p for p in players if p["player_id"] != host_player_id]
@@ -48,6 +55,7 @@ def results(scenario: dict, players: list[dict], answers: list[dict],
         pid, role = p["player_id"], p["role"]
         by_phase: dict[str, dict] = {}
         missed: list[str] = []
+        top_missed_impact: int | None = None
         for step in steps:
             # One point is possible only if this player's role had options at this step.
             correct_opt = _correct_option(scenario, step, role)
@@ -64,11 +72,16 @@ def results(scenario: dict, players: list[dict], answers: list[dict],
                 for act in correct_opt.get("actions", []):
                     if act not in missed:
                         missed.append(act)
+                # What this miss cost (T7.06): the step's weighted exposure.
+                exposure = _impact.step_exposure(book, devices or [], step)
+                if exposure and (top_missed_impact is None or exposure > top_missed_impact):
+                    top_missed_impact = exposure
         results_by_player.append({
             "name": p["name"],
             # Only the phases this player actually faced appear.
             "by_phase": by_phase,
             "missed_actions": missed,
+            "top_missed_impact": top_missed_impact,
         })
 
     # --- team tally: every options-step of every player; the host's unanswered

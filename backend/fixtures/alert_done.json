@@ -39,5 +39,10 @@
     "id": 5,
     "status": "proposed",
     "simulated": true
+  },
+  "impact": {
+    "level": "low",
+    "score": 4,
+    "reason": "Low - 4: front-desk check-in on RECEPTION-PC (front_desk account)"
   }
 }

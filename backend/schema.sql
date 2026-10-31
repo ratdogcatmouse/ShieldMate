@@ -130,3 +130,14 @@ CREATE TABLE restore_runs (
   exposed INTEGER NOT NULL,
   details TEXT NOT NULL                           -- JSON: checks[] as in the API
 );
+
+-- Attack simulation (roadmap T8): one row per in-app attack-script run. The simulator is
+-- the only writer; /demo/reset clears it like every other runtime table.
+CREATE TABLE sim_runs (
+  id INTEGER PRIMARY KEY,
+  script_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('running','contained','spread','stopped','expired')),
+  outcome_reason TEXT,
+  started_at TEXT NOT NULL,
+  finished_at TEXT
+);

@@ -103,7 +103,8 @@ def test_clinic_hides_never_block_and_flags_single_point_of_failure(app_h):
 
 def test_status_in_replay_mode(app_h):
     s = app_h.get("/status").json()
-    assert s == {"alert_source": "replay", "flags": {"AI_REWORD": False, "ACTIONS": False}, "undo_supported": False,
+    assert s == {"alert_source": "replay", "flags": {"AI_REWORD": False, "ACTIONS": False, "SIMULATE": False},
+                 "undo_supported": False,
                  "server_time": "2026-11-01T04:00:00Z",
                  "wazuh": {"api_ok": None, "indexer_ok": None, "agent_active": None, "last_alert_at": None}}
 

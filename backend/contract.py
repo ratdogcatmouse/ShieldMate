@@ -114,6 +114,7 @@ class StandingRuleRequest(Model):
 class Flags(Model):
     AI_REWORD: bool
     ACTIONS: bool
+    SIMULATE: bool = False          # attack simulation (roadmap, gate T8; default off)
 
 
 class WazuhHealth(Model):
@@ -154,6 +155,16 @@ class AlertActionRef(Model):
     simulated: bool
 
 
+class ImpactOut(Model):
+    """Impact priority (T7): how much is at risk, so the team knows what to rush.
+
+    ``level`` is the band from the seed's thresholds; ``score`` is the formula's
+    result; ``reason`` is the generated one-liner (roadmap 2.3)."""
+    level: Literal["low", "medium", "high", "critical"]
+    score: int
+    reason: str
+
+
 class AlertOut(Model):
     id: int
     source: AlertSource
@@ -169,6 +180,7 @@ class AlertOut(Model):
     done_by: int | None
     card: Card
     action: AlertActionRef | None
+    impact: ImpactOut | None = None        # null for filtered noise or unknown devices (T7.03)
 
 
 class AlertsResponse(Model):
@@ -311,6 +323,7 @@ class PlayerResult(Model):
     name: str
     by_phase: dict[Phase, PhaseScore]
     missed_actions: list[ActionId]
+    top_missed_impact: int | None = None   # impact of the step they missed (T7.06), null when they missed nothing
 
 
 class TeamScore(Model):
@@ -396,6 +409,7 @@ class DeviceOut(Model):
     status: DeviceStatus
     status_changed_at: str | None
     block: DeviceBlock | None
+    impact: ImpactOut | None = None        # open exposure at a glance; null when not under_attack (T7.04)
 
 
 class DevicesResponse(Model):
@@ -448,6 +462,34 @@ class ResetResult(Model):
     reset_at: str
 
 
+class SimRunOut(Model):
+    """One attack-simulation run (roadmap T8): the script's outcome as observed."""
+
+    id: int
+    script_id: str
+    status: Literal["running", "contained", "spread", "stopped", "expired"]
+    outcome_reason: str | None
+    started_at: str
+    finished_at: str | None
+    phases_fired: int
+    phases_cancelled: int
+    elapsed_ms: int
+
+
+class SimStartResult(Model):
+    """POST /demo/simulate/{script_id}: the run kicked off and what to expect."""
+
+    run: SimRunOut
+    title: str
+    real_total_ms: int       # script sim-duration x multiplier -> how long the demo lasts
+
+
+class SimStatusResult(Model):
+    """GET /demo/simulate and the stop route: the current (or None) run."""
+
+    run: SimRunOut | None
+
+
 # --- route index ---------------------------------------------------------
 
 class Route(NamedTuple):
@@ -485,6 +527,10 @@ ROUTES: list[Route] = [
     Route("PUT", "/clinic/standing-rule", StandingRuleRequest, ClinicOut, "standing_rule.json", who="owner", flag="ACTIONS"),
     Route("POST", "/demo/replay/{alert_type}", None, ReplayResult, "demo_replay.json", who="backstage"),
     Route("POST", "/demo/reset", None, ResetResult, "demo_reset.json", who="backstage"),
+    # Attack simulation (roadmap T8), backstage-only, behind the SIMULATE flag.
+    Route("POST", "/demo/simulate/{script_id}", None, SimStartResult, "demo_simulate_start.json", who="backstage", flag="SIMULATE"),
+    Route("POST", "/demo/simulate/stop", None, SimStatusResult, "demo_simulate_stop.json", who="backstage", flag="SIMULATE"),
+    Route("GET", "/demo/simulate", None, SimStatusResult, "demo_simulate_status.json", who="backstage", flag="SIMULATE"),
 ]
 
 # Extra fixtures that are valid bodies of the models above (used by tests only).

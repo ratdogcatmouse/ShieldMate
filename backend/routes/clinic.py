@@ -71,7 +71,8 @@ def get_status(request: Request):
     ctx = request.app.state.ctx
     return {
         "alert_source": ctx.config.alert_source,
-        "flags": {"AI_REWORD": ctx.config.ai_reword, "ACTIONS": ctx.config.actions},
+        "flags": {"AI_REWORD": ctx.config.ai_reword, "ACTIONS": ctx.config.actions,
+                  "SIMULATE": ctx.config.simulate},
         "undo_supported": ctx.config.undo_supported,
         "server_time": now_iso(ctx.clock),
         "wazuh": ctx.wazuh_health,       # all null in replay mode
