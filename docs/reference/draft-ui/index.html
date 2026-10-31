@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#F4F7FB">
+  <title>ShieldMate</title>
+  <link rel="stylesheet" href="assets/css/shieldmate.css">
+</head>
+<body>
+  <div class="shell">
+    <div id="mode"></div>
+    <header class="topbar">
+      <div class="row" style="gap:8px">
+        <span style="color:var(--blue);display:flex" aria-hidden="true">
+          <svg class="icon" style="width:28px;height:28px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <span class="app-name">ShieldMate</span>
+      </div>
+      <span class="pill pill-sim" id="mode-pill">Demo data</span>
+    </header>
+
+    <main class="content">
+      <div class="stack-sm">
+        <h1 style="font-size:26px">Who's using this device?</h1>
+        <p class="muted">Sunrise Family Clinic. Pick once; this tab remembers.</p>
+      </div>
+
+      <nav aria-label="Choose who you are" class="stack-sm">
+        <a class="role-link" href="staff.html?staff=meena"><span class="stack-sm" style="gap:0"><span class="bold">Meena</span><span class="small muted">Front desk · phone</span></span><span style="color:var(--blue)" id="i1"></span></a>
+        <a class="role-link" href="staff.html?staff=ravi"><span class="stack-sm" style="gap:0"><span class="bold">Ravi</span><span class="small muted">Billing · phone</span></span><span style="color:var(--blue)" id="i2"></span></a>
+        <a class="role-link" href="owner.html"><span class="stack-sm" style="gap:0"><span class="bold">Dr. Rao</span><span class="small muted">Owner · laptop or phone</span></span><span style="color:var(--blue)" id="i3"></span></a>
+        <a class="btn btn-soft btn-block" href="backstage.html">Backstage (demo controls)</a>
+      </nav>
+
+      <section class="card tight">
+        <span class="section-label">Open on another phone</span>
+        <p class="small">Join the same Wi-Fi or hotspot as this laptop, then open:</p>
+        <p class="mono" id="addr" style="font-size:16px;word-break:break-all"></p>
+      </section>
+
+      <details class="log">
+        <summary>All screens (for reviewers)</summary>
+        <div class="body small">
+          <a href="staff.html?staff=meena">Staff · Today, all clear (before any alert)</a>
+          <a href="staff.html?staff=meena">Staff · Alert card (after Backstage → password attack)</a>
+          <a href="drill.html?staff=ravi">Staff · Join drill and lobby</a>
+          <a href="drill.html?staff=ravi">Staff · Drill step and results (after the owner starts)</a>
+          <a href="owner-notify.html">Owner phone · Approval notification</a>
+          <a href="owner.html">Owner · Right now (live approval or ransomware)</a>
+          <a href="owner-readiness.html">Owner · Readiness</a>
+          <a href="owner-drill.html">Owner · Hosting a drill</a>
+          <span class="muted">Owner pages switch to the phone layout below 900 px wide.</span>
+        </div>
+      </details>
+    </main>
+  </div>
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/mock-server.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/pages/start.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "clinic": {
+    "name": "Sunrise Family Clinic",
+    "backup_age_limit_hours": 24,
+    "it_contact_name": "Suresh (TechCare IT)",
+    "it_contact_phone": "+91 90000 00000",
+    "approval_timeout_minutes": 5,
+    "block_minutes": 60,
+    "never_block": [
+      {"ip": "192.168.1.1", "label": "the clinic router"},
+      {"ip": "192.168.1.5", "label": "the Wazuh server"},
+      {"ip": "192.168.1.9", "label": "the ShieldMate laptop"}
+    ]
+  },
+  "staff": [
+    {"id": 1, "name": "Meena", "role": "front_desk", "can_restore_backups": false, "can_approve_downtime": false, "is_backup_approver": false},
+    {"id": 2, "name": "Ravi", "role": "billing", "can_restore_backups": false, "can_approve_downtime": false, "is_backup_approver": true},
+    {"id": 3, "name": "Dr. Rao", "role": "owner", "can_restore_backups": true, "can_approve_downtime": true, "is_backup_approver": false}
+  ],
+  "devices": [
+    {"agent_name": "RECEPTION-PC", "wazuh_agent_id": "003", "location": "Front desk", "services": ["Front-desk check-in"], "when_down": {"Front-desk check-in": "Check-in moves to the billing PC"}},
+    {"agent_name": "FILE-SERVER", "wazuh_agent_id": "001", "location": "Back office", "services": ["Appointments", "Billing", "Patient records"], "when_down": {}},
+    {"agent_name": "DOCTOR-PC", "wazuh_agent_id": "004", "location": "Consulting room", "services": ["Consultations"], "when_down": {}}
+  ]
+}

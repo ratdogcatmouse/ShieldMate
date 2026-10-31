@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "name": "Sunrise Family Clinic",
+  "backup_age_limit_hours": 24,
+  "it_contact_name": "Suresh (TechCare IT)",
+  "it_contact_phone": "+91 90000 00000",
+  "standing_rule_block_ip": true,
+  "standing_rule_set_by": 3,
+  "standing_rule_set_at": "2026-11-01T04:05:00Z",
+  "approval_timeout_minutes": 5,
+  "block_minutes": 60
+}

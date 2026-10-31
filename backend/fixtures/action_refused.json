@@ -1,0 +1,19 @@
+{
+  "id": 6,
+  "alert_id": 12,
+  "action_id": "BLOCK_IP",
+  "label": "Block 192.168.1.1 for 60 minutes",
+  "target_ip": "192.168.1.1",
+  "agent_name": "RECEPTION-PC",
+  "simulated": true,
+  "status": "refused",
+  "refused_reason": "192.168.1.1 is the clinic router",
+  "decided_by": null,
+  "decided_via": null,
+  "proposed_at": "2026-11-01T04:10:00Z",
+  "decided_at": null,
+  "expires_at": null,
+  "seconds_left": null,
+  "on_timeout": "ask_backup_approver",
+  "undo_available": false
+}
