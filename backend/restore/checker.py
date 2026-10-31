@@ -97,8 +97,9 @@ def run(db: Database, clock: Clock, config: Config) -> dict:
 
 
 def latest(db: Database, config: Config) -> dict:
-    """The newest stored run, or the NOT_TESTED placeholder before the first run (T1.15)."""
-    row = db.one("SELECT * FROM restore_runs ORDER BY id DESC LIMIT 1")
+    """The newest stored *check* run (verify runs have their own kind), or the
+    NOT_TESTED placeholder before the first run (T1.15)."""
+    row = db.one("SELECT * FROM restore_runs WHERE kind = 'check' ORDER BY id DESC LIMIT 1")
     if row is None:
         return {"id": None, "result": "NOT_TESTED", "simulated_backup": _is_simulated(config),
                 "started_at": None, "backup_age_hours": None, "files_total": None,

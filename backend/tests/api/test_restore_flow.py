@@ -84,3 +84,30 @@ def test_restore_check_works_on_a_fresh_start_before_any_reset(make_app):
     r = h.post("/restore/run")
     assert r.status_code == 200, r.text
     assert r.json()["result"] == "FAIL" and r.json()["files_total"] == 50
+
+
+def test_verify_route_runs_the_recovery_drill(app_h):
+    app_h.reset()
+    r = app_h.post("/restore/verify")
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["kind"] == "verify"
+    # The demo layout's backup is the planted-fault one, so the story ends FAIL;
+    # the drill's *shape* is what this test pins down.
+    assert [c["check"] for c in body["checks"]] == ["update", "vulnerabilities", "recovery"]
+    assert body["vulns_found"] == 3
+    assert body["recovery"]["files_total"] == 50
+    # Stored with its own kind, not the plain check's.
+    assert app_h.ctx.db.one("SELECT kind FROM restore_runs WHERE id = ?", (body["id"],))["kind"] == "verify"
+
+
+def test_latest_ignores_verify_runs(app_h):
+    app_h.reset()
+    app_h.post("/restore/verify")
+    latest = app_h.get("/restore/latest").json()
+    # No check has run yet: the placeholder, even though a verify run is stored.
+    assert latest == {"id": None, "result": "NOT_TESTED", "simulated_backup": True,
+                      "started_at": None, "backup_age_hours": None, "files_total": None,
+                      "files_ok": None, "exposed": None, "checks": []}
+    app_h.post("/restore/run")
+    assert app_h.get("/restore/latest").json()["result"] in ("PASS", "FAIL")

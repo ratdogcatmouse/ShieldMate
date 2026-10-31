@@ -1,6 +1,10 @@
 # ShieldMate gitignored directories
 backend/demo_backup/originals/
 backend/demo_backup/backup/
+# the verify story's generated trees (restore/verify.py regenerates them on reset)
+backend/demo_backup/compromised/
+backend/demo_backup/patched/
+backend/demo_backup/vuln_markers.json
 backend/restore_sandbox/
 backend/shieldmate.db*
 backend/*-events.db*

@@ -11,11 +11,18 @@ faults, deterministically, so the demo always starts from the same state:
   ``backup_meta.json`` saying the backup is 9 days old and the drive is always
   connected (the freshness and exposure failures).
 
+The verify story (``restore/verify.py``) adds two more trees, generated the same way:
+
+- ``compromised/`` - the clinic's *live* records directory after an attack: the same 50
+  files, but three carry literal **vulnerability markers** (old SQL-injection string,
+  an MD5 password hash, a legacy TLS cipher).
+- ``patched/`` - the IT update: only those three files, rewritten clean.
+
 Content is generated from a fixed seed, so the hashes are identical on every machine
 ("works on my laptop" means the same thing on the demo laptop). ``db.reset`` calls
-``ensure(force=True)`` so a fresh reset always regenerates both folders.
+``ensure(force=True)`` so a fresh reset always regenerates all the folders.
 
-The two on-disk folders are gitignored; they are generated artifacts.
+The on-disk folders are gitignored; they are generated artifacts.
 """
 from __future__ import annotations
 
@@ -28,8 +35,12 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-ORIGINALS_DIR = BACKEND_DIR / "demo_backup" / "originals"
-BACKUP_DIR = BACKEND_DIR / "demo_backup" / "backup"
+BASE_DIR = BACKEND_DIR / "demo_backup"
+ORIGINALS_DIR = BASE_DIR / "originals"
+BACKUP_DIR = BASE_DIR / "backup"
+COMPROMISED_DIR = BASE_DIR / "compromised"     # the live directory, mid-attack
+PATCHED_DIR = BASE_DIR / "patched"             # the IT update (only the fixed files)
+MARKERS_FILE = BASE_DIR / "vuln_markers.json"
 
 # 50 files across the three clinic folders. The two deliberately-altered files below are
 # named by fixtures/restore_run.json, so the paths must stay exactly these.
@@ -44,6 +55,16 @@ ALTERED_FILES = {"invoices/invoice_017.txt", "letters/letter_032.txt"}
 
 # Faults planted in the demo backup: 9 days old, drive always connected.
 FAULT_AGE_DAYS = 9
+
+# The verify story: which live files carry which vulnerability marker (literal strings -
+# the scanner is a substring search, so the demo is deterministic and needs no runtime).
+VULN_MARKERS = ["VULN-SQLI-001", "VULN-MD5-002", "VULN-TLS-LEGACY-003"]
+COMPROMISED_FILES = {
+    "invoices/invoice_005.txt": VULN_MARKERS[0],      # old, vulnerable query build
+    "letters/letter_010.txt": VULN_MARKERS[1],        # passwords hashed with MD5
+    "appointments/appt_001.txt": VULN_MARKERS[2],     # legacy TLS cipher in the exporter
+}
+assert len(COMPROMISED_FILES) == 3, "the verify demo story plants exactly three vulnerabilities"
 
 
 def _content(rel: str, altered: bool = False) -> str:
@@ -66,17 +87,28 @@ def _sha256(text: str) -> str:
 
 
 def build(originals_dir: Path = ORIGINALS_DIR, backup_dir: Path = BACKUP_DIR,
-          good: bool = False, now_text: str | None = None) -> dict:
-    """(Re)generate both folders from scratch.
+          good: bool = False, now_text: str | None = None,
+          compromised_dir: Path | None = None, patched_dir: Path | None = None,
+          markers_path: Path | None = None) -> dict:
+    """(Re)generate all demo folders from scratch.
 
     ``good=True`` builds the test-only passing backup (T1.13): same 50 files, no
     altered files, ``last_backup_at = now`` and ``always_connected: false``.
     ``now_text`` pins the "current time" so tests get a stable, clock-independent build.
+
+    The verify-story trees are always regenerated (they are part of the same demo
+    state). By default they live next to the backup folder (``<backup>/../compromised``,
+    ``patched``, ``vuln_markers.json``), so a test build in a temp dir stays fully
+    sandboxed; pass explicit paths to point elsewhere.
     """
     now_text = now_text or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    for base in (originals_dir, backup_dir):
-        shutil.rmtree(base, ignore_errors=True)
-        base.mkdir(parents=True)
+    base = Path(backup_dir).parent
+    compromised_dir = Path(compromised_dir) if compromised_dir else base / "compromised"
+    patched_dir = Path(patched_dir) if patched_dir else base / "patched"
+    markers_path = Path(markers_path) if markers_path else base / "vuln_markers.json"
+    for dir_ in (originals_dir, backup_dir, compromised_dir, patched_dir):
+        shutil.rmtree(dir_, ignore_errors=True)
+        Path(dir_).mkdir(parents=True)
 
     # 1. The originals and their manifest (the expected hashes).
     manifest: dict[str, str] = {}
@@ -99,7 +131,30 @@ def build(originals_dir: Path = ORIGINALS_DIR, backup_dir: Path = BACKUP_DIR,
         target.write_bytes(_content(rel, altered).encode("utf-8"))
     meta = {"last_backup_at": last_backup_at, "always_connected": not good}
     (Path(backup_dir) / "backup_meta.json").write_text(json.dumps(meta), encoding="utf-8")
+
+    # 3. The verify story: the compromised live directory, the clean IT patch, and the
+    #    marker list the scanner reads (one file so generator and scanner can't drift).
+    _build_verify_trees(compromised_dir, patched_dir, markers_path)
     return manifest
+
+
+def _build_verify_trees(compromised_dir: Path, patched_dir: Path, markers_path: Path) -> None:
+    """Compromised = the 50 originals, three with markers; patched = just those three, clean."""
+    for rel in _NAMES:
+        marker = COMPROMISED_FILES.get(rel)
+        text = _content(rel)
+        if marker:
+            text += f"# VULNERABLE: {marker}\n"
+        target = Path(compromised_dir) / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(text.encode("utf-8"))
+        # The IT update rewrites only the vulnerable files, without the marker.
+        if marker:
+            clean = Path(patched_dir) / rel
+            clean.parent.mkdir(parents=True, exist_ok=True)
+            clean.write_bytes(_content(rel).encode("utf-8"))
+    markers_path.write_text(json.dumps({"markers": VULN_MARKERS, "compromised_files": sorted(COMPROMISED_FILES)}),
+                            encoding="utf-8")
 
 
 def _shift(now_text: str, days: int) -> str:
@@ -109,10 +164,12 @@ def _shift(now_text: str, days: int) -> str:
 
 
 def ensure(force: bool = False) -> None:
-    """Called by ``db.reset`` (force=True): rebuild the demo faults so every demo
-    run starts from the same 50 files, 2 altered, 9 days old, always connected."""
+    """Called by ``db.reset`` (force=True): rebuild the demo state so every demo run
+    starts from the same 50 files, 2 altered, 9 days old, always connected - and the
+    verify story (compromised/patched trees + marker list) regenerates too."""
     if force or not (ORIGINALS_DIR / "manifest.json").is_file() \
-            or not (BACKUP_DIR / "backup_meta.json").is_file():
+            or not (BACKUP_DIR / "backup_meta.json").is_file() \
+            or not (COMPROMISED_DIR / "invoices").is_dir() or not MARKERS_FILE.is_file():
         build()
 
 

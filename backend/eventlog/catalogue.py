@@ -67,9 +67,13 @@ EVENT_TYPES: dict[str, EventType] = {
     "drill.advanced": EventType(("from_status", "to_status", "step_index", "missed", "auto"),
                                 "The drill moved on (auto: closed itself when everyone answered)."),
     "drill.ended": EventType(("from_status", "step_index"), "The host ended the drill early (v2)."),
-    # --- restore check (restore/checker.py) ---
+    # --- restore check (restore/checker.py, restore/verify.py) ---
     "restore.run": EventType(("result", "files_ok", "files_total", "backup_age_hours", "exposed", "failed_checks"),
                              "A restore check ran."),
+    "restore.verify": EventType(("result", "vulns_found", "vulns_fixed", "vulns_remaining", "files_ok"),
+                                "The recovery/patch verification ran (snapshot -> update -> marker delta -> restore)."),
+    "restore.snapshot": EventType(("files", "vuln_files"),
+                                  "The compromised directory was snapshotted (automatic, on a 100201 card)."),
     # --- demo (routes/demo.py, db.reset) ---
     "demo.replay": EventType(("alert_type", "click", "injected", "cards_created", "grouped", "filtered"),
                              "Backstage replayed one click of alerts."),

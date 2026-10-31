@@ -1,0 +1,23 @@
+{
+  "id": 7,
+  "kind": "verify",
+  "started_at": "2026-11-01T04:20:00Z",
+  "result": "PASS",
+  "simulated_backup": true,
+  "vulns_found": 3,
+  "vulns_fixed": 3,
+  "vulns_remaining": 0,
+  "backup_vuln_files": 0,
+  "recovery": {"files_total": 20, "files_ok": 20, "markers_in_recovered": 0},
+  "checks": [
+    {"check": "update", "passed": true,
+     "detail": "3 vulnerable file(s) before the update, 0 after. All closed.",
+     "fix": "Apply the vendor patch and re-verify before trusting the update."},
+    {"check": "vulnerabilities", "passed": true,
+     "detail": "The backup carries none of the known vulnerability markers.",
+     "fix": "Rebuild the backup from the patched system."},
+    {"check": "recovery", "passed": true,
+     "detail": "20 of 20 files restored exactly, and the recovered copy is clean of every known vulnerability marker.",
+     "fix": "Rebuild the backup from the patched system and re-verify."}
+  ]
+}

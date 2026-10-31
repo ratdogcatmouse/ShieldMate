@@ -157,6 +157,7 @@ CREATE TABLE drill_answers (
 
 CREATE TABLE restore_runs (
   id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL DEFAULT 'check' CHECK (kind IN ('check','verify')),  -- verify = the recovery/patch test
   started_at TEXT NOT NULL,
   result TEXT NOT NULL CHECK (result IN ('PASS','FAIL')),   -- NOT_TESTED is never stored
   backup_age_hours REAL NOT NULL,

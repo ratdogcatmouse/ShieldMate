@@ -41,7 +41,7 @@ ScenarioDeviceState = Literal["ok", "infected", "isolated", "encrypting", "encry
 ServiceStatus = Literal["ok", "moved", "down", "unavailable"]
 DeviceStatus = Literal["ok", "under_attack", "protected"]
 RestoreResult = Literal["PASS", "FAIL", "NOT_TESTED"]
-RestoreCheckName = Literal["freshness", "integrity", "exposure"]
+RestoreCheckName = Literal["freshness", "integrity", "exposure", "update", "vulnerabilities", "recovery"]
 ActionStatus = Literal[
     "proposed", "approved", "declined", "executed", "failed", "expired", "undone", "refused",
     "withdrawn",        # v2: the alert was "That was me" or closed before anyone decided
@@ -485,6 +485,34 @@ class RestoreRun(Model):
     checks: list[RestoreCheck]
 
 
+class RestoreRecovery(Model):
+    """The recovery half of a verify run: did the known-good backup come back clean?"""
+    files_total: int
+    files_ok: int
+    markers_in_recovered: int
+
+
+class RestoreVerifyResult(Model):
+    """POST /restore/verify: the recovery/patch story, one owner-gated call.
+
+    Snapshot the compromised directory -> apply the IT patch to a sandbox copy ->
+    re-scan both for the same vulnerability markers -> test that the known-good
+    backup restores clean. ``result`` is PASS only when the patch closed every
+    vulnerability the snapshot caught AND the recovery is clean.
+    """
+    id: int
+    kind: Literal["verify"]
+    started_at: str
+    result: RestoreResult
+    simulated_backup: bool
+    vulns_found: int
+    vulns_fixed: int
+    vulns_remaining: int
+    backup_vuln_files: int              # marker hits in the backup itself (0 = clean)
+    recovery: RestoreRecovery
+    checks: list[RestoreCheck]
+
+
 # --- devices and actions (flag ACTIONS) ----------------------------------
 
 class DeviceBlock(Model):
@@ -654,6 +682,7 @@ ROUTES: list[Route] = [
     Route("POST", "/drills/{code}/advance", AdvanceRequest, DrillView, "drill_view_review.json", who="owner"),
     Route("POST", "/drills/{code}/end", AdvanceRequest, DrillView, "drill_view_finished.json", who="owner"),  # v2
     Route("POST", "/restore/run", None, RestoreRun, "restore_run.json", who="owner"),
+    Route("POST", "/restore/verify", None, RestoreVerifyResult, "restore_verify.json", who="owner"),
     Route("GET", "/restore/latest", None, RestoreRun, "restore_latest.json"),
     Route("GET", "/devices", None, DevicesResponse, "devices.json", flag="ACTIONS"),
     Route("GET", "/actions", None, ActionsResponse, "actions.json", flag="ACTIONS"),
