@@ -35,7 +35,7 @@ make reset                                   # curl -X POST localhost:8000/api/d
 cd frontend && npm run dev                   # Vite dev server; proxies /api -> http://localhost:8000
 ```
 
-Environment: Python 3.12 venv at `backend/.venv`, Node 22. The `.venv` that exists today is at `../.venv` (outside this repo, Python 3.11, nothing installed), so it doesn't match. Config lives in `backend/.env` (copy `.env.example`).
+Environment: Python 3.12 venv at `backend/.venv`, Node 24. The `.venv` that exists today is at `../.venv` (outside this repo, Python 3.11, nothing installed), so it doesn't match. Config lives in `backend/.env` (copy `.env.example`).
 
 ## Architecture
 
