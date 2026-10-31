@@ -62,3 +62,4 @@ FastAPI serves both the JSON API (all under `/api`) and the built React app (fal
 - **Untrusted log text:** `log_fields` (e.g. `username_tried`, `source_ip`) are copied verbatim from alerts and the replay data deliberately contains a prompt-injection string. The frontend renders them as plain text nodes only, never `dangerouslySetInnerHTML`. The AI reword guard may receive only the already-filled `headline` and `why`, never log text, and falls back unless output is ≤ 200 chars with no changed numbers, new digits or links.
 - **Wazuh credentials never leave the server**; TLS verification uses `WAZUH_CA_CERT` and is never turned off. `lab/` is never imported by the app.
 - Kannada/Hindi translations apply to the alert card only, with per-string English fallback. Action IDs in translated steps never change.
+- add comments wherever necessary, and add testing modules
