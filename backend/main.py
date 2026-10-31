@@ -83,8 +83,11 @@ async def _ingest_loop(ctx: Context, every: float) -> None:
     """Live mode only: poll the source and push each alert through the pipeline."""
     def cycle() -> None:
         for raw in ctx.source.next_batch():
-            pipeline.process(normalise(raw, now_iso(ctx.clock)), ctx.db, ctx.clock,
-                             lessons=ctx.lessons, config=ctx.config)
+            try:                                   # one malformed alert must not drop the rest of the batch
+                pipeline.process(normalise(raw, now_iso(ctx.clock)), ctx.db, ctx.clock,
+                                 lessons=ctx.lessons, config=ctx.config)
+            except Exception:
+                log.exception("skipped a malformed alert")
         ctx.wazuh_health.update(ctx.wazuh.health())
 
     while True:

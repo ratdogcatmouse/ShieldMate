@@ -108,7 +108,7 @@ class LessonBook:
         tr = body.get("translations", {}).get(lang, {}) if lang != "en" else {}
         steps_tr = tr.get("steps") or []
         # Only the log fields this role's lesson allows (front desk sees the username, owner also the IP).
-        shown ={k: v for k, v in log_fields.items() if k in body.get("show_log_fields", [])}
+        shown = {k: v for k, v in log_fields.items() if k in body.get("show_log_fields", [])}
         return {
             "lang": lang,
             "headline": fill(tr.get("headline") or body["headline"], values),

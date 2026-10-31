@@ -36,7 +36,7 @@ def normalise(raw: RawAlert, now: str) -> NormalisedAlert:
 
     # Counts for the card placeholders, taken from the optional shieldmate block.
     # DECISIONS departure #3: the replay file says "failures"; the card placeholder is {count}.
-    block =raw.get("shieldmate") or {}
+    block = raw.get("shieldmate") or {}
     counts: dict[str, int] = {}
     if "failures" in block:
         counts["count"] = int(block["failures"])

@@ -140,8 +140,12 @@ export default function Drill() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState(null);
   const [restore, setRestore] = useState(null);
-  const stored = getStoredDrill();
-  const playerId = stored?.code === code ? stored.player_id : null;
+  // Kept in state, not re-read from storage each render: arriving by QR code joins here, and the
+  // page must re-render once it has a player_id (and must not re-join after clearDrill() at the end).
+  const [playerId, setPlayerId] = useState(() => {
+    const stored = getStoredDrill();
+    return stored?.code === code ? stored.player_id : null;
+  });
 
   // Join is idempotent per staff_id, so a device with no stored membership can simply join.
   useEffect(() => {
@@ -152,7 +156,10 @@ export default function Drill() {
       return;
     }
     joinDrill(code, me.id)
-      .then((res) => setDrill({ code, player_id: res.player_id }))
+      .then((res) => {
+        setDrill({ code, player_id: res.player_id });
+        setPlayerId(res.player_id);
+      })
       .catch(setActionError);
   }, [code, playerId, navigate]);
 

@@ -34,7 +34,7 @@ class ReplaySource:
 
     def _load(self, path: Path) -> None:
         """Read the file and enforce the T0.05 rules: valid type/click, required alert fields, no click gaps."""
-        records =json.loads(Path(path).read_text(encoding="utf-8"))
+        records = json.loads(Path(path).read_text(encoding="utf-8"))
         for rec in records:
             meta = rec.get("replay") or {}
             kind, click = meta.get("type"), meta.get("click")
