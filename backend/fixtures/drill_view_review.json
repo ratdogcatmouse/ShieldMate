@@ -1,0 +1,110 @@
+{
+  "code": "4821",
+  "scenario_id": "ransomware_clinic",
+  "title": "Ransomware at the clinic",
+  "status": "review",
+  "step_index": 0,
+  "step_count": 4,
+  "me": {
+    "player_id": 1,
+    "staff_id": 3,
+    "name": "Dr. Rao",
+    "role": "owner",
+    "is_host": true
+  },
+  "step": {
+    "step_id": "s1",
+    "phase": "detect",
+    "game_time": "9:10 AM",
+    "situation": "Files on the shared drive are turning into .locked and a ransom note just appeared on the reception PC.",
+    "opened_at": "2026-11-01T04:20:00Z"
+  },
+  "options": [],
+  "waiting_message": "Waiting for the team to decide",
+  "my_answer": null,
+  "team": {
+    "answered": 2,
+    "total": 2,
+    "players": [
+      {
+        "player_id": 1,
+        "name": "Dr. Rao",
+        "role": "owner",
+        "has_options": false,
+        "answered": false
+      },
+      {
+        "player_id": 2,
+        "name": "Meena",
+        "role": "front_desk",
+        "has_options": true,
+        "answered": true
+      },
+      {
+        "player_id": 3,
+        "name": "Ravi",
+        "role": "billing",
+        "has_options": true,
+        "answered": true
+      }
+    ]
+  },
+  "review": {
+    "answers": [
+      {
+        "name": "Meena",
+        "option_text": "Unplug the network cable / turn Wi-Fi off; leave the PC on",
+        "correct": true
+      },
+      {
+        "name": "Ravi",
+        "option_text": null,
+        "correct": false
+      }
+    ]
+  },
+  "impact": [
+    {
+      "device": "RECEPTION-PC",
+      "state": "infected",
+      "services": [
+        {
+          "name": "Front-desk check-in",
+          "status": "moved",
+          "note": "Check-in moves to the billing PC"
+        }
+      ]
+    },
+    {
+      "device": "FILE-SERVER",
+      "state": "encrypting",
+      "services": [
+        {
+          "name": "Appointments",
+          "status": "down"
+        },
+        {
+          "name": "Billing",
+          "status": "down"
+        },
+        {
+          "name": "Patient records",
+          "status": "unavailable"
+        }
+      ]
+    },
+    {
+      "device": "DOCTOR-PC",
+      "state": "ok",
+      "services": [
+        {
+          "name": "Consultations",
+          "status": "ok"
+        }
+      ]
+    }
+  ],
+  "restore_check_available": false,
+  "can_advance": true,
+  "results": null
+}

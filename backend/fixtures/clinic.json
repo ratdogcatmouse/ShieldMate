@@ -1,0 +1,28 @@
+{
+  "clinic": {
+    "id": 1,
+    "name": "Sunrise Family Clinic",
+    "backup_age_limit_hours": 24,
+    "it_contact_name": "Suresh (TechCare IT)",
+    "it_contact_phone": "+91 90000 00000",
+    "standing_rule_block_ip": false,
+    "standing_rule_set_by": null,
+    "standing_rule_set_at": null,
+    "approval_timeout_minutes": 5,
+    "block_minutes": 60
+  },
+  "staff": [
+    {"id": 1, "name": "Meena", "role": "front_desk", "can_restore_backups": false, "can_approve_downtime": false, "is_backup_approver": false},
+    {"id": 2, "name": "Ravi", "role": "billing", "can_restore_backups": false, "can_approve_downtime": false, "is_backup_approver": true},
+    {"id": 3, "name": "Dr. Rao", "role": "owner", "can_restore_backups": true, "can_approve_downtime": true, "is_backup_approver": false}
+  ],
+  "devices": [
+    {"id": 1, "agent_name": "RECEPTION-PC", "location": "Front desk", "services": ["Front-desk check-in"]},
+    {"id": 2, "agent_name": "FILE-SERVER", "location": "Back office", "services": ["Appointments", "Billing", "Patient records"]},
+    {"id": 3, "agent_name": "DOCTOR-PC", "location": "Consulting room", "services": ["Consultations"]}
+  ],
+  "single_point_of_failure": [
+    {"capability": "can_restore_backups", "label": "Restore backups", "only": "Dr. Rao"},
+    {"capability": "can_approve_downtime", "label": "Approve downtime", "only": "Dr. Rao"}
+  ]
+}

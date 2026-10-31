@@ -1,0 +1,7 @@
+{
+  "devices": [
+    {"id": 1, "agent_name": "RECEPTION-PC", "location": "Front desk", "status": "protected", "status_changed_at": "2026-11-01T04:12:30Z", "block": {"action_row_id": 5, "target_ip": "192.168.1.57", "expires_at": "2026-11-01T05:12:30Z"}},
+    {"id": 2, "agent_name": "FILE-SERVER", "location": "Back office", "status": "ok", "status_changed_at": null, "block": null},
+    {"id": 3, "agent_name": "DOCTOR-PC", "location": "Consulting room", "status": "ok", "status_changed_at": null, "block": null}
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": 5,
+  "alert_id": 12,
+  "action_id": "BLOCK_IP",
+  "label": "Block 192.168.1.57 for 60 minutes",
+  "target_ip": "192.168.1.57",
+  "agent_name": "RECEPTION-PC",
+  "simulated": true,
+  "status": "proposed",
+  "refused_reason": null,
+  "decided_by": null,
+  "decided_via": null,
+  "proposed_at": "2026-11-01T04:10:00Z",
+  "decided_at": null,
+  "expires_at": null,
+  "seconds_left": 287,
+  "on_timeout": "ask_backup_approver",
+  "undo_available": false
+}
