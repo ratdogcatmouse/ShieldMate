@@ -81,7 +81,7 @@ def make_app(tmp_path):
     """Factory: ``make_app(actions=True, ...)`` builds an isolated app. Flags default to off."""
     opened: list[TestClient] = []
 
-    def factory(wazuh: FakeWazuhClient | None = None, **overrides) -> Harness:
+    def factory(wazuh: FakeWazuhClient | None = None, interpreter=None, **overrides) -> Harness:
         config = Config(
             db_path=tmp_path / f"t{len(opened)}.db",
             restore_sandbox_dir=tmp_path / "sandbox",
@@ -89,7 +89,7 @@ def make_app(tmp_path):
         )
         clock = FakeClock()
         wazuh = wazuh or FakeWazuhClient()
-        app = create_app(config, clock, wazuh_client=wazuh, background=False)
+        app = create_app(config, clock, wazuh_client=wazuh, interpreter=interpreter, background=False)
         client = TestClient(app, raise_server_exceptions=False)
         client.__enter__()                    # runs the lifespan
         opened.append(client)

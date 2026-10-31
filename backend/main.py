@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 import db as database
 from actions import timeout
 from actions.wazuh_client import FakeWazuhClient
+from ai.interpreter import get_interpreter
 from alerts import pipeline
 from alerts.normalise import normalise
 from clock import Clock, OffsetClock, RealClock, now_iso
@@ -35,7 +36,7 @@ TIMEOUT_TICK_SECONDS = 10      # approval timeout / expiry pass
 INGEST_TICK_SECONDS = 5        # live Wazuh poll
 
 # Routers owned by the other backend lane. Mounted only if they exist yet.
-LANE_TWO_ROUTERS = ("drills", "restore", "devices")
+LANE_TWO_ROUTERS = ("drills", "restore", "devices", "interpreter")
 LANE_ONE_ROUTERS = ("clinic", "alerts", "notifications", "actions", "demo", "events")
 
 
@@ -61,7 +62,7 @@ def _ensure_demo_backup(config: Config) -> None:
 
 
 def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
-                  reword_provider=None) -> Context:
+                  reword_provider=None, interpreter=None) -> Context:
     db = database.connect(config)
     if config.event_log:
         db.events = EventLog(config.events_path, clock)
@@ -109,12 +110,25 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
                 live, client = None, FakeWazuhClient()
         if client is None:
             client = FakeWazuhClient()
+    # AI interpreter: the real n8n client when the flag and URL are set, else None (feature off).
+    # A misconfigured URL must not take the app down (T5.09) - the route answers fallback.
+    interp = interpreter
+    if interp is None:
+        try:
+            interp = get_interpreter(config)
+        except Exception as exc:
+            log.warning(f"AI_INTERPRETER is on but its URL is misconfigured "
+                        f"({type(exc).__name__}: {exc}); the interpreter stays off.")
+            db.emit("system.source_fallback", reason="interpreter_misconfigured",
+                    exc_type=type(exc).__name__)
+            interp = None
     return Context(
         config=config, db=db, clock=clock,
         source=live or replay, replay=replay, wazuh=client,
         lessons=LessonBook.load(config.lessons_path),
         reword_provider=reword_provider or get_provider(config.ai_provider),
         sim=sim,
+        interpreter=interp,
     )
 
 
@@ -157,11 +171,13 @@ async def _ingest_loop(ctx: Context, every: float) -> None:
 
 
 def create_app(config: Config | None = None, clock: Clock | None = None, wazuh_client=None,
-               source=None, reword_provider=None, background: bool = True) -> FastAPI:
+               source=None, reword_provider=None, interpreter=None,
+               background: bool = True) -> FastAPI:
     """Build the app. Tests pass fakes and ``background=False``."""
     config = config or Config.load()
     # Wrapped so Backstage's "Skip 5 min" (POST /demo/skip) can move time; tests still drive the inner clock.
-    ctx = build_context(config, OffsetClock(clock or RealClock()), wazuh_client, source, reword_provider)
+    ctx = build_context(config, OffsetClock(clock or RealClock()), wazuh_client, source,
+                        reword_provider, interpreter)
 
     # Start-up/shut-down: launch the background loops (timeout every 10 s; Wazuh poll every 5 s in live
     # mode), and cancel them and close the DB on exit.

@@ -21,6 +21,7 @@ if TYPE_CHECKING:  # only for type hints; avoids import cycles
     from ingest.source import AlertSource
     from lessons.engine import LessonBook
     from lessons.providers import RewordProvider
+    from ai.interpreter import InterpreterClient
 
 BACKEND_DIR = Path(__file__).resolve().parent
 REPO_ROOT = BACKEND_DIR.parent
@@ -74,6 +75,11 @@ class Config:
     wazuh_ar_command: str = "netsh3600"
     wazuh_timeout_seconds: float = 5.0
     ai_provider: str = "none"
+    # AI interpreter (roadmap): proxy a stuck user's question to the n8n agent so they can
+    # understand a task. Off by default; the URL is a server-side secret (like the Wazuh creds).
+    ai_interpreter: bool = False
+    ai_interpreter_url: str = ""
+    ai_interpreter_timeout_seconds: float = 30.0
     # Attack simulation (roadmap T8): the in-app attacker that generates Wazuh-shaped
     # alerts from a script. Default off - the replay demo stays the stage fallback.
     simulate: bool = False
@@ -124,6 +130,10 @@ class Config:
             wazuh_ar_command=env.get("WAZUH_AR_COMMAND") or d.wazuh_ar_command,
             wazuh_timeout_seconds=float(env.get("WAZUH_TIMEOUT_SECONDS") or d.wazuh_timeout_seconds),
             ai_provider=env.get("AI_PROVIDER") or d.ai_provider,
+            ai_interpreter=_flag(env.get("AI_INTERPRETER")),
+            ai_interpreter_url=env.get("AI_INTERPRETER_URL", ""),
+            ai_interpreter_timeout_seconds=float(env.get("AI_INTERPRETER_TIMEOUT_SECONDS")
+                                                 or d.ai_interpreter_timeout_seconds),
             # Which clinic seed to load (e.g. backend/seed/clinic.lab.json for the Wazuh lab).
             seed_path=_path(env["SEED_PATH"]) if env.get("SEED_PATH") else d.seed_path,
             simulate=_flag(env.get("SIMULATE")),
@@ -146,7 +156,7 @@ class Config:
     def flag(self, name: str) -> bool:
         """Look up a feature flag by its env-var name (``AI_REWORD``, ``ACTIONS``, ``SIMULATE`` or ``EVENT_LOG``)."""
         return {"AI_REWORD": self.ai_reword, "ACTIONS": self.actions, "SIMULATE": self.simulate,
-                "EVENT_LOG": self.event_log}[name]
+                "AI_INTERPRETER": self.ai_interpreter, "EVENT_LOG": self.event_log}[name]
 
 
 @dataclass
@@ -165,6 +175,9 @@ class Context:
     lessons: "LessonBook"
     reword_provider: "RewordProvider"
     sim: "Simulator | None" = None # the in-app attack simulator (SIMULATE flag; None when off)
+    # AI interpreter client (AI_INTERPRETER flag). Fake when the flag is off / URL missing, so a
+    # broken config never takes the app down (T5.09, like the Wazuh client).
+    interpreter: "InterpreterClient | None" = None
     # Last Wazuh health snapshot for /status (all None in replay mode).
     wazuh_health: dict = field(default_factory=lambda: {
         "api_ok": None, "indexer_ok": None, "agent_active": None, "last_alert_at": None})

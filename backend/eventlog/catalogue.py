@@ -34,6 +34,9 @@ EVENT_TYPES: dict[str, EventType] = {
                                 "Noise kept only for hidden_count; reason is low_level or no_lesson."),
     "alert.done": EventType(("rule_id", "lang", "already_done"), "Staff tapped Done."),
     "alert.reworded": EventType(("role", "lang", "source"), "AI reword asked for; source is ai or fallback."),
+    # --- AI interpreter (roadmap, routes/interpreter.py) ---
+    "interpreter.query": EventType(("alert_id", "drill_code", "device_id", "role", "lang", "source"),
+                                   "A user asked the n8n agent to explain a task; source is ai or fallback."),
     "alert.step_set": EventType(("rule_id", "step_action", "done"), "A card step was ticked or unticked (v2)."),
     "alert.mine": EventType(("rule_id",), "Staff said \"That was me\"; the alert is paused for an hour (v2)."),
     "alert.reopened": EventType(("rule_id", "trigger"),

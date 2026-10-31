@@ -264,6 +264,24 @@ class RewordResponse(Model):
     source: RewordSource
 
 
+# --- AI interpreter (roadmap) ------------------------------------------
+# A stuck user chats with the n8n agent through the backend. The request carries the question
+# plus "what I'm looking at" ids; the response is the agent's plain answer and which way it went.
+
+class InterpreterRequest(Model):
+    question: str = Field(max_length=500)
+    role: Role
+    lang: Lang
+    alert_id: int | None = None      # the card on screen, if any (ids/labels only reach the agent)
+    drill_code: str | None = None    # the drill in progress, if any
+    device_id: int | None = None     # a device the task is about, if any
+
+
+class InterpreterResponse(Model):
+    answer: str = Field(max_length=2000)
+    source: Literal["ai", "fallback"]
+
+
 # --- notifications -------------------------------------------------------
 
 class StaffRef(Model):
@@ -698,6 +716,9 @@ ROUTES: list[Route] = [
     Route("POST", "/demo/simulate/stop", None, SimStatusResult, "demo_simulate_stop.json", who="backstage", flag="SIMULATE"),
     Route("GET", "/demo/simulate", None, SimStatusResult, "demo_simulate_status.json", who="backstage", flag="SIMULATE"),
     Route("POST", "/events", EventsRequest, EventsAccepted, "events_accepted.json", flag="EVENT_LOG"),
+    # AI interpreter (roadmap): a stuck user asks the n8n agent to explain a task. Off by default.
+    Route("POST", "/interpreter/chat", InterpreterRequest, InterpreterResponse,
+          "interpreter.json", flag="AI_INTERPRETER"),
 ]
 
 # Extra fixtures that are valid bodies of the models above (used by tests only).
