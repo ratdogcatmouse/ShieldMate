@@ -5,6 +5,7 @@
     "severity": "needs_you_now",
     "drill_scenario": null,
     "proposed_action": "BLOCK_IP",
+    "that_was_me": true,
     "count_defaults": {"count": 8, "window_minutes": 4},
     "roles": {
       "front_desk": {

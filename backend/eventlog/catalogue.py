@@ -34,6 +34,12 @@ EVENT_TYPES: dict[str, EventType] = {
                                 "Noise kept only for hidden_count; reason is low_level or no_lesson."),
     "alert.done": EventType(("rule_id", "lang", "already_done"), "Staff tapped Done."),
     "alert.reworded": EventType(("role", "lang", "source"), "AI reword asked for; source is ai or fallback."),
+    "alert.step_set": EventType(("rule_id", "step_action", "done"), "A card step was ticked or unticked (v2)."),
+    "alert.mine": EventType(("rule_id",), "Staff said \"That was me\"; the alert is paused for an hour (v2)."),
+    "alert.reopened": EventType(("rule_id", "trigger"),
+                                "A \"That was me\" alert came back; trigger is staff or repeat (v2)."),
+    "alert.it": EventType(("it_action",), "The IT contact's panel: received, note or resolved (v2)."),
+    "alert.closed": EventType(("confirmed",), "The owner confirmed IT's fix, or sent it back (v2)."),
     # --- actions (actions/propose.py, actions/timeout.py) ---
     "action.proposed": EventType(("alert_id", "agent_name", "simulated"), "A BLOCK_IP approval request."),
     "action.refused": EventType(("alert_id", "stage", "reason"),
@@ -46,6 +52,8 @@ EVENT_TYPES: dict[str, EventType] = {
     "action.escalated": EventType(("alert_id", "to_staff_id", "waited_s"),
                                   "Nobody answered in time; the backup approver was asked."),
     "action.expired": EventType(("alert_id", "agent_name"), "A block's time ran out."),
+    "action.withdrawn": EventType(("alert_id", "reason"),
+                                  "A pending proposal was dropped; reason is mine or closed (v2)."),
     # --- clinic, notifications, devices ---
     "clinic.standing_rule_set": EventType(("enabled",), "The owner switched the standing rule."),
     "notification.sent": EventType(("alert_id", "action_row_id", "to_role", "to_staff_id"),
@@ -58,6 +66,7 @@ EVENT_TYPES: dict[str, EventType] = {
                                 "A player locked an answer; latency_ms counts from the step opening."),
     "drill.advanced": EventType(("from_status", "to_status", "step_index", "missed", "auto"),
                                 "The drill moved on (auto: closed itself when everyone answered)."),
+    "drill.ended": EventType(("from_status", "step_index"), "The host ended the drill early (v2)."),
     # --- restore check (restore/checker.py) ---
     "restore.run": EventType(("result", "files_ok", "files_total", "backup_age_hours", "exposed", "failed_checks"),
                              "A restore check ran."),
@@ -65,6 +74,7 @@ EVENT_TYPES: dict[str, EventType] = {
     "demo.replay": EventType(("alert_type", "click", "injected", "cards_created", "grouped", "filtered"),
                              "Backstage replayed one click of alerts."),
     "demo.reset": EventType(("epoch",), "Back to the seeded clinic; epoch is the new reset count."),
+    "demo.skip": EventType(("minutes", "offset_minutes"), "Backstage moved the server clock forward (v2)."),
     # --- requests, errors, the process (eventlog/middleware.py, main.py) ---
     "request.completed": EventType(("method", "route", "status", "error", "duration_ms"),
                                    "An /api call finished (successful reads only with EVENT_LOG_READS)."),

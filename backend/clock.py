@@ -33,6 +33,31 @@ class FakeClock:
         self._now += timedelta(seconds=seconds)
 
 
+class OffsetClock:
+    """v2: another clock plus an offset Backstage can move forward ("Skip 5 min").
+
+    ``create_app`` wraps every clock in one, so the standing rule's 5-minute wait can be
+    shown on stage without waiting. Reset puts the offset back to zero.
+    """
+
+    def __init__(self, base: Clock):
+        self.base = base
+        self.offset = timedelta(0)
+
+    def now(self) -> datetime:
+        return self.base.now() + self.offset
+
+    def skip(self, minutes: int) -> None:
+        self.offset += timedelta(minutes=minutes)
+
+    def reset(self) -> None:
+        self.offset = timedelta(0)
+
+    @property
+    def offset_minutes(self) -> int:
+        return int(self.offset.total_seconds() // 60)
+
+
 def iso(dt: datetime) -> str:
     """ISO 8601 UTC with a trailing Z and no fractional seconds: ``2026-11-01T04:10:00Z``."""
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

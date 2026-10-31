@@ -2,9 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0B1020" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F6F4FF" />
     <title>ShieldMate</title>
+    <script>
+      /* Look and feel, set before the first paint so the page never flashes the wrong theme.
+         "bold": violet brand (default). "calm": the original clinic blue.
+         Override for one tab with ?theme=calm or ?theme=bold. */
+      (function () {
+        var t = "bold";
+        try {
+          var q = new URLSearchParams(location.search).get("theme");
+          if (q === "bold" || q === "calm") sessionStorage.setItem("sm-theme", q);
+          t = sessionStorage.getItem("sm-theme") || t;
+        } catch (e) { /* storage blocked: default */ }
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

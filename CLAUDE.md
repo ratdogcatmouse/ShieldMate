@@ -6,14 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The backend app code is **implemented** (both backend lanes): Lane 1 (Ishaan) covers the
 foundation and the alert/action/lesson pipeline; Lane 2 (Cetas) covers drills, the restore
-check, the device strip and the demo backup. What is still missing: the frontend build,
-Kishaann's live-mode pieces (`ingest/wazuh.py`, the real `RealWazuhClient`), and `lab/`.
-The full suite is green: `cd backend && python -m pytest -q` (272 tests).
+check, the device strip and the demo backup. The frontend is the React + Vite port of the
+HTML/CSS/JS redesign (the original is kept in `docs/reference/vanilla-ui/` for reference), built
+on contract v2 (below). Still missing: Kishaann's live-mode pieces and `lab/`.
+The suites are green: `make test` (pytest + vitest) and `make e2e` (Playwright, against a running stack).
 
 The contract and demo content are frozen and validated against the Testing Plan's T0.04–T0.06 rules:
 
 - [docs/DECISIONS.md](docs/DECISIONS.md) — the 22 pre-H0 decisions, **team ownership** (Ishaan: backend core; Cetas: drills/restore/devices; Abhiram: frontend; Kishaann: Wazuh lab and live mode), and where it departs from the spec. Read it before the PDFs; it wins on conflicts.
-- `backend/contract.py` (Pydantic models and the 21-route `ROUTES` index), `backend/fixtures/*.json` (one stub body per route), `backend/schema.sql`, `backend/seed/clinic.json`, `backend/replay/alerts.json`, `backend/scenarios/*.json`, `backend/lessons/lessons.json`, `backend/.env.example`.
+- `backend/contract.py` (Pydantic models and the `ROUTES` index; **contract v2** added step ticking `PUT /alerts/{id}/steps/{action}`, "That was me" `POST /alerts/{id}/mine|reopen`, the IT loop `POST /alerts/{id}/it|close`, `GET /drills/current`, `POST /drills/{code}/end` and `POST /demo/skip`, each marked "v2"), `backend/fixtures/*.json` (one stub body per route), `backend/schema.sql`, `backend/seed/clinic.json`, `backend/replay/alerts.json`, `backend/scenarios/*.json`, `backend/lessons/lessons.json`, `backend/.env.example`.
 
 Lane 2 notes (Cetas):
 - `drills/models.py` loads/validates the scenario JSON; `drills/engine.py` owns the lobby/open/review/finished machine and is the only writer of the drill tables; `drills/scoring.py` is a pure function (results per phase, missed action IDs); `drills/impact.py` is a pure lookup joining step device states with the seed's services/`when_down` (T2.06).
@@ -67,7 +68,8 @@ ShieldMate turns Wazuh security alerts into plain-language, role-specific cards 
 ./start.sh                                   # npm ci + build frontend, then uvicorn on :8000, single worker, no --reload
 make test                                    # cd backend && .venv/bin/pytest -q
 cd backend && .venv/bin/pytest -q tests/unit/test_filter.py::test_name   # single test
-make e2e                                     # cd frontend && npx playwright test
+make e2e                                     # cd frontend && npx playwright test (needs ACTIONS=1 stack running; presses Reset)
+cd frontend && npm test                      # vitest unit tests (src/**/*.test.js)
 make reset                                   # curl -X POST localhost:8000/api/demo/reset
 cd frontend && npm run dev                   # Vite dev server; proxies /api -> http://localhost:8000
 ```
@@ -78,7 +80,7 @@ Environment: Python 3.12 venv at `backend/.venv`, Node 24. The `.venv` that exis
 
 FastAPI serves both the JSON API (all under `/api`) and the built React app (falling back to `index.html` for `/staff/*`, `/owner`, `/drill/*`, `/backstage`). One uvicorn worker only, because background tasks must run exactly once. State is one SQLite file in WAL mode (`schema.sql`, 10 tables, live-mode columns created from the start). No auth except the optional owner PIN.
 
-**Alert pipeline** (`ingest/` → `alerts/`): an `AlertSource` (`ingest/replay.py` reads `replay/alerts.json` by type and click; `ingest/wazuh.py` polls the Wazuh indexer every 5 s) yields `RawAlert`s → `normalise` → `filter` (level < 7 or no lesson → status `filtered`, counted as `hidden_count`) → `group` (same rule + agent within 10 min → `count++`) → store. `alerts/pipeline.py` is the only writer of `alerts`. Cards are produced per role by `lessons/engine.py`, which fills placeholders (`{agent_name}`, `{count}`, `{window_minutes}`, `{files_renamed}`) in `lessons/lessons.json`. An alert whose lesson has no text for a role is omitted for that role (the ransomware card is owner-only).
+**Alert pipeline** (`ingest/` → `alerts/`, v2 additions in `alerts/pipeline.py` and `alerts/it.py`): an `AlertSource` (`ingest/replay.py` reads `replay/alerts.json` by type and click; `ingest/wazuh.py` polls the Wazuh indexer every 5 s) yields `RawAlert`s → `normalise` → `filter` (level < 7 or no lesson → status `filtered`, counted as `hidden_count`) → `group` (same rule + agent within 10 min → `count++`) → store. `alerts/pipeline.py` is the only writer of `alerts`, except the IT-loop columns and `alert_it_log`, which belong to `alerts/it.py`. Ticked steps live in `alert_steps`, keyed by action ID so a tick shows on every role's card. A repeat of the same rule+agent within an hour of "That was me" reopens that card (`group.find_paused`). The schema carries `PRAGMA user_version` (`db.SCHEMA_VERSION`): an older DB file is dropped and rebuilt at start-up. Cards are produced per role by `lessons/engine.py`, which fills placeholders (`{agent_name}`, `{count}`, `{window_minutes}`, `{files_renamed}`) in `lessons/lessons.json`. An alert whose lesson has no text for a role is omitted for that role (the ransomware card is owner-only).
 
 **Drills** (`drills/`): the server owns all state (lobby → open → review → open … → finished); phones only render `GET /drills/{code}` and post answers. `drills/engine.py` is the only writer of drill tables. Options never include `correct`/`feedback` until that player has answered. Only the host (owner) advances. Scenario JSON must have exactly one `correct` option per role per step. A drill option may name `BLOCK_IP`, but answering it must never create a real action.
 
@@ -95,7 +97,7 @@ FastAPI serves both the JSON API (all under `/api`) and the built React app (fal
 - **Request events:** `eventlog/middleware.py` gives each `/api` call a `request_id`, reads the phone's `X-Session-Id`, and emits `request.completed` for writes and errors (successful GETs only with `EVENT_LOG_READS`).
 - **Frontend events:** the phones batch `ui.*` events to `POST /api/events` via `frontend/src/telemetry.js`.
 
-**Frontend** (React + Vite + react-router, no login): `api.js` has one function per contract route and throws `ApiError {status, error, message}`. `usePoll` keeps the last good data on failure (`stale: true`), pauses on hidden tabs and never overlaps requests. `session.js` keeps identity and drill membership in `localStorage` (every access wrapped in try/catch because Safari private mode throws).
+**Frontend** (`frontend/`, React + Vite + react-router, no login, no mock mode: it always talks to the backend, which `npm run dev` proxies at :8000). Identity is the address: `/staff/:id`, `/owner[/readiness|/drill|/notify]`, `/it`, `/mission`, `/backstage`. `src/lib/api.js` has one function per contract route and throws `ApiError {status, error, message}`; `listOrEmpty` turns a flagged-off list route into `[]`. `usePoll` keeps the last good data on failure (`stale: true`), pauses on hidden tabs, never overlaps, and returns `refresh()` for after a tap. `time.js` keeps countdowns on the server's clock (`/status` server_time; Backstage can skip it). `derive.js` holds the facts several screens share (device strip, CERT-In deadline, the activity timeline built from API timestamps). `content.js` is presentation-only wording (device names, labels, the IT playbook, the sample "last month" drill); alert and drill text always come from the backend. `session.js` keeps the language and drill player ids in `localStorage` (every access wrapped in try/catch because Safari private mode throws). The stylesheet is the redesign's, unchanged. There is no `dangerouslySetInnerHTML` anywhere.
 
 ## Conventions that cut across files
 

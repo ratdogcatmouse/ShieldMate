@@ -1,9 +1,12 @@
 -- ShieldMate schema: ten tables, live-mode columns included from H0 (T0.01).
 -- Setup tables are re-seeded from seed/clinic.json on every reset;
 -- runtime tables are emptied. "-- proposed (n)" marks Build Spec decision n.
+-- "-- v2" marks the contract v2 additions (step ticking, "That was me", the IT loop).
+-- user_version must match db.SCHEMA_VERSION: an older file is rebuilt at start-up.
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
+PRAGMA user_version = 2;
 
 -- setup (re-seeded on every reset)
 
@@ -53,12 +56,42 @@ CREATE TABLE alerts (
   group_key TEXT NOT NULL,                        -- rule_id + ':' + agent_name
   count INTEGER NOT NULL DEFAULT 1,
   lesson_id TEXT,                                 -- NULL when filtered for no lesson
-  status TEXT NOT NULL CHECK (status IN ('new','done','filtered')),
+  status TEXT NOT NULL CHECK (status IN ('new','done','filtered','mine')),
   log_fields TEXT NOT NULL DEFAULT '{}',          -- JSON, verbatim strings
   raw TEXT NOT NULL,                              -- JSON, the original alert
   first_seen TEXT NOT NULL,
   last_seen TEXT NOT NULL,
-  done_by INTEGER REFERENCES staff(id)
+  done_by INTEGER REFERENCES staff(id),
+  done_at TEXT,                                   -- v2
+  mine_by INTEGER REFERENCES staff(id),           -- v2: "That was me"
+  mine_at TEXT,                                   -- v2
+  reopened INTEGER NOT NULL DEFAULT 0,            -- v2: came back after "That was me"
+  it_received_at TEXT,                            -- v2: the IT loop (alerts/it.py)
+  it_resolved_at TEXT,
+  it_resolved_note TEXT,
+  it_sent_back_at TEXT,
+  it_sent_back_note TEXT,
+  closed_at TEXT,                                 -- v2: the owner confirmed IT's fix
+  closed_by INTEGER REFERENCES staff(id)
+);
+
+-- v2: ticked card steps, one row per alert and action ID (shared across roles).
+CREATE TABLE alert_steps (
+  alert_id INTEGER NOT NULL REFERENCES alerts(id),
+  action TEXT NOT NULL,
+  done_by INTEGER NOT NULL REFERENCES staff(id),
+  done_at TEXT NOT NULL,
+  PRIMARY KEY (alert_id, action)
+);
+
+-- v2: the incident's IT history. by_staff_id NULL = the clinic's IT contact.
+CREATE TABLE alert_it_log (
+  id INTEGER PRIMARY KEY,
+  alert_id INTEGER NOT NULL REFERENCES alerts(id),
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('called','received','note','resolved','confirmed','sent_back')),
+  by_staff_id INTEGER REFERENCES staff(id),
+  note TEXT
 );
 
 CREATE TABLE actions (
@@ -69,7 +102,7 @@ CREATE TABLE actions (
   agent_name TEXT NOT NULL,
   simulated INTEGER NOT NULL,                     -- 1 when the alert came from replay
   status TEXT NOT NULL CHECK (status IN
-    ('proposed','approved','declined','executed','failed','expired','undone','refused')),
+    ('proposed','approved','declined','executed','failed','expired','undone','refused','withdrawn')),
   refused_reason TEXT,                            -- proposed (17)
   decided_by INTEGER REFERENCES staff(id),
   decided_via TEXT CHECK (decided_via IN ('tap','standing_rule')),

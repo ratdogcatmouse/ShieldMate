@@ -6,6 +6,7 @@ This module is the only writer of the drill tables; routes call it, never SQL.
 
     lobby --advance--> open s1 --auto/advance--> review s1
           --advance--> open s2 ... --advance--> finished
+    any state but finished --end (v2, host only)--> finished
 
 Non-host advance is ``not_host``. A drill option that names BLOCK_IP is practice,
 never a real action: drill answers only write ``drill_answers``, so nothing in the
@@ -258,6 +259,50 @@ def advance(db: Database, clock: Clock, code: str, player_id: int,
     return view(db, code, player_id, reg)
 
 
+def _require_host(db: Database, row: Row, code: str, player_id: int) -> Row:
+    player = db.one("SELECT * FROM drill_players WHERE drill_code = ? AND id = ?", (code, player_id))
+    if player is None:
+        raise ApiError("player_not_in_drill", "That player is not in this drill.", 404)
+    if row["host_staff_id"] != player["staff_id"]:
+        raise ApiError("not_host", "Only the drill host can move the team on.", 403)
+    return player
+
+
+def end(db: Database, clock: Clock, code: str, player_id: int, reg: ScenarioRegistry | None = None) -> dict:
+    """v2: the host ends the drill now ("End drill now").
+
+    Results cover only the moments the team reached (``view`` scores up to ``step_index``).
+    Ending while a moment is open closes it the way an early ``advance`` does: anyone who
+    had options but hadn't answered is recorded as missing it.
+    """
+    reg = reg or registry()
+    row = _drill_row(db, code)
+    if row["status"] == "finished":
+        raise ApiError("drill_finished", "This drill is already finished.", 409)
+    player = _require_host(db, row, code, player_id)
+    with db.transaction():
+        if row["status"] == "open":
+            step = _step(row, reg.get(row["scenario_id"]))
+            answered = {a["player_id"] for a in _answers(db, code, step["step_id"])}
+            for p in _steps_with_options(step, _players(db, code)):
+                if p["player_id"] not in answered:
+                    _insert_answer(db, code, p["player_id"], step["step_id"], "", [], 0, now_iso(clock))
+        db.execute("UPDATE drills SET status = 'finished' WHERE code = ?", (code,))
+        db.emit("drill.ended", actor=player["staff_id"], subject=("drill", code), from_status=row["status"],
+                step_index=row["step_index"])
+    return view(db, code, player_id, reg)
+
+
+def current(db: Database, reg: ScenarioRegistry | None = None) -> dict | None:
+    """v2: the newest drill that isn't finished, as a ``DrillSummary`` - or None."""
+    reg = reg or registry()
+    row = db.one("SELECT * FROM drills WHERE status != 'finished' ORDER BY created_at DESC, rowid DESC LIMIT 1")
+    if row is None:
+        return None
+    return {"code": row["code"], "scenario_id": row["scenario_id"],
+            "title": reg.get(row["scenario_id"])["title"], "status": row["status"]}
+
+
 # --- the shared drill view ----------------------------------------------------------
 
 def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None = None) -> dict:
@@ -280,8 +325,9 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
     finished = row["status"] == "finished"
     # The view's step: the current one when open/review; None in the lobby and when finished.
     step = None if finished or row["status"] == "lobby" else _step(row, scenario)
-    # Impact always reflects the step being shown; a finished drill keeps its last step's picture.
-    impact_step = scenario["steps"][-1] if finished else step
+    # Impact always reflects the step being shown; a finished drill keeps the picture of the
+    # last step it reached (none if it was ended in the lobby).
+    impact_step = (scenario["steps"][row["step_index"]] if row["step_index"] >= 0 else None) if finished else step
     showing_step = step is not None and row["status"] in ("open", "review")
 
     # This player's options for the step (text only - the answer key stays hidden).
@@ -299,8 +345,13 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
                          "feedback": opt.get("feedback", ""), "actions": mine["action_ids"]}
 
     # Team progress: total counts only the players who have options this step (T1.10).
+    # In the lobby the list is everyone who has joined so far (no one has options yet), so
+    # the host's screen and the phones can show who is ready.
     team_players = []
     team_answered = 0
+    if row["status"] == "lobby":
+        team_players = [{"player_id": p["player_id"], "name": p["name"], "role": p["role"],
+                         "has_options": False, "answered": False} for p in _players(db, code)]
     if showing_step:
         answers = {a["player_id"]: a for a in _answers(db, code, step["step_id"])}
         for p in _players(db, code):
@@ -343,12 +394,15 @@ def view(db: Database, code: str, player_id: int, reg: ScenarioRegistry | None =
     # finished view shows no host row and the team tally counts only answered steps.
     results = None
     if finished:
+        # Only the moments the drill reached are scored (v2: a drill the host ended early
+        # stops at step_index; a normal finish is on the last step, so that's all of them).
+        reached = {**scenario, "steps": scenario["steps"][:row["step_index"] + 1]}
         all_answers: list[dict] = []
-        for s in scenario["steps"]:
+        for s in reached["steps"]:
             all_answers.extend(_answers(db, code, s["step_id"]))
         latest = db.one("SELECT result FROM restore_runs ORDER BY id DESC LIMIT 1")
         host_pid = _player_id_for_staff(db, code, row["host_staff_id"])
-        results = scoring.results(scenario, _players(db, code), all_answers,
+        results = scoring.results(reached, _players(db, code), all_answers,
                                   restore_result=latest["result"] if latest else None,
                                   host_player_id=host_pid,
                                   book=_impact_book(db), devices=db.devices())

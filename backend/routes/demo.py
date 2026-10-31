@@ -1,12 +1,13 @@
-"""POST /demo/replay/{alert_type}, POST /demo/reset, and the attack-simulation routes (T8)."""
+"""POST /demo/replay/{alert_type}, POST /demo/reset, POST /demo/skip (v2), and the attack-simulation routes (T8)."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
 
+from actions import timeout
 from alerts import pipeline
 from alerts.normalise import normalise
 from clock import now_iso
-from contract import ReplayResult, ResetResult, SimStartResult, SimStatusResult
+from contract import ReplayResult, ResetResult, SimStartResult, SimStatusResult, SkipRequest, SkipResult
 from errors import ApiError, require_backstage, require_flag
 from ingest.replay import ReplayExhausted
 from ingest.simulator import SimScriptError
@@ -49,11 +50,25 @@ def post_replay(alert_type: str, request: Request):
 @router.post("/demo/reset", response_model=ResetResult)
 def post_reset(request: Request):
     ctx = request.app.state.ctx
+    ctx.clock.reset()                  # undo any "Skip 5 min" before the fresh clinic is stamped
     ctx.db.reset(ctx.config)
     ctx.replay.reset_state()
     if ctx.sim is not None:            # the simulator's in-memory run is dropped; sim_runs cleared by the DB
         ctx.sim.reset_state()
     return {"ok": True, "reset_at": now_iso(ctx.clock)}
+
+
+@router.post("/demo/skip", response_model=SkipResult)
+def post_skip(body: SkipRequest, request: Request):
+    """v2: move the server clock forward, e.g. past the 5-minute approval wait so the standing rule acts.
+
+    The timeout pass runs straight away, so the screens show the outcome on their next poll.
+    """
+    ctx = request.app.state.ctx
+    ctx.clock.skip(body.minutes)
+    ctx.db.emit("demo.skip", minutes=body.minutes, offset_minutes=ctx.clock.offset_minutes)
+    timeout.run_once(ctx.db, ctx.clock, ctx.config, ctx.wazuh)
+    return {"offset_minutes": ctx.clock.offset_minutes, "server_time": now_iso(ctx.clock)}
 
 
 # --- Attack simulation (T8): Backstage presses Play, the script runs in the background. ---

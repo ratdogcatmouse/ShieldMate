@@ -30,7 +30,7 @@ def test_lane2_response_validates(make_app, route):
     def fill(path: str) -> str:
         return path.replace("{code}", code)
 
-    query = {f"GET {route.path}": f"?player_id={host_pid}"}.get(f"{route.method} {route.path}", "")
+    query = {"GET /drills/{code}": f"?player_id={host_pid}"}.get(f"{route.method} {route.path}", "")
     body = None
     if route.request is not None:
         values = {"scenario_id": "ransomware_clinic", "host_staff_id": 3, "source_alert_id": None,

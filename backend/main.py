@@ -20,7 +20,7 @@ from actions import timeout
 from actions.wazuh_client import FakeWazuhClient
 from alerts import pipeline
 from alerts.normalise import normalise
-from clock import Clock, RealClock, now_iso
+from clock import Clock, OffsetClock, RealClock, now_iso
 from config import Config, Context
 from errors import ApiError, install_handlers
 from eventlog.log import EventLog
@@ -160,7 +160,8 @@ def create_app(config: Config | None = None, clock: Clock | None = None, wazuh_c
                source=None, reword_provider=None, background: bool = True) -> FastAPI:
     """Build the app. Tests pass fakes and ``background=False``."""
     config = config or Config.load()
-    ctx = build_context(config, clock or RealClock(), wazuh_client, source, reword_provider)
+    # Wrapped so Backstage's "Skip 5 min" (POST /demo/skip) can move time; tests still drive the inner clock.
+    ctx = build_context(config, OffsetClock(clock or RealClock()), wazuh_client, source, reword_provider)
 
     # Start-up/shut-down: launch the background loops (timeout every 10 s; Wazuh poll every 5 s in live
     # mode), and cancel them and close the DB on exit.

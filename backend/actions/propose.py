@@ -1,8 +1,9 @@
 """The ``actions`` table: proposals and every decision on them. Nothing else writes it.
 
 Lifecycle: ``proposed`` -> ``executed`` (approve, or the standing rule on timeout) or
-``declined``; ``executed`` -> ``expired`` (timeout.py) or ``undone``; ``refused`` and
-``failed`` are terminal. A *simulated* action (its alert came from replay, decision 12)
+``declined`` or (v2) ``withdrawn`` (the alert was "That was me" or closed first);
+``executed`` -> ``expired`` (timeout.py) or ``undone``; ``refused``, ``failed`` and
+``withdrawn`` are terminal. A *simulated* action (its alert came from replay, decision 12)
 never reaches the Wazuh client, even in live mode.
 
 ``expires_at`` is the *block's* expiry and stays NULL until the action executes. The
@@ -46,6 +47,16 @@ def propose(db: Database, clock: Clock, alert_id: int, source: str, agent_name: 
     else:
         db.emit("action.refused", subject=("action", row_id), alert_id=alert_id, stage="propose", reason=code)
     return row_id
+
+
+def withdraw_pending(db: Database, alert_id: int, reason: str) -> None:
+    """v2: drop any request still waiting on this alert, so the standing rule can't act on it later.
+
+    ``reason`` is ``mine`` or ``closed``. Runs inside the caller's transaction.
+    """
+    for row in db.query("SELECT id FROM actions WHERE alert_id = ? AND status = 'proposed'", (alert_id,)):
+        db.execute("UPDATE actions SET status = 'withdrawn' WHERE id = ?", (row["id"],))
+        db.emit("action.withdrawn", subject=("action", row["id"]), alert_id=alert_id, reason=reason)
 
 
 def get(db: Database, action_id: int) -> Row:

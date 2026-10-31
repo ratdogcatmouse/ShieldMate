@@ -1,4 +1,5 @@
-"""The /drills routes: create, join, the shared view, answers and the host's advance.
+"""The /drills routes: create, join, the shared view, answers and the host's advance,
+plus (v2) the current-drill lookup and the host's "End drill now".
 
 The routes are thin - all state lives in ``drills.engine`` (the only writer of the
 drill tables), so a phone and the owner laptop always see the same picture.
@@ -7,12 +8,20 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from contract import (AnswerRequest, AdvanceRequest, DrillCreateRequest, DrillCreateResponse,
-                      DrillView, JoinRequest, JoinResponse, MyAnswer)
+from contract import (AnswerRequest, AdvanceRequest, CurrentDrillResponse, DrillCreateRequest,
+                      DrillCreateResponse, DrillView, JoinRequest, JoinResponse, MyAnswer)
 from drills import engine
 from errors import require_owner
 
 router = APIRouter()
+
+
+# Registered before /drills/{code}, so "current" is never read as a code.
+@router.get("/drills/current", response_model=CurrentDrillResponse)
+def get_current(request: Request):
+    """v2: the running drill, so staff phones can offer "join" without being told the code first."""
+    ctx = request.app.state.ctx
+    return {"drill": engine.current(ctx.db)}
 
 
 @router.post("/drills", response_model=DrillCreateResponse, dependencies=[Depends(require_owner)])
@@ -46,3 +55,10 @@ def post_advance(code: str, body: AdvanceRequest, request: Request):
     """The host-only move: lobby -> open, open -> review, review -> next step or finished."""
     ctx = request.app.state.ctx
     return engine.advance(ctx.db, ctx.clock, code, body.player_id)
+
+
+@router.post("/drills/{code}/end", response_model=DrillView, dependencies=[Depends(require_owner)])
+def post_end(code: str, body: AdvanceRequest, request: Request):
+    """v2: the host ends the drill now; the team sees results for what they answered."""
+    ctx = request.app.state.ctx
+    return engine.end(ctx.db, ctx.clock, code, body.player_id)

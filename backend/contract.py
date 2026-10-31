@@ -8,6 +8,10 @@ Conventions: every field is always present (empty means None, never missing);
 extra fields are rejected so drift shows up in tests; lists are wrapped in objects.
 The one exception is RestoreCheck.failed_files, which the spec says appears on the
 integrity check only, so it defaults to None.
+
+Contract v2 (agreed by all four owners for the new frontend): step ticking, "That was me"
+and reopen, the IT support loop (IT panel + owner close), ending a drill early, the
+current-drill lookup and Backstage's skip-ahead. Each addition is marked "v2" below.
 """
 from __future__ import annotations
 
@@ -29,7 +33,7 @@ ActionId = Literal[
     "PRESERVE_EVIDENCE", "VERIFY_BACKUP", "REPORT_CERTIN", "START_DPDP_NOTE", "BLOCK_IP",
 ]
 Severity = Literal["needs_you_now", "heads_up"]
-AlertStatus = Literal["new", "done", "filtered"]
+AlertStatus = Literal["new", "done", "filtered", "mine"]   # v2: mine = "That was me", paused 1 h
 AlertSource = Literal["replay", "wazuh"]
 DrillStatus = Literal["lobby", "open", "review", "finished"]
 Phase = Literal["detect", "contain", "recover", "report"]
@@ -40,6 +44,7 @@ RestoreResult = Literal["PASS", "FAIL", "NOT_TESTED"]
 RestoreCheckName = Literal["freshness", "integrity", "exposure"]
 ActionStatus = Literal[
     "proposed", "approved", "declined", "executed", "failed", "expired", "undone", "refused",
+    "withdrawn",        # v2: the alert was "That was me" or closed before anyone decided
 ]
 DecidedVia = Literal["tap", "standing_rule"]
 OnTimeout = Literal["block_under_standing_rule", "ask_backup_approver"]
@@ -50,7 +55,10 @@ ErrorCode = Literal[
     "not_found", "not_enabled", "drill_not_found", "player_not_in_drill", "step_closed",
     "already_answered", "drill_finished", "action_not_pending", "target_refused",
     "undo_not_supported", "replay_exhausted", "wazuh_unavailable", "internal_error",
+    "already_closed", "not_resolved", "not_owner",          # v2: the IT support loop
 ]
+ItStatus = Literal["none", "called", "received", "resolved", "closed"]
+ItLogKind = Literal["called", "received", "note", "resolved", "confirmed", "sent_back"]
 
 
 # --- errors --------------------------------------------------------------
@@ -137,6 +145,11 @@ class StatusResponse(Model):
 class CardStep(Model):
     action: ActionId
     text: str
+    # v2: ticked state, shared by action ID across roles (staff ticking CALL_SAVED_IT ticks
+    # the owner's checklist too).
+    done: bool
+    done_by: int | None
+    done_at: str | None
 
 
 class Card(Model):
@@ -165,6 +178,29 @@ class ImpactOut(Model):
     reason: str
 
 
+class ItLogEntry(Model):
+    """v2: one line of an incident's IT history. Who: a staff member, or the IT contact."""
+    at: str
+    kind: ItLogKind
+    by_staff_id: int | None             # None = the clinic's IT contact
+    note: str | None                    # free text typed by IT or the owner: render as text only
+
+
+class ItOut(Model):
+    """v2: where the IT contact is with this alert. ``called_*`` come from the CALL_SAVED_IT step."""
+    status: ItStatus
+    called_by: int | None
+    called_at: str | None
+    received_at: str | None
+    resolved_at: str | None
+    resolved_note: str | None
+    sent_back_at: str | None
+    sent_back_note: str | None
+    closed_at: str | None
+    closed_by: int | None
+    log: list[ItLogEntry]
+
+
 class AlertOut(Model):
     id: int
     source: AlertSource
@@ -178,8 +214,14 @@ class AlertOut(Model):
     first_seen: str
     last_seen: str
     done_by: int | None
+    done_at: str | None                 # v2
+    mine_by: int | None                 # v2: who said "That was me"
+    mine_at: str | None                 # v2
+    reopened: bool                      # v2: came back after "That was me"
+    can_say_mine: bool                  # v2: the lesson allows "That was me"
     card: Card
     action: AlertActionRef | None
+    it: ItOut                           # v2
     impact: ImpactOut | None = None        # null for filtered noise or unknown devices (T7.03)
 
 
@@ -190,6 +232,25 @@ class AlertsResponse(Model):
 
 class DoneRequest(Model):
     staff_id: int
+
+
+class StepRequest(Model):
+    """v2: PUT /alerts/{id}/steps/{action}."""
+    staff_id: int
+    done: bool
+
+
+class ItRequest(Model):
+    """v2: POST /alerts/{id}/it, from the IT contact's panel. ``resolved`` needs a note of 5+ characters."""
+    action: Literal["received", "note", "resolved"]
+    note: str = Field(max_length=300)
+
+
+class CloseRequest(Model):
+    """v2: POST /alerts/{id}/close. confirm=false sends it back to IT with ``note`` as the reason."""
+    staff_id: int
+    confirm: bool
+    note: str = Field(max_length=300)
 
 
 class RewordRequest(Model):
@@ -369,7 +430,20 @@ class AnswerRequest(Model):
 
 
 class AdvanceRequest(Model):
+    """Also the body of v2's POST /drills/{code}/end (host only)."""
     player_id: int
+
+
+class DrillSummary(Model):
+    """v2: the running drill, so a staff phone can offer "join" without the owner nearby."""
+    code: str
+    scenario_id: str
+    title: str
+    status: DrillStatus
+
+
+class CurrentDrillResponse(Model):
+    drill: DrillSummary | None          # None when no drill is running
 
 
 # --- restore check -------------------------------------------------------
@@ -462,6 +536,16 @@ class ResetResult(Model):
     reset_at: str
 
 
+class SkipRequest(Model):
+    """v2: POST /demo/skip moves the server clock forward (Reset puts it back)."""
+    minutes: int = Field(ge=1, le=120)
+
+
+class SkipResult(Model):
+    offset_minutes: int                 # how far ahead the clock is in total
+    server_time: str
+
+
 class SimRunOut(Model):
     """One attack-simulation run (roadmap T8): the script's outcome as observed."""
 
@@ -538,12 +622,20 @@ ROUTES: list[Route] = [
     Route("GET", "/alerts", None, AlertsResponse, "alerts.json"),
     Route("POST", "/alerts/{id}/done", DoneRequest, AlertOut, "alert_done.json"),
     Route("POST", "/alerts/{id}/reword", RewordRequest, RewordResponse, "reword.json", flag="AI_REWORD"),
+    # v2: the new frontend's alert flows.
+    Route("PUT", "/alerts/{id}/steps/{action}", StepRequest, AlertOut, "alert_step.json"),
+    Route("POST", "/alerts/{id}/mine", DoneRequest, AlertOut, "alert_mine.json"),
+    Route("POST", "/alerts/{id}/reopen", DoneRequest, AlertOut, "alert_reopen.json"),
+    Route("POST", "/alerts/{id}/it", ItRequest, AlertOut, "alert_it.json"),
+    Route("POST", "/alerts/{id}/close", CloseRequest, AlertOut, "alert_close.json", who="owner"),
     Route("GET", "/notifications", None, NotificationsResponse, "notifications.json"),
+    Route("GET", "/drills/current", None, CurrentDrillResponse, "drill_current.json"),     # v2
     Route("POST", "/drills", DrillCreateRequest, DrillCreateResponse, "drill_create.json", who="owner"),
     Route("POST", "/drills/{code}/join", JoinRequest, JoinResponse, "drill_join.json"),
     Route("GET", "/drills/{code}", None, DrillView, "drill_view.json"),
     Route("POST", "/drills/{code}/answers", AnswerRequest, MyAnswer, "drill_answer.json"),
     Route("POST", "/drills/{code}/advance", AdvanceRequest, DrillView, "drill_view_review.json", who="owner"),
+    Route("POST", "/drills/{code}/end", AdvanceRequest, DrillView, "drill_view_finished.json", who="owner"),  # v2
     Route("POST", "/restore/run", None, RestoreRun, "restore_run.json", who="owner"),
     Route("GET", "/restore/latest", None, RestoreRun, "restore_latest.json"),
     Route("GET", "/devices", None, DevicesResponse, "devices.json", flag="ACTIONS"),
@@ -554,6 +646,7 @@ ROUTES: list[Route] = [
     Route("PUT", "/clinic/standing-rule", StandingRuleRequest, ClinicOut, "standing_rule.json", who="owner", flag="ACTIONS"),
     Route("POST", "/demo/replay/{alert_type}", None, ReplayResult, "demo_replay.json", who="backstage"),
     Route("POST", "/demo/reset", None, ResetResult, "demo_reset.json", who="backstage"),
+    Route("POST", "/demo/skip", SkipRequest, SkipResult, "demo_skip.json", who="backstage"),       # v2
     # Attack simulation (roadmap T8), backstage-only, behind the SIMULATE flag.
     Route("POST", "/demo/simulate/{script_id}", None, SimStartResult, "demo_simulate_start.json", who="backstage", flag="SIMULATE"),
     Route("POST", "/demo/simulate/stop", None, SimStatusResult, "demo_simulate_stop.json", who="backstage", flag="SIMULATE"),

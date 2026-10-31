@@ -33,16 +33,17 @@ dev: ## uvicorn on :8000 + Vite dev server on :5173 with hot reload (Ctrl-C stop
 fresh: ## Like `start`, but delete the SQLite database first
 	./start.sh --fresh
 
-build: ## Build the frontend against the real API (VITE_API_MODE=http, not the fixture mock)
-	cd frontend && VITE_API_MODE=http npm run build
+build: ## Build the frontend (frontend/dist, served by FastAPI)
+	cd frontend && npm run build
 
-test: ## Run the backend test suite (pytest)
+test: ## Run the backend tests (pytest) and the frontend unit tests (vitest)
 	cd backend && .venv/bin/python -m pytest -q $(ARGS)
+	cd frontend && npm test
 
 smoke: build ## Boot the built stack on a spare port and check the API and the frontend together
 	bash scripts/smoke.sh
 
-e2e: ## Run the Playwright browser tests (needs the stack running; frontend/e2e is still empty)
+e2e: ## Playwright demo-story tests; needs `ACTIONS=1 make start` running (they press Reset)
 	cd frontend && npx playwright test
 
 reset: ## Reset the running demo to its starting state (POST /api/demo/reset)

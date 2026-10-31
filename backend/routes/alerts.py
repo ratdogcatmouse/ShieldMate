@@ -1,13 +1,15 @@
-"""GET /alerts, POST /alerts/{id}/done, POST /alerts/{id}/reword."""
+"""GET /alerts, POST /alerts/{id}/done, POST /alerts/{id}/reword, and the v2 card routes:
+PUT /alerts/{id}/steps/{action}, POST /alerts/{id}/mine|reopen|it|close."""
 from __future__ import annotations
 
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from alerts import impact, pipeline
-from contract import AlertOut, AlertsResponse, DoneRequest, Lang, RewordRequest, RewordResponse, Role
-from errors import ApiError, require_flag
+from alerts import impact, it, pipeline
+from contract import (ActionId, AlertOut, AlertsResponse, CloseRequest, DoneRequest, ItRequest, Lang,
+                      RewordRequest, RewordResponse, Role, StepRequest)
+from errors import ApiError, require_flag, require_owner
 from lessons import reword as guard
 
 router = APIRouter()
@@ -15,10 +17,11 @@ router = APIRouter()
 
 @router.get("/alerts", response_model=AlertsResponse)
 def get_alerts(request: Request, role: Role, lang: Lang = "en",
-               sort: Literal["time", "impact"] = Query("time")):
+               sort: Literal["time", "impact"] = Query("time"), include_closed: bool = False):
     ctx = request.app.state.ctx
     book = impact.book_for(ctx.config.seed_path)
-    return pipeline.list_alerts(ctx.db, ctx.lessons, role, lang, book=book, sort=sort)
+    return pipeline.list_alerts(ctx.db, ctx.lessons, role, lang, book=book, sort=sort,
+                                include_closed=include_closed)
 
 
 @router.post("/alerts/{alert_id}/done", response_model=AlertOut)
@@ -44,3 +47,46 @@ def post_reword(alert_id: int, body: RewordRequest, request: Request):
     ctx.db.emit("alert.reworded", subject=("alert", alert_id), role=body.role, lang=body.lang,
                 source=result["source"])
     return result
+
+
+# --- v2 ---------------------------------------------------------------------------
+# Each answers with the alert in the acting person's wording (the IT panel and the owner's
+# close get the owner's), so the screen can redraw from the response.
+
+@router.put("/alerts/{alert_id}/steps/{action}", response_model=AlertOut)
+def put_step(alert_id: int, action: ActionId, body: StepRequest, request: Request, lang: Lang = "en"):
+    ctx = request.app.state.ctx
+    book = impact.book_for(ctx.config.seed_path)
+    return pipeline.set_step(ctx.db, ctx.clock, ctx.lessons, alert_id, action, body.staff_id, body.done,
+                             lang, book=book)
+
+
+@router.post("/alerts/{alert_id}/mine", response_model=AlertOut)
+def post_mine(alert_id: int, body: DoneRequest, request: Request, lang: Lang = "en"):
+    ctx = request.app.state.ctx
+    book = impact.book_for(ctx.config.seed_path)
+    return pipeline.say_mine(ctx.db, ctx.clock, ctx.lessons, alert_id, body.staff_id, lang, book=book)
+
+
+@router.post("/alerts/{alert_id}/reopen", response_model=AlertOut)
+def post_reopen(alert_id: int, body: DoneRequest, request: Request, lang: Lang = "en"):
+    ctx = request.app.state.ctx
+    book = impact.book_for(ctx.config.seed_path)
+    return pipeline.reopen(ctx.db, ctx.clock, ctx.config, ctx.lessons, alert_id, body.staff_id, lang, book=book)
+
+
+@router.post("/alerts/{alert_id}/it", response_model=AlertOut)
+def post_it(alert_id: int, body: ItRequest, request: Request):
+    """The clinic IT contact's panel. No staff id: the IT contact isn't a staff member."""
+    ctx = request.app.state.ctx
+    it.it_action(ctx.db, ctx.clock, alert_id, body.action, body.note)
+    return pipeline.alert_out_for(ctx.db, ctx.lessons, alert_id, "owner", "en",
+                                  book=impact.book_for(ctx.config.seed_path))
+
+
+@router.post("/alerts/{alert_id}/close", response_model=AlertOut, dependencies=[Depends(require_owner)])
+def post_close(alert_id: int, body: CloseRequest, request: Request):
+    ctx = request.app.state.ctx
+    it.close(ctx.db, ctx.clock, alert_id, body.staff_id, body.confirm, body.note)
+    return pipeline.alert_out_for(ctx.db, ctx.lessons, alert_id, "owner", "en",
+                                  book=impact.book_for(ctx.config.seed_path))

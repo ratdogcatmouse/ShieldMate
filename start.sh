@@ -8,10 +8,6 @@
 #   ./start.sh --fresh         also delete the SQLite DB first (the backend recreates it)
 #   ./start.sh --no-build      serve mode only: reuse the existing frontend/dist
 #
-# Why VITE_API_MODE=http: the frontend defaults to "mock" mode, which answers from
-# backend/fixtures/*.json and never calls the backend. Both modes below set it to "http",
-# otherwise this would not be a backend + frontend test at all.
-#
 # The ports are fixed because frontend/vite.config.js hard-codes the proxy target
 # (http://localhost:8000) and the dev port (5173).
 #
@@ -111,9 +107,9 @@ ensure_frontend_deps() {
 }
 
 build_frontend() {
-  # Always rebuild by default: an existing dist/ may be a mock-mode build.
-  info "Building the frontend against the real API (VITE_API_MODE=http)"
-  (cd "$FRONTEND" && VITE_API_MODE=http npm run build)
+  # Always rebuild by default, so the served app matches the source.
+  info "Building the frontend"
+  (cd "$FRONTEND" && npm run build)
 }
 
 # --- fresh start -------------------------------------------------------------------------
@@ -141,12 +137,12 @@ print_banner() {
   local port="$1" ip
   ip="$(lan_ip)"
   echo
-  info "ShieldMate is starting in $MODE mode (frontend talks to the real API)"
+  info "ShieldMate is starting in $MODE mode"
   echo "    This computer : http://localhost:$port"
   if [ -n "$ip" ]; then
     echo "    Phones (same network) : http://$ip:$port"
   fi
-  echo "    Pages         : /  (pick a person)   /owner   /backstage (demo controls)"
+  echo "    Pages         : /  (pick a person)   /owner   /it   /mission   /backstage"
   echo "    Backend health: http://localhost:$BACKEND_PORT/api/status"
   echo "    Reset demo    : make reset"
   echo
@@ -223,7 +219,7 @@ run_dev() {
 
   info "Starting the Vite dev server on :$FRONTEND_PORT"
   # --strictPort: fail instead of silently picking another port (the preflight already checked).
-  (cd "$FRONTEND" && VITE_API_MODE=http exec npm run dev -- --strictPort) &
+  (cd "$FRONTEND" && exec npm run dev -- --strictPort) &
   FRONT_PID=$!
 
   print_banner "$FRONTEND_PORT"

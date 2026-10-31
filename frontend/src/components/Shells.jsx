@@ -1,86 +1,62 @@
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { API_MODE, getStatus } from "../api.js";
-import { usePoll } from "../usePoll.js";
-import { getStaff } from "../session.js";
-import { Icon } from "../icons.jsx";
-import { ModeBanner } from "./Badge.jsx";
+// Page frames: the owner's sidebar (laptop) / bottom tabs (phone), and the staff phone's tabs.
+import { NavLink } from "react-router-dom";
+import { Bars, History, Home, Menu, Shield, ShieldPlain, Target } from "./Icons.jsx";
+import { StaleBanner } from "./ui.jsx";
 
-const mock = API_MODE === "mock";
+const OWNER_PAGES = [
+  ["/owner", "Right now"],
+  ["/owner/readiness", "Readiness"],
+  ["/owner/drill", "Drills"],
+  ["/owner/notify", "Phone alert preview"],
+  ["/mission", "Mission control (projector)"],
+];
 
-export function Topbar({ left, right }) {
-  return (
-    <header className="topbar">
-      {left || (
-        <div className="row" style={{ gap: 8 }}>
-          <span className="brand-mark"><Icon name="shield" size={28} /></span>
-          <span className="app-name">ShieldMate</span>
-        </div>
-      )}
-      {right}
-    </header>
-  );
-}
-
-function Tab({ to, icon, label, end }) {
-  return (
-    <NavLink to={to} end={end}>
-      <Icon name={icon} className="" />
-      {label}
-    </NavLink>
-  );
-}
-
-// Phone-first shell: Start, Staff and Drill.
-export function PhoneShell() {
-  const { data: status } = usePoll(getStatus, 5000);
-  const { pathname } = useLocation();
-  const me = getStaff();
-  const showTabs = pathname.startsWith("/staff/") || pathname.startsWith("/drill/");
-  const home = me && me !== "backstage" ? (me.role === "owner" ? "/owner" : `/staff/${me.id}`) : "/";
-  return (
-    <div className="shell">
-      <ModeBanner status={status} mock={mock} />
-      <Outlet />
-      {showTabs && (
-        <nav className="tabbar" aria-label="Main" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-          <Tab to={home} icon="home" label="Today" end />
-          <Tab to="/" icon="menu" label="Switch" end />
-        </nav>
-      )}
-    </div>
-  );
-}
-
-// Owner: side menu on a laptop, bottom tabs under 900 px.
-// READINESS_PAGE and NOTIFY_PREVIEW (features.js) would add menu entries here. Not built.
-export function OwnerShell() {
-  const { data: status } = usePoll(getStatus, 5000);
+// `urgent` puts a red dot on "Right now" (something needs the owner's decision).
+export function OwnerShell({ clinicName, ownerName, urgent, stale, children }) {
   return (
     <div className="owner">
       <nav className="sidebar" aria-label="Main">
         <div className="brand">
-          <span className="brand-mark"><Icon name="shield" /></span>
+          <span style={{ color: "var(--blue)", display: "flex" }}><Shield /></span>
           <span className="stack-sm" style={{ gap: 0 }}>
             <span className="brand-name">ShieldMate</span>
-            <span className="tiny muted">Sunrise Family Clinic</span>
+            <span className="tiny muted">{clinicName}</span>
           </span>
         </div>
-        <NavLink className="nav" to="/owner" end>Right now</NavLink>
+        {OWNER_PAGES.map(([to, label]) => (
+          <NavLink key={to} className="nav" to={to} end>
+            {label}
+            {to === "/owner" && urgent ? <span className="dot" aria-label="Needs you" /> : null}
+          </NavLink>
+        ))}
         <div className="foot">
-          <span>Dr. Rao · owner</span>
-          <Link to="/">Switch person</Link>
-          <Link to="/backstage">Backstage</Link>
+          <span>{ownerName ? `${ownerName} · owner` : "Owner"}</span>
+          <NavLink to="/">Switch person</NavLink>
+          <NavLink to="/backstage">Backstage</NavLink>
         </div>
       </nav>
       <div className="owner-main">
-        <ModeBanner status={status} mock={mock} />
-        <Outlet />
-        <nav className="tabbar" aria-label="Main" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-          <Tab to="/owner" icon="shieldNav" label="Right now" end />
-          <Tab to="/" icon="menu" label="Switch" end />
+        <StaleBanner stale={stale} />
+        <main className="owner-body" aria-live="polite">{children}</main>
+        <nav className="tabbar" aria-label="Main">
+          <NavLink to="/owner" end><ShieldPlain className="" />Right now</NavLink>
+          <NavLink to="/owner/readiness"><Bars className="" />Readiness</NavLink>
+          <NavLink to="/owner/drill"><Target className="" />Drills</NavLink>
+          <NavLink to="/" end><Menu className="" />Switch</NavLink>
         </nav>
       </div>
     </div>
   );
 }
 
+// The staff phone's bottom tabs (NavLink marks the current one with aria-current="page").
+export function StaffTabs({ staffId }) {
+  return (
+    <nav className="tabbar" aria-label="Main">
+      <NavLink to={`/staff/${staffId}`} end><Home className="" />Today</NavLink>
+      <NavLink to={`/staff/${staffId}/drill`}><Target className="" />Drills</NavLink>
+      <NavLink to={`/staff/${staffId}/history`}><History className="" />History</NavLink>
+      <NavLink to="/" end><Menu className="" />Switch</NavLink>
+    </nav>
+  );
+}

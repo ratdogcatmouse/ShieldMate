@@ -21,11 +21,17 @@ from config import Config
 from eventlog import catalogue
 from eventlog.log import Event, NullEventLog
 
-# Children first, so foreign keys never block a delete (T0.07).
+# Children first, so foreign keys never block a delete (T0.07). Notifications point at
+# actions (standing-rule and escalation notes), so they must go before them.
 RUNTIME_TABLES = [
-    "actions", "drill_answers", "drill_players", "drills",
-    "restore_runs", "sim_runs", "notifications", "alerts",
+    "notifications", "actions", "drill_answers", "drill_players", "drills",
+    "restore_runs", "sim_runs", "alert_steps", "alert_it_log", "alerts",
 ]
+
+# Must match ``PRAGMA user_version`` in schema.sql. Bump it with any schema change: an
+# older file is dropped and rebuilt at start-up (its rows are demo state that Reset wipes
+# anyway; the event log is a separate file and is kept).
+SCHEMA_VERSION = 2
 
 
 class Database:
@@ -173,11 +179,25 @@ class Database:
     # --- schema, seed, reset -----------------------------------------------
 
     def init_schema(self, schema_path: Path) -> None:
-        """Create the ten tables if the file is new (idempotent for an existing DB)."""
+        """Create the tables if the file is new (idempotent for an up-to-date DB).
+
+        A file from an older schema (``user_version`` below SCHEMA_VERSION) can't be altered
+        in place - SQLite can't change CHECK constraints - so its tables are dropped and
+        rebuilt; ``connect`` then re-seeds it.
+        """
         with self.lock:
             has_tables = self.conn.execute(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='clinic'"
             ).fetchone()[0]
+            version = self.conn.execute("PRAGMA user_version").fetchone()[0]
+            if has_tables and version < SCHEMA_VERSION:
+                names = [r[0] for r in self.conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+                self.conn.execute("PRAGMA foreign_keys = OFF")
+                for name in names:
+                    self.conn.execute(f'DROP TABLE "{name}"')
+                self.conn.execute("PRAGMA foreign_keys = ON")
+                has_tables = False
             if not has_tables:
                 self.conn.executescript(schema_path.read_text(encoding="utf-8"))
 

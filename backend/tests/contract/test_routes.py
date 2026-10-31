@@ -28,7 +28,15 @@ def lane_one(route) -> bool:
 def fill_path(path: str, **ids) -> str:
     return (path.replace("{id}", str(ids["id"]))
                 .replace("{alert_type}", "password_guessing")
-                .replace("{script_id}", "ransom_wave"))
+                .replace("{script_id}", "ransom_wave")
+                .replace("{action}", "CALL_SAVED_IT"))
+
+
+# v2 routes that need some state first: (method, path) -> calls made before the request.
+SETUP = {
+    ("POST", "/alerts/{id}/reopen"): [("POST", "/alerts/2/mine", {"staff_id": 3})],
+    ("POST", "/alerts/{id}/close"): [("POST", "/alerts/2/it", {"action": "resolved", "note": "Changed the password."})],
+}
 
 
 @pytest.mark.parametrize("route", [r for r in ROUTES if lane_one(r)], ids=lambda r: f"{r.method} {r.path}")
@@ -42,7 +50,10 @@ def test_live_response_validates_against_contract(make_app, route):
     h.inject("password_guessing")                              # alert 2, action 1
     if route.path.endswith("/undo"):
         assert h.post("/actions/1/approve", json={"staff_id": 3}).status_code == 200
-    values = {"staff_id": 3, "enabled": True, "role": "owner", "lang": "en"}
+    for method, path, setup_body in SETUP.get((route.method, route.path), []):
+        assert h.client.request(method, "/api" + path, json=setup_body).status_code == 200
+    values = {"staff_id": 3, "enabled": True, "role": "owner", "lang": "en",
+              "done": True, "action": "received", "note": "", "confirm": True, "minutes": 5}
     body = {k: values[k] for k in route.request.model_fields} if route.request else None
     path = fill_path(route.path, id=1 if "actions" in route.path else 2)
     query = {"/alerts": "?role=front_desk", "/notifications": "?role=owner"}.get(route.path, "")

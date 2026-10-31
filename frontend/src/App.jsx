@@ -1,15 +1,22 @@
 import { useEffect, useRef } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
-import { OwnerShell, PhoneShell } from "./components/Shells.jsx";
-import Start from "./routes/Start.jsx";
-import Staff from "./routes/Staff.jsx";
-import Owner from "./routes/Owner.jsx";
-import Drill from "./routes/Drill.jsx";
-import Backstage from "./routes/Backstage.jsx";
-import { track } from "./telemetry.js";
+import { ToastProvider } from "./components/ui.jsx";
+import { getStatus } from "./lib/api.js";
+import { track } from "./lib/telemetry.js";
+import { syncServerTime } from "./lib/time.js";
+import { usePoll } from "./lib/usePoll.js";
+import Start from "./pages/Start.jsx";
+import Staff from "./pages/Staff.jsx";
+import StaffDrill from "./pages/StaffDrill.jsx";
+import OwnerNow from "./pages/OwnerNow.jsx";
+import OwnerReadiness from "./pages/OwnerReadiness.jsx";
+import OwnerDrill from "./pages/OwnerDrill.jsx";
+import OwnerNotify from "./pages/OwnerNotify.jsx";
+import Mission from "./pages/Mission.jsx";
+import ItPanel from "./pages/ItPanel.jsx";
+import Backstage from "./pages/Backstage.jsx";
 
-// One ui.page_view per screen, here rather than in a shell because /backstage has none.
-// The ref skips StrictMode's second run of the effect in development.
+// One ui.page_view per screen. The ref skips StrictMode's second run of the effect in development.
 function usePageViews() {
   const { pathname } = useLocation();
   const last = useRef(null);
@@ -20,20 +27,33 @@ function usePageViews() {
   }, [pathname]);
 }
 
+// Keeps countdowns on the server's clock (Backstage can skip it ahead).
+function useServerClock() {
+  const { data } = usePoll(getStatus, 10000);
+  useEffect(() => {
+    if (data) syncServerTime(data.server_time);
+  }, [data]);
+}
+
 export default function App() {
   usePageViews();
+  useServerClock();
   return (
-    <Routes>
-      <Route element={<PhoneShell />}>
+    <ToastProvider>
+      <Routes>
         <Route path="/" element={<Start />} />
-        <Route path="/staff/:staffId" element={<Staff />} />
-        <Route path="/drill/:code" element={<Drill />} />
+        <Route path="/staff/:staffId" element={<Staff view="today" />} />
+        <Route path="/staff/:staffId/history" element={<Staff view="history" />} />
+        <Route path="/staff/:staffId/drill" element={<StaffDrill />} />
+        <Route path="/owner" element={<OwnerNow />} />
+        <Route path="/owner/readiness" element={<OwnerReadiness />} />
+        <Route path="/owner/drill" element={<OwnerDrill />} />
+        <Route path="/owner/notify" element={<OwnerNotify />} />
+        <Route path="/mission" element={<Mission />} />
+        <Route path="/it" element={<ItPanel />} />
+        <Route path="/backstage" element={<Backstage />} />
         <Route path="*" element={<Start />} />
-      </Route>
-      <Route element={<OwnerShell />}>
-        <Route path="/owner" element={<Owner />} />
-      </Route>
-      <Route path="/backstage" element={<Backstage />} />
-    </Routes>
+      </Routes>
+    </ToastProvider>
   );
 }
