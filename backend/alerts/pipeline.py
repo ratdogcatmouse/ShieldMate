@@ -59,7 +59,7 @@ def process(alert: NormalisedAlert, db: Database, clock: Clock, *, lessons: Less
 
         # Step 3: store a brand-new card.
         # Decision 18: the first card uses the rule's own definition (e.g. 8 failures in 4 min).
-        count =alert.counts.get("count", lesson.get("count_defaults", {}).get("count", 1))
+        count = alert.counts.get("count", lesson.get("count_defaults", {}).get("count", 1))
         alert_id = db.execute(
             "INSERT INTO alerts (source, external_id, rule_id, level, agent_name, group_key, count,"
             " lesson_id, status, log_fields, raw, first_seen, last_seen)"

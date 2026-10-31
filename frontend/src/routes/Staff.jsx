@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { getAlerts, getClinic, getNotifications, joinDrill, markDone } from "../api.js";
 import { usePoll } from "../usePoll.js";
 import { clearNotifSince, getLang, getNotifSince, setDrill, setLang, setNotifSince } from "../session.js";
@@ -44,9 +44,15 @@ export default function Staff() {
     [role],
   );
 
+  // /staff/99 or a stale link: the clinic loaded and has no such person, so go back to the picker.
+  if (clinic.data && !person) return <Navigate to="/" replace />;
+
+  // Alert ids start from 1 again after a Backstage reset, so "handled" is remembered by id and first_seen.
+  const handledKey = (a) => `${a.id}@${a.first_seen}`;
+  const isHandled = (a) => handledIds.includes(handledKey(a));
   const list = alerts.data?.alerts || [];
-  const open = list.find((a) => a.status === "new" && !handledIds.includes(a.id));
-  const shown = open || list.find((a) => handledIds.includes(a.id));
+  const open = list.find((a) => a.status === "new" && !isHandled(a));
+  const shown = open || list.find(isHandled);
   const recent = list.filter((a) => a !== shown && a.status !== "new").slice(0, 3);
 
   const pickLang = (l) => {
@@ -59,7 +65,7 @@ export default function Staff() {
     setActionError(null);
     try {
       await markDone(alert.id, person.id);
-      setHandledIds((ids) => [...ids, alert.id]);
+      setHandledIds((ids) => [...ids, handledKey(alert)]);
     } catch (e) {
       setActionError(e);
     } finally {
@@ -106,7 +112,7 @@ export default function Staff() {
             alert={shown}
             it={clinic.data?.clinic}
             busy={busy}
-            handled={handledIds.includes(shown.id)}
+            handled={isHandled(shown)}
             onDone={() => done(shown)}
           />
         ) : (

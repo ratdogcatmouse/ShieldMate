@@ -49,6 +49,12 @@ def install_handlers(app: FastAPI) -> None:
         message = "The request was not valid" + (f" ({where}: {first.get('msg')})." if where else ".")
         return _body("invalid_request", message, 400)
 
+    @app.exception_handler(OverflowError)
+    async def _too_big(_: Request, exc: OverflowError):
+        # An id too large for SQLite's 64-bit integer (e.g. /alerts/99999999999999999999/done): the
+        # caller's mistake, not a server fault.
+        return _body("invalid_request", "That number is too large.", 400)
+
     @app.exception_handler(StarletteHTTPException)
     async def _http(_: Request, exc: StarletteHTTPException):
         if exc.status_code == 404:

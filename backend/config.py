@@ -43,7 +43,7 @@ def parse_env_file(path: Path) -> dict[str, str]:
 
 
 def _flag(value: str | None) -> bool:
-    return (value or "").strip() in ("1", "true", "True", "yes")
+    return (value or "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _path(value: str) -> Path:
@@ -90,8 +90,11 @@ class Config:
         env = parse_env_file(env_file or BACKEND_DIR / ".env")
         env.update(os.environ if environ is None else environ)
         d = cls()
+        alert_source = env.get("ALERT_SOURCE") or d.alert_source
+        if alert_source not in ("replay", "wazuh"):     # a typo would otherwise make GET /status fail later
+            raise ValueError(f"ALERT_SOURCE must be 'replay' or 'wazuh', not {alert_source!r}")
         return cls(
-            alert_source=env.get("ALERT_SOURCE", d.alert_source) or d.alert_source,
+            alert_source=alert_source,
             ai_reword=_flag(env.get("AI_REWORD")),
             actions=_flag(env.get("ACTIONS")),
             db_path=_path(env["DB_PATH"]) if env.get("DB_PATH") else d.db_path,

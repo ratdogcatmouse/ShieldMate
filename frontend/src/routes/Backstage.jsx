@@ -16,12 +16,16 @@ export default function Backstage() {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [confirmReset, setConfirmReset] = useState(false);
-  const timer = useRef(null);
+  const timer = useRef(null);          // toast
+  const confirmTimer = useRef(null);   // "Tap again to reset"; separate so a toast can't cancel it
   const status = usePoll(getStatus, 5000);
 
   useEffect(() => {
     setStaff("backstage");
-    return () => clearTimeout(timer.current);
+    return () => {
+      clearTimeout(timer.current);
+      clearTimeout(confirmTimer.current);
+    };
   }, []);
 
   const say = (text) => {
@@ -50,9 +54,10 @@ export default function Backstage() {
   const doReset = async () => {
     if (!confirmReset) {
       setConfirmReset(true);
-      timer.current = setTimeout(() => setConfirmReset(false), 4000);
+      confirmTimer.current = setTimeout(() => setConfirmReset(false), 4000);
       return;
     }
+    clearTimeout(confirmTimer.current);
     setConfirmReset(false);
     const r = await run("reset", reset);
     if (r) {

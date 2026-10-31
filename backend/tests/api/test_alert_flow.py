@@ -243,3 +243,13 @@ def test_owner_pin_when_set(make_app):
     assert h.put("/clinic/standing-rule", json=body).status_code == 401
     assert h.put("/clinic/standing-rule", json=body, headers={"X-Owner-Pin": "9999"}).json()["error"] == "pin_invalid"
     assert h.put("/clinic/standing-rule", json=body, headers={"X-Owner-Pin": "1234"}).status_code == 200
+
+
+@pytest.mark.parametrize("method, path, body", [
+    ("post", "/alerts/99999999999999999999/done", {"staff_id": MEENA}),
+    ("post", "/alerts/1/done", {"staff_id": 99999999999999999999}),
+    ("get", "/notifications?role=owner&since_id=99999999999999999999", None),
+])
+def test_ids_too_large_for_sqlite_are_a_400_not_a_500(app_h, method, path, body):
+    r = getattr(app_h, method)(path, **({"json": body} if body else {}))
+    assert r.status_code == 400 and r.json()["error"] == "invalid_request"
