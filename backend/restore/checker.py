@@ -59,8 +59,9 @@ def run(db: Database, clock: Clock, config: Config) -> dict:
 
     # 3. Integrity: every file must hash to its original (the manifest's expected values).
     files = sorted(manifest["files"])
+    # A file missing from the backup is a failure too (the usual ransomware outcome), not a crash.
     failed = [rel for rel in files
-              if _sha256(Path(sandbox, rel)) != manifest["files"][rel]]
+              if not Path(sandbox, rel).is_file() or _sha256(Path(sandbox, rel)) != manifest["files"][rel]]
     total, ok = len(files), len(files) - len(failed)
     integrity_check = {
         "check": "integrity", "passed": not failed,

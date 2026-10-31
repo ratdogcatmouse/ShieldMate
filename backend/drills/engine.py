@@ -113,10 +113,10 @@ def create(db: Database, clock: Clock, scenario_id: str, host_staff_id: int,
         raise ApiError("invalid_request", "Unknown staff member.", 400)
     if source_alert_id is not None and db.one("SELECT 1 FROM alerts WHERE id = ?", (source_alert_id,)) is None:
         raise ApiError("invalid_request", "Unknown source alert.", 400)
-    open_codes = {r["code"] for r in db.query(
-        "SELECT code FROM drills WHERE status IN ('lobby','open','review')")}
+    # The code is the table's primary key, so finished drills' codes are taken too (reusing one would 500).
+    taken = {r["code"] for r in db.query("SELECT code FROM drills")}
     code = f"{random.randint(0, 9999):04d}"
-    while code in open_codes:                       # unique among open drills (T1.05)
+    while code in taken:                            # unique among open drills (T1.05)
         code = f"{random.randint(0, 9999):04d}"
     now_text = now_iso(clock)
     db.execute(

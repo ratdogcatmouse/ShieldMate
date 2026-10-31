@@ -42,6 +42,23 @@ def test_t1_05_create_and_join(app_h):
     assert app_h.post("/drills/0000/join", json={"staff_id": MEENA}).json()["error"] == "drill_not_found"
 
 
+def test_new_drill_code_never_reuses_a_finished_drills_code(app_h, monkeypatch):
+    """The code is the primary key: a collision with a *finished* drill used to be a 500."""
+    import random
+    app_h.reset()
+    codes = iter(["1234", "1234", "5678"])          # second draw collides, third is free
+    monkeypatch.setattr(random, "randint", lambda a, b: int(next(codes)))
+    code, players = _start(app_h, join=())
+    assert code == "1234"
+    for _ in range(9):                              # lobby, then open + review for each of the 4 steps
+        app_h.post(f"/drills/{code}/advance", json={"player_id": players[OWNER]})
+    assert app_h.get(f"/drills/{code}", params={"player_id": players[OWNER]}).json()["status"] == "finished"
+    again = app_h.post("/drills", json={"scenario_id": "ransomware_clinic", "host_staff_id": OWNER,
+                                         "source_alert_id": None})
+    assert again.status_code == 200, again.text
+    assert again.json()["code"] == "5678"
+
+
 def test_practise_with_the_team_links_the_alert(app_h):
     app_h.reset()
     app_h.inject("password_guessing")

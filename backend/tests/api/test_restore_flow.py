@@ -61,3 +61,26 @@ def test_t1_16_restore_check_button_appears_after_the_host_answer(app_h):
     # A wrong answer at s3 (no trigger) leaves it off.
     advance("review"); advance("open")                 # s4
     assert app_h.get(f"/drills/{code}", params={"player_id": host}).json()["restore_check_available"] is False
+
+
+def test_a_file_missing_from_the_backup_fails_integrity_instead_of_crashing(app_h):
+    app_h.reset()
+    (app_h.config.restore_backup_dir / "invoices" / "invoice_001.txt").unlink()
+    r = app_h.post("/restore/run")
+    assert r.status_code == 200, r.text
+    integrity = next(c for c in r.json()["checks"] if c["check"] == "integrity")
+    assert r.json()["files_ok"] == 47
+    assert "invoices/invoice_001.txt" in integrity["failed_files"]
+    app_h.reset()                       # put the shared demo backup back
+
+
+def test_restore_check_works_on_a_fresh_start_before_any_reset(make_app):
+    """The demo backup is built at start-up, so a clone that never pressed Reset doesn't 500."""
+    import shutil
+    from demo_backup import make
+    shutil.rmtree(make.BACKUP_DIR, ignore_errors=True)
+    shutil.rmtree(make.ORIGINALS_DIR, ignore_errors=True)
+    h = make_app()                       # create_app -> _ensure_demo_backup
+    r = h.post("/restore/run")
+    assert r.status_code == 200, r.text
+    assert r.json()["result"] == "FAIL" and r.json()["files_total"] == 50

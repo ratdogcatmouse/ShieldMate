@@ -45,9 +45,23 @@ def _optional(module: str, attr: str):
         return None
 
 
+def _ensure_demo_backup(config: Config) -> None:
+    """Build the synthetic backup if it is missing, so the restore check works before the first Reset.
+
+    Only for the demo layout; a RESTORE_BACKUP_DIR pointing elsewhere is a real backup and is left alone.
+    """
+    try:
+        from demo_backup import make
+    except ImportError:
+        return
+    if config.restore_backup_dir == make.BACKUP_DIR:
+        make.ensure()
+
+
 def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
                   reword_provider=None) -> Context:
     db = database.connect(config)
+    _ensure_demo_backup(config)
     replay = ReplaySource(config.replay_path, clock)
     # Alert source: replay by default; the Wazuh poller only if ALERT_SOURCE=wazuh and Kishaann's class exists.
     live = source
