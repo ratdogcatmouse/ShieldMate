@@ -22,6 +22,22 @@ MAX_BODY_BYTES = 8 * 1024 * 1024     # same cap as the Wazuh client; an agent an
 MAX_TEXT_BYTES = 2000                # the response model's answer cap
 
 
+def _tls_context() -> ssl.SSLContext:
+    """Verify certificates (never disable, like the Wazuh client).
+
+    Prefer the certifi bundle: this machine's Python install has no system CA store, so a bare
+    ``create_default_context()`` fails HTTPS with CERTIFICATE_VERIFY_FAILED. If certifi is
+    missing, fall back to the system defaults (macOS/stock Python works either way).
+    """
+    ctx = ssl.create_default_context()
+    try:
+        import certifi
+        ctx.load_verify_locations(certifi.where())
+    except (ImportError, FileNotFoundError, ssl.SSLError):
+        pass
+    return ctx
+
+
 class InterpreterClient(Protocol):
     def ask(self, question: str, context: dict, role: str, lang: str) -> str:
         """Return the agent's plain-language answer for this question + sanitized context."""
@@ -42,11 +58,12 @@ class RealInterpreterClient:
         if self._timeout <= 0:
             raise ValueError("AI_INTERPRETER_TIMEOUT_SECONDS must be positive")
         # Verify certificates (never disable, like the Wazuh client).
-        self._tls = ssl.create_default_context()
+        self._tls = _tls_context()
         self.calls: list[dict] = []      # test hook
 
     def ask(self, question: str, context: dict, role: str, lang: str) -> str:
-        payload = json.dumps({"question": question, "context": context,
+        # The workflow reads ``query`` - ``question``/``chatInput``/``message`` make it 500.
+        payload = json.dumps({"query": question, "context": context,
                               "role": role, "lang": lang}).encode("utf-8")
         # Reject redirects so the request never follows another origin.
         class NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -62,13 +79,13 @@ class RealInterpreterClient:
 
     @staticmethod
     def _extract(body: bytes) -> str:
-        """n8n may answer {"text": ...}, {"answer": ...} or a bare string - parse defensively."""
+        """n8n may answer {"response": ...}, {"text": ...}, {"answer": ...} or a bare string - parse defensively."""
         try:
             data = json.loads(body.decode("utf-8"))
         except (ValueError, UnicodeDecodeError):
             data = None
         if isinstance(data, dict):
-            for key in ("text", "answer", "reply", "output"):
+            for key in ("response", "text", "answer", "reply", "output"):
                 value = data.get(key)
                 if isinstance(value, str) and value.strip():
                     return value

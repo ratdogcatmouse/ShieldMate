@@ -41,7 +41,7 @@ ScenarioDeviceState = Literal["ok", "infected", "isolated", "encrypting", "encry
 ServiceStatus = Literal["ok", "moved", "down", "unavailable"]
 DeviceStatus = Literal["ok", "under_attack", "protected"]
 RestoreResult = Literal["PASS", "FAIL", "NOT_TESTED"]
-RestoreCheckName = Literal["freshness", "integrity", "exposure", "update", "vulnerabilities", "recovery"]
+RestoreCheckName = Literal["freshness", "integrity", "exposure", "update", "compare"]
 ActionStatus = Literal[
     "proposed", "approved", "declined", "executed", "failed", "expired", "undone", "refused",
     "withdrawn",        # v2: the alert was "That was me" or closed before anyone decided
@@ -503,31 +503,23 @@ class RestoreRun(Model):
     checks: list[RestoreCheck]
 
 
-class RestoreRecovery(Model):
-    """The recovery half of a verify run: did the known-good backup come back clean?"""
-    files_total: int
-    files_ok: int
-    markers_in_recovered: int
-
-
 class RestoreVerifyResult(Model):
-    """POST /restore/verify: the recovery/patch story, one owner-gated call.
+    """POST /restore/verify: does a backup of a compromised directory carry the same
+    vulnerabilities as the live system?
 
-    Snapshot the compromised directory -> apply the IT patch to a sandbox copy ->
-    re-scan both for the same vulnerability markers -> test that the known-good
-    backup restores clean. ``result`` is PASS only when the patch closed every
-    vulnerability the snapshot caught AND the recovery is clean.
+    Back up the compromised directory -> apply the IT patch to a sandbox copy of the live
+    directory -> compare the two for the same vulnerability markers. ``result`` is PASS
+    only when the update closed every live vulnerability AND the backup carries none of
+    them (so restoring that backup would not bring the compromise back).
     """
     id: int
     kind: Literal["verify"]
     started_at: str
     result: RestoreResult
     simulated_backup: bool
-    vulns_found: int
-    vulns_fixed: int
-    vulns_remaining: int
-    backup_vuln_files: int              # marker hits in the backup itself (0 = clean)
-    recovery: RestoreRecovery
+    backup_vuln_files: int              # vulnerable files the backup (of the compromised dir) carries
+    updated_vuln_files: int             # vulnerable files left in the live dir after the update (0 = clean)
+    same_vulnerabilities: bool          # True when the backup carries a vulnerability the update closed
     checks: list[RestoreCheck]
 
 

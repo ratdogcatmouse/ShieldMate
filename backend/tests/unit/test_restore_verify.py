@@ -1,4 +1,5 @@
-"""Real backup/restore verification (restore/verify.py): the recovery/patch drill.
+"""Backup/restore verification (restore/verify.py): back up the compromised directory, update
+the live directory, then compare the two for the same vulnerabilities.
 
 Same test pattern as test_restore.py: temp demo trees built by demo_backup.make,
 a throwaway config pointing at them, and a seeded temp DB.
@@ -16,7 +17,7 @@ from restore import verify
 
 def _setup(tmp_path: Path, good: bool):
     db = connect(Config(db_path=tmp_path / "db.sqlite"))
-    # build() also drops the verify trees next to backup: compromised/, patched/, vuln_markers.json.
+    # build() drops the verify trees next to backup: compromised/, patched/, vuln_markers.json.
     make.build(tmp_path / "orig", tmp_path / "backup", good=good, now_text="2026-11-01T04:00:00Z")
     config = Config(
         db_path=tmp_path / "unused.db",
@@ -26,64 +27,54 @@ def _setup(tmp_path: Path, good: bool):
     return db, FakeClock(), config
 
 
-def _marker_list(config: Config) -> list[str]:
-    markers = config.restore_backup_dir.parent / "vuln_markers.json"
-    return __import__("json").loads(markers.read_text(encoding="utf-8"))["markers"]
-
-
 def _tree(base: Path) -> dict[str, bytes]:
     return {str(p.relative_to(base)): p.read_bytes() for p in Path(base).rglob("*") if p.is_file()}
 
 
-def test_verify_passes_on_a_clean_backup(tmp_path):
+def test_verify_compares_backup_against_updated_live_dir(tmp_path):
+    """The demo story: the live dir carries 3 planted vulnerabilities; the patch closes all
+    of them, but the backup (a snapshot of the compromised dir) still carries them - so the
+    compare fails and the run is FAIL (restoring that backup would bring the holes back)."""
     db, clock, config = _setup(tmp_path, good=True)
     out = verify.run_verify(db, clock, config)
-    assert out["result"] == "PASS" and all(c["passed"] for c in out["checks"])
-    # The drill: 3 planted vulnerabilities, all closed by the patch, backup clean.
-    assert out["vulns_found"] == 3 and out["vulns_fixed"] == 3 and out["vulns_remaining"] == 0
-    assert out["backup_vuln_files"] == 0
-    assert out["recovery"]["files_total"] == out["recovery"]["files_ok"] == 50
-    assert out["recovery"]["markers_in_recovered"] == 0
-    assert [c["check"] for c in out["checks"]] == ["update", "vulnerabilities", "recovery"]
-
-
-def test_verify_fails_when_the_demo_backup_is_corrupt(tmp_path):
-    db, clock, config = _setup(tmp_path, good=False)
-    out = verify.run_verify(db, clock, config)
     assert out["result"] == "FAIL"
+    assert [c["check"] for c in out["checks"]] == ["update", "compare"]
+    # The update closed every live vulnerability...
+    assert out["updated_vuln_files"] == 0
     by = {c["check"]: c for c in out["checks"]}
-    # The patch still closes the live vulnerabilities; the recovery is what breaks
-    # (the two altered files hash wrong against the manifest).
-    assert by["update"]["passed"] and by["vulnerabilities"]["passed"]
-    assert not by["recovery"]["passed"] and out["recovery"]["files_ok"] == 48
+    assert by["update"]["passed"] is True
+    # ...but the backup captured the compromised state, so it carries the same vulns.
+    assert out["backup_vuln_files"] == 3
+    assert out["same_vulnerabilities"] is True
+    assert by["compare"]["passed"] is False
+
+
+def test_verify_passes_when_the_backup_is_clean(tmp_path):
+    """A live directory with no vulnerabilities produces a clean backup - PASS."""
+    db, clock, config = _setup(tmp_path, good=True)
+    # Point the tool at a live dir with no markers: delete the three vulnerable source files
+    # so the backup (a copy of it) carries nothing and the update closes nothing to remove.
+    base = config.restore_backup_dir.parent
+    for rel in ("invoices/invoice_005.txt", "letters/letter_010.txt", "appointments/appt_001.txt"):
+        (base / "compromised" / rel).unlink()
+        (base / "patched" / rel).unlink()     # the patch no longer references these files
+    out = verify.run_verify(db, clock, config)
+    assert out["result"] == "PASS" and all(c["passed"] for c in out["checks"])
+    assert out["backup_vuln_files"] == 0 and out["updated_vuln_files"] == 0
+    assert out["same_vulnerabilities"] is False
 
 
 def test_verify_fails_when_the_patch_leaves_a_hole(tmp_path):
+    """An incomplete patch leaves a live vulnerability open, so the update check fails."""
     db, clock, config = _setup(tmp_path, good=True)
+    base = config.restore_backup_dir.parent
     # Drop the patch for one vulnerable file: that marker survives the "update".
-    (config.restore_backup_dir.parent / "patched" / "invoices" / "invoice_005.txt").unlink()
+    (base / "patched" / "invoices" / "invoice_005.txt").unlink()
     out = verify.run_verify(db, clock, config)
     assert out["result"] == "FAIL"
     by = {c["check"]: c for c in out["checks"]}
-    assert not by["update"]["passed"]
-    assert out["vulns_found"] == 3 and out["vulns_remaining"] == 1
-
-
-def test_verify_flags_a_backup_that_carries_vulnerabilities(tmp_path):
-    db, clock, config = _setup(tmp_path, good=True)
-    # A backup that still contains a marker restores the holes - both the compare
-    # and the recovery scan must catch it.
-    marker = _marker_list(config)[0]
-    f = config.restore_backup_dir / "invoices" / "invoice_003.txt"
-    f.write_bytes(f.read_bytes() + f"# VULNERABLE: {marker}\n".encode("utf-8"))
-    out = verify.run_verify(db, clock, config)
-    assert out["result"] == "FAIL"
-    by = {c["check"]: c for c in out["checks"]}
-    assert out["backup_vuln_files"] == 1
-    assert not by["vulnerabilities"]["passed"]
-    assert out["recovery"]["markers_in_recovered"] == 1
-    # The hash of that file no longer matches the manifest either.
-    assert "invoices/invoice_003.txt" in by["recovery"]["failed_files"]
+    assert by["update"]["passed"] is False
+    assert out["updated_vuln_files"] == 1
 
 
 def test_snapshot_only_captures_the_compromised_state(tmp_path):

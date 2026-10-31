@@ -39,6 +39,43 @@ def test_real_client_rejects_bad_url():
         RealInterpreterClient(config)
 
 
+def test_real_client_reads_response_field():
+    # The live n8n workflow answers {"response": "..."} - it must not read as "no text field".
+    assert RealInterpreterClient._extract(b'{"response": "do the step"}') == "do the step"
+
+
+def test_real_client_sends_query_field():
+    client = RealInterpreterClient(Config(ai_interpreter=True, ai_interpreter_url="https://n8n.example/webhook"))
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self, n):
+            return b'{"response": "ok"}'
+
+    captured = {}
+
+    class _Opener:
+        def open(self, request, timeout=None):
+            captured["payload"] = json.loads(request.data.decode("utf-8"))
+            return _Resp()
+
+    import ai.interpreter as interp
+    orig = interp.urllib.request.build_opener
+    interp.urllib.request.build_opener = lambda *a: _Opener()
+    try:
+        assert client.ask("why?", {}, "owner", "en") == "ok"
+    finally:
+        interp.urllib.request.build_opener = orig
+    # The workflow reads ``query``; sending ``question`` makes n8n reply 500.
+    assert captured["payload"]["query"] == "why?"
+    assert "question" not in captured["payload"]
+
+
 def test_fake_client_records_and_answers():
     client = FakeInterpreterClient(answer="the plain answer")
     assert client.ask("why?", {}, "owner", "en") == "the plain answer"

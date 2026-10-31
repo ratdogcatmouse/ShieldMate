@@ -1,23 +1,22 @@
-"""Real backup/restore verification (the "faux" restore check made real).
+"""Backup / restore verification: does a backup of a compromised directory carry the same
+vulnerabilities as the live system?
 
-The demo directories stay synthetic, but the feature does the work it claims:
+The demo directories stay synthetic, but the feature does the real work it claims. Three
+steps, exactly the story:
 
-1. **snapshot** - the compromised live directory (``compromised/``) is copied into
-   the sandbox with a vulnerability-marker report.
-2. **update**   - the IT patch (``patched/``) is applied to a *sandbox copy* of the
-   live directory - the live trees are never modified (T1.14: the sandbox is the
-   only folder this module writes to).
-3. **vuln delta** - the snapshot and the updated copy are re-scanned for the same
-   markers; the patch passes when every marker the snapshot caught is gone.
-4. **recovery** - the known-good backup is restored into the sandbox and verified
-   three ways: hash-integrity against the manifest, exact file-set, and a marker
-   scan (a backup that restores *with* the vulnerabilities in it fails).
+1. **backup** - the compromised live directory (``compromised/``) is copied into the
+   sandbox as the backup of the compromised state, and scanned for vulnerability markers.
+2. **update** - the IT patch (``patched/``) is applied to a *sandbox copy* of the live
+   directory - the live trees are never modified (T1.14: the sandbox is the only folder
+   this module writes to) - and re-scanned.
+3. **compare** - the updated directory and the backup are scanned for the same markers:
+   does the backup still carry the vulnerabilities? If it does, restoring that backup
+   would bring the holes straight back.
 
 Fast and deterministic: tens of small files, fixed markers, no execution.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -56,14 +55,6 @@ def _walk_files(base: Path) -> list[Path]:
     return sorted(p for p in Path(base).rglob("*") if p.is_file())
 
 
-def _sha256(path: Path) -> str:
-    h = hashlib.sha256()
-    with path.open("rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
-
-
 def _scan(base: Path, markers: list[str]) -> dict[str, list[str]]:
     """rel path (POSIX form) -> markers found, only for files that carry at least one marker."""
     out: dict[str, list[str]] = {}
@@ -75,8 +66,16 @@ def _scan(base: Path, markers: list[str]) -> dict[str, list[str]]:
     return out
 
 
+def _apply_patch(source: Path, patched: Path, target: Path) -> None:
+    """Copy the IT patch onto ``target``, keeping the patch's relative layout."""
+    for rel in _walk_files(patched):
+        dest = target / Path(rel).relative_to(patched)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(rel, dest)
+
+
 def snapshot_only(db: Database, clock: Clock, config: Config) -> dict:
-    """Step 1 alone: back up the compromised directory now (the button/verify path).
+    """Back up the compromised directory now, without running the full verify.
 
     No alert/DB writes - the snapshot is pure filesystem, in the sandbox (T1.14).
     Raises ApiError on a missing/unsupported layout - fine for a route call, wrong
@@ -113,15 +112,16 @@ def auto_snapshot(db: Database, clock: Clock, config: Config) -> dict | None:
 
 
 def run_verify(db: Database, clock: Clock, config: Config) -> dict:
-    """The full story: snapshot -> update -> vuln delta -> backup comparison -> recovery test.
+    """Back up the compromised directory, update the live directory, then compare the two.
 
-    1. snapshot the compromised live directory,
-    2. apply the IT patch to a sandbox copy and re-scan (same markers - did the update
-       close the holes the snapshot caught?),
-    3. compare the *backup* against the markers (does restoring it bring the same
-       vulnerabilities back?),
-    4. recovery test: restore the backup into the sandbox and verify it three ways
-       (hash-integrity, exact file-set, post-restore marker scan).
+    1. **backup** the compromised state - copy ``compromised/`` into the sandbox and
+       scan it for vulnerability markers: this is what the backup now carries.
+    2. **update** the live directory - apply the IT patch to a sandbox copy and re-scan.
+    3. **compare** - does the backup still hold a marker the updated directory no longer
+       has? If yes, restoring that backup would reintroduce the compromise.
+
+    ``result`` is PASS only when the update closed every vulnerability the live directory
+    carried AND the backup carries none of them.
     """
     compromised, patched, markers_path = _ensure_trees(config)
     markers = _markers(markers_path)
@@ -130,92 +130,70 @@ def run_verify(db: Database, clock: Clock, config: Config) -> dict:
     sandbox.mkdir(parents=True)
     checks: list[dict] = []
 
-    # 1. Snapshot the compromised directory.
-    snap = sandbox / "snapshot"
-    shutil.copytree(compromised, snap)
-    before = _scan(snap, markers)
-    vulns_found = sum(len(v) for v in before.values())
+    # 1. BACKUP the compromised directory - the backup of the compromised state now
+    #    captures whatever vulnerabilities the live directory had at that moment.
+    backup = sandbox / "backup"
+    shutil.copytree(compromised, backup)
+    backup_vuln = _scan(backup, markers)
+    backup_vuln_files = len(backup_vuln)
 
-    # 2. Update the live directory - on a sandbox copy, never the real trees - and re-scan.
+    # 2. UPDATE the live directory - on a sandbox copy, never the real trees - and re-scan.
     updated = sandbox / "updated"
     shutil.copytree(compromised, updated)
-    for rel in _walk_files(patched):
-        # Keep the patch's relative layout: letters/letter_010.txt lands in updated/letters/.
-        target = updated / Path(rel).relative_to(patched)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(rel, target)
-    after = _scan(updated, markers)
-    vulns_remaining = sum(len(v) for v in after.values())
+    _apply_patch(updated, patched, updated)
+    updated_vuln = _scan(updated, markers)
+    updated_vuln_files = len(updated_vuln)
     checks.append({
         "check": "update",
-        "passed": vulns_found > 0 and vulns_remaining == 0,
-        "detail": (f"{vulns_found} vulnerable file(s) before the update, {vulns_remaining} after. "
-                   + ("All closed." if vulns_remaining == 0 else "Still open after the update.")),
+        "passed": updated_vuln_files == 0,
+        "detail": (f"{sum(len(v) for v in backup_vuln.values())} vulnerability marker(s) in the live "
+                   f"directory, {updated_vuln_files} after the update."
+                   + (" All closed." if updated_vuln_files == 0 else " Still open after the update.")),
         "fix": "Apply the vendor patch and re-verify before trusting the update.",
     })
 
-    # 3. Does the backup carry the same vulnerabilities? A read-only marker scan of the
-    #    backup folder - if it does, restoring it would bring the holes back.
-    backup_vuln = _scan(config.restore_backup_dir, markers)
-    backup_vuln_files = len(backup_vuln)
+    # 3. COMPARE the updated directory with the backup - does the backup have the same
+    #    vulnerabilities? The backup is a snapshot of the compromised state; a marker it
+    #    carries that the updated directory no longer has is one a restore would bring
+    #    straight back. (Markers still present after the update are caught by the "update"
+    #    check above; this one is about the backup specifically.)
+    backup_markers = {m for marks in backup_vuln.values() for m in marks}
+    updated_markers = {m for marks in updated_vuln.values() for m in marks}
+    stale = backup_markers - updated_markers          # in the backup, gone from the live dir
     checks.append({
-        "check": "vulnerabilities",
-        "passed": backup_vuln_files == 0,
-        "detail": ("The backup carries none of the known vulnerability markers."
-                   if backup_vuln_files == 0 else
-                   f"{backup_vuln_files} file(s) in the backup still carry a known vulnerability "
-                   "marker; restoring it would bring the holes back."),
-        "fix": "Rebuild the backup from the patched system.",
+        "check": "compare",
+        "passed": not stale,
+        "detail": ("The backup carries no vulnerability the updated directory lacks; "
+                   "restoring it is safe."
+                   if not stale else
+                   f"The backup still carries {len(stale)} vulnerability marker(s) the update removed "
+                   f"from the live directory (e.g. {sorted(stale)[0]}). Restoring it would bring the "
+                   "vulnerabilities back."),
+        "fix": "Take a new backup after the update and verify again.",
     })
-
-    # 4. Recovery test: restore the known-good backup, verify it three ways.
-    recovered = sandbox / "recovered"
-    shutil.copytree(config.restore_backup_dir, recovered)
-    manifest = json.loads(Path(config.restore_manifest).read_text(encoding="utf-8"))["files"]
-    # POSIX-form keys: on Windows relative_to() gives backslashes, the manifest uses slashes.
-    recovered_files = {p.relative_to(recovered).as_posix() for p in _walk_files(recovered)}
-    missing = sorted(set(manifest) - recovered_files)
-    bad = [rel for rel in manifest
-           if (recovered / rel).is_file() and _sha256(recovered / rel) != manifest[rel]]
-    # backup_meta.json is the backup's own bookkeeping, not a record file.
-    extra = sorted(recovered_files - set(manifest) - {"backup_meta.json"})
-    files_total = len(manifest)
-    files_ok = files_total - len(missing) - len(bad)
-    rec_markers = _scan(recovered, markers)
-    recovery = {
-        "check": "recovery",
-        "passed": not missing and not bad and not extra and not rec_markers,
-        "detail": (f"{files_ok} of {files_total} files restored exactly, "
-                   + ("and the recovered copy is clean of every known vulnerability marker."
-                      if not rec_markers else
-                      f"but {len(rec_markers)} file(s) still carry a vulnerability marker.")),
-        "fix": "Rebuild the backup from the patched system and re-verify.",
-    }
-    if missing or bad or extra:
-        recovery["failed_files"] = sorted(missing + bad + extra)
-    checks.append(recovery)
 
     result = "PASS" if all(c["passed"] for c in checks) else "FAIL"
     now_text = iso(clock.now())
+    # The shared restore_runs table stores files_total/files_ok: total = the backup's
+    # file count, ok = the files that carry no marker after the update.
+    files_total = len(_walk_files(backup))
+    files_ok = files_total - updated_vuln_files
     run_id = db.execute(
         "INSERT INTO restore_runs (kind, started_at, result, backup_age_hours, files_total,"
         " files_ok, exposed, details) VALUES ('verify', ?, ?, 0, ?, ?, 0, ?)",
         (now_text, result, files_total, files_ok, json.dumps(checks)))
     db.emit("restore.verify", subject=("restore_run", run_id), result=result,
-            vulns_found=vulns_found, vulns_fixed=max(vulns_found - vulns_remaining, 0),
-            vulns_remaining=vulns_remaining, files_ok=files_ok)
+            backup_vuln_files=backup_vuln_files, updated_vuln_files=updated_vuln_files,
+            same_vulnerabilities=bool(stale))
     return {
         "id": run_id,
         "kind": "verify",
         "started_at": now_text,
         "result": result,
         "simulated_backup": _is_demo_layout(config),
-        "vulns_found": vulns_found,
-        "vulns_fixed": max(vulns_found - vulns_remaining, 0),
-        "vulns_remaining": vulns_remaining,
         "backup_vuln_files": backup_vuln_files,
-        "recovery": {"files_total": files_total, "files_ok": files_ok,
-                     "markers_in_recovered": len(rec_markers)},
+        "updated_vuln_files": updated_vuln_files,
+        "same_vulnerabilities": bool(stale),
         "checks": checks,
     }
 

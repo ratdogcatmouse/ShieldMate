@@ -92,11 +92,12 @@ def test_verify_route_runs_the_recovery_drill(app_h):
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["kind"] == "verify"
-    # The demo layout's backup is the planted-fault one, so the story ends FAIL;
-    # the drill's *shape* is what this test pins down.
-    assert [c["check"] for c in body["checks"]] == ["update", "vulnerabilities", "recovery"]
-    assert body["vulns_found"] == 3
-    assert body["recovery"]["files_total"] == 50
+    # The demo layout plants three live vulnerabilities; the patch closes all of them, but the
+    # backup (a snapshot of the compromised directory) still carries those same three - so the
+    # compare fails and the story ends FAIL (restoring that backup would bring the holes back).
+    assert [c["check"] for c in body["checks"]] == ["update", "compare"]
+    assert body["updated_vuln_files"] == 0 and body["backup_vuln_files"] == 3
+    assert body["same_vulnerabilities"] is True and body["result"] == "FAIL"
     # Stored with its own kind, not the plain check's.
     assert app_h.ctx.db.one("SELECT kind FROM restore_runs WHERE id = ?", (body["id"],))["kind"] == "verify"
 

@@ -73,8 +73,8 @@ EVENT_TYPES: dict[str, EventType] = {
     # --- restore check (restore/checker.py, restore/verify.py) ---
     "restore.run": EventType(("result", "files_ok", "files_total", "backup_age_hours", "exposed", "failed_checks"),
                              "A restore check ran."),
-    "restore.verify": EventType(("result", "vulns_found", "vulns_fixed", "vulns_remaining", "files_ok"),
-                                "The recovery/patch verification ran (snapshot -> update -> marker delta -> restore)."),
+    "restore.verify": EventType(("result", "backup_vuln_files", "updated_vuln_files", "same_vulnerabilities"),
+                                "The backup/restore verification ran (back up compromised -> update live -> compare)."),
     "restore.snapshot": EventType(("files", "vuln_files"),
                                   "The compromised directory was snapshotted (automatic, on a 100201 card)."),
     # --- demo (routes/demo.py, db.reset) ---
