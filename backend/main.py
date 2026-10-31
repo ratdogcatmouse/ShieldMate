@@ -75,7 +75,14 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
             log.warning("ALERT_SOURCE=wazuh but ingest/wazuh.py has no WazuhSource yet; staying on replay")
             db.emit("system.source_fallback", reason="no_wazuh_source", exc_type=None)
         else:
-            live = wazuh_source(config, clock)
+            try:
+                live = wazuh_source(config, clock)
+            except Exception as exc:
+                # WazuhSource builds the real client, which rejects a half-set-up lab. Same rule as the
+                # client below (T5.09): a broken lab config must not stop the app; stay on replay.
+                log.warning(f"ALERT_SOURCE=wazuh but the Wazuh source could not start "
+                            f"({type(exc).__name__}: {exc}); staying on the replay source.")
+                db.emit("system.source_fallback", reason="source_misconfigured", exc_type=type(exc).__name__)
     # Attack simulation (T8): when SIMULATE is on, the in-app simulator becomes the live
     # source - it *generates* Wazuh-shaped alerts from a script instead of polling a lab.
     # Replay is kept on ctx.replay so the stage fallback buttons still work alongside it.

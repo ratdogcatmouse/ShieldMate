@@ -1,7 +1,6 @@
-"""ShieldMate Wazuh transport and ingest adapter (Python 3.10+, standard library).
+"""ShieldMate Wazuh transport (Python 3.10+, standard library): talks to Wazuh and nothing else.
 
-Suggested split: WazuhClient -> backend/actions/wazuh_client.py;
-WazuhPoller -> backend/ingest/wazuh.py; normalise -> backend/alerts/normalise.py.
+Reading alerts into ShieldMate lives in backend/ingest/wazuh.py (WazuhSource).
 This is an integration module, NOT a replacement for backend.py or owner routes.
 No alert automatically executes a block. See INTEGRATION_REVIEW.md.
 """
@@ -19,9 +18,9 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Protocol
+from typing import Any, Protocol
 
 log = logging.getLogger(__name__)
 
@@ -300,55 +299,16 @@ def validate_target(ip: str, never_block: set[str]) -> str:
     return target
 
 
-def normalise(hit: dict) -> dict:
-    """Adapter shape; map this to your existing NormalisedAlert model in the repo."""
-    raw = hit['_source']
-    win = raw.get('data', {}).get('win', {}).get('eventdata', {})
-    rule = raw.get('rule', {})
-    return {
-        'source': 'wazuh',  # Server assigned; never accept source from the browser.
-        # Include index because _id is only unique within an index.
-        'external_id': f"{hit['_index']}:{hit['_id']}",
-        'rule_id': str(rule['id']), 'level': int(rule['level']),
-        'agent_name': raw['agent']['name'], 'agent_id': raw['agent']['id'],
-        'timestamp': raw['timestamp'],
-        'source_ip': win.get('ipAddress'),
-        'log_fields': {'username_tried': win.get('targetUserName')},
-        # Fill failures/window from Ishaan's installed 60204 definition in your
-        # lesson engine. Do not invent counts or infer them from description text.
-        'raw': raw,
-    }
+def __getattr__(name: str):
+    """``normalise`` and ``WazuhPoller`` moved to ingest/wazuh.py; old imports keep working.
 
+    Resolved lazily because ingest.wazuh imports this module (a top-level import would be circular).
+    """
+    if name in ('normalise', 'WazuhPoller'):
+        from ingest import wazuh
+        return getattr(wazuh, name)
+    raise AttributeError(f'module {__name__!r} has no attribute {name!r}')
 
-class WazuhPoller:
-    def __init__(self, client: WazuhClient, ingest: Callable[[dict], None], *,
-                 clock: Callable[[], datetime] = utc_now, lookback_seconds: int = 120):
-        self.client, self.ingest, self.clock = client, ingest, clock
-        self.started_at = clock()  # Old demo alerts are excluded at startup.
-        self.last_success = self.started_at
-        self.lookback = timedelta(seconds=lookback_seconds)
-        self.last_error: str | None = None
-        self._poll_lock = threading.Lock()
-
-    def poll_once(self) -> None:
-        # Run every 5 s in your existing background task. In an async FastAPI app
-        # use asyncio.to_thread(self.poll_once), not blocking I/O on the event loop.
-        # Single worker; reset must stop/recreate this poller and reset the DB.
-        with self._poll_lock:
-            end = self.clock()
-            start = max(self.started_at, self.last_success - self.lookback)
-            try:
-                for hit in self.client.alert_hits(start, end):
-                    # ingest MUST atomically dedupe external_id and perform the
-                    # shared filter/group/store/proposal transaction. A duplicate
-                    # must do nothing; no in-memory _seen and no block call here.
-                    self.ingest(normalise(hit))
-            except Exception:
-                self.last_error = 'Live ingestion failed; use Backstage replay'
-                raise  # Supervisor logs sanitized failure and retries next tick.
-            else:
-                self.last_success = end  # Never advance after partial failure.
-                self.last_error = None
 
 class WazuhClient(Protocol):
     def block_ip(self, agent_id: str, ip: str) -> dict: ...      # raises WazuhUnavailable
