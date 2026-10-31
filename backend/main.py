@@ -74,8 +74,20 @@ def build_context(config: Config, clock: Clock, wazuh_client=None, source=None,
     # Wazuh client: the fake unless live mode and a real client exists. Simulated actions bypass it anyway.
     client = wazuh_client
     if client is None:
-        real = _optional("actions.wazuh_client", "RealWazuhClient") if config.alert_source == "wazuh" else None
-        client = real(config) if real else FakeWazuhClient()
+        if config.alert_source == "wazuh":
+            try:
+                client = _optional("actions.wazuh_client", "RealWazuhClient")(config)
+            except Exception as exc:
+                # A broken lab config must never take down the demo (T5.09: the lab can be off
+                # while the app stays up on the replay fallback). The real client is the only
+                # thing that can reach Wazuh; the fake is what a rejected approval would raise
+                # wazuh_unavailable against until the lab is fixed.
+                log.warning(f"ALERT_SOURCE=wazuh but the Wazuh client is misconfigured "
+                            f"({type(exc).__name__}: {exc}); staying on the replay source "
+                            f"and the fake client until the lab is fixed.")
+                live, client = None, FakeWazuhClient()
+        if client is None:
+            client = FakeWazuhClient()
     return Context(
         config=config, db=db, clock=clock,
         source=live or replay, replay=replay, wazuh=client,
