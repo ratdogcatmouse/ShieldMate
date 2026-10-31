@@ -13,3 +13,7 @@ venv/
 node_modules/
 dist/
 .DS_Store
+
+# Wazuh lab certificates (demo laptop only)
+backend/*.pem
+backend/*.crt
