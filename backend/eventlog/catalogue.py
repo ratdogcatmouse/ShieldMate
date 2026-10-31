@@ -77,6 +77,11 @@ EVENT_TYPES: dict[str, EventType] = {
                                 "The backup/restore verification ran (back up compromised -> update live -> compare)."),
     "restore.snapshot": EventType(("files", "vuln_files"),
                                   "The compromised directory was snapshotted (automatic, on a 100201 card)."),
+    # --- v3 restore-incident loop (restore/incident.py) ---
+    "restore.incident_opened": EventType(("result",), "A FAIL check opened the backup incident for the IT contact."),
+    "restore.incident_reopened": EventType((), "A fresh FAIL reopened a resolved incident."),
+    "restore.incident_resolved": EventType((), "The IT contact marked the backup fixed; the owner was notified."),
+    "restore.incident_closed": EventType(("confirmed",), "The owner closed the incident (or sent it back)."),
     # --- demo (routes/demo.py, db.reset) ---
     "demo.replay": EventType(("alert_type", "click", "injected", "cards_created", "grouped", "filtered"),
                              "Backstage replayed one click of alerts."),

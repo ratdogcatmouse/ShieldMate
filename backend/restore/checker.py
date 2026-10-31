@@ -32,16 +32,20 @@ _EXPOSURE_FIX = "Unplug the backup drive after each backup, or keep an offline c
 def run(db: Database, clock: Clock, config: Config) -> dict:
     """Run the check now and store the result in ``restore_runs``. Synchronous: 50 small
     files take well under a second, so the owner's button returns the result inline."""
+    from demo_backup import make
     now = clock.now()
     clinic = db.clinic()
 
-    backup_meta = json.loads(Path(config.restore_backup_dir, "backup_meta.json").read_text(encoding="utf-8"))
+    # Which backup to check: IT's repaired ``backup_new`` when it exists (demo), else the old
+    # ``backup``. A real backup drive is always checked as-is (target_backup passes it through).
+    backup_dir = make.target_backup(config.restore_backup_dir)
+    backup_meta = json.loads(Path(backup_dir, "backup_meta.json").read_text(encoding="utf-8"))
     manifest = json.loads(Path(config.restore_manifest).read_text(encoding="utf-8"))
 
     # 1. Copy the backup into the sandbox - the only place the checker writes (T1.14).
     sandbox = config.restore_sandbox_dir
     shutil.rmtree(sandbox, ignore_errors=True)
-    shutil.copytree(config.restore_backup_dir, sandbox)
+    shutil.copytree(backup_dir, sandbox)
 
     checks: list[dict] = []
 
@@ -93,6 +97,10 @@ def run(db: Database, clock: Clock, config: Config) -> dict:
     db.emit("restore.run", subject=("restore_run", run_id), result=result, files_ok=ok, files_total=total,
             backup_age_hours=round(age_hours, 1), exposed=exposed,
             failed_checks=[c["check"] for c in checks if not c["passed"]])
+    # v3: a FAIL opens (or reopens) the restore incident so the IT contact is alerted with
+    # the fix steps; a PASS just refreshes the active incident's result for the owner's retest.
+    from restore import incident
+    incident.after_check(db, clock, config, run_id, result, checks)
     return view(db, run_id, config)
 
 

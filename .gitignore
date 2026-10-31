@@ -1,6 +1,8 @@
 # ShieldMate gitignored directories
 backend/demo_backup/originals/
 backend/demo_backup/backup/
+# IT's repaired backup - a separate clean tree the incident repair generates
+backend/demo_backup/backup_new/
 # the verify story's generated trees (restore/verify.py regenerates them on reset)
 backend/demo_backup/compromised/
 backend/demo_backup/patched/

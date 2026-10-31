@@ -27,9 +27,14 @@ export default function OwnerReadiness() {
   const navigate = useNavigate();
   const [run, busy] = useAction();
   const { data, stale, refresh } = usePoll(async () => {
-    const [clinic, restore] = await Promise.all([api.getClinic(), api.getRestoreLatest()]);
+    const [clinic, restore, incidents] = await Promise.all([
+      api.getClinic(), api.getRestoreLatest(),
+      api.listOrEmpty(api.getRestoreIncidents(), "incidents"),
+    ]);
     const owner = ownerOf(clinic);
-    return { clinic, owner, restore, drill: await lastDrill(owner) };
+    // The active (open/resolved) incident, if one is in flight.
+    const incident = incidents.find((i) => i.status === "open" || i.status === "resolved") ?? null;
+    return { clinic, owner, restore, incident, drill: await lastDrill(owner) };
   }, 3000);
 
   const test = () => run("restore", async () => {
@@ -37,6 +42,14 @@ export default function OwnerReadiness() {
     await api.runRestore();
     await refresh();
   });
+
+  // Owner closes the backup incident: confirm=true once a retest is safe; confirm=false sends
+  // it back to IT with a reason when the retest still fails.
+  const closeIncident = (confirm, note = "") => run("close-incident", async () => {
+    await api.closeRestoreIncident(data.owner.id, confirm, note);
+    await refresh();
+  });
+
   const startDrill = () => run("drill", async () => {
     const r = await api.createDrill("ransomware_clinic", data.owner.id);
     setPlayer(r.code, data.owner.id, r.player_id);
@@ -51,7 +64,8 @@ export default function OwnerReadiness() {
         <>
           <Summary restore={data.restore} drill={data.drill} gaps={data.clinic.single_point_of_failure} />
           <div className="grid-auto">
-            <BackupCard r={data.restore} testing={busy === "restore"} disabled={!!busy} onTest={test} />
+            <BackupCard r={data.restore} incident={data.incident} itName={data.clinic.clinic.it_contact_name}
+              testing={busy === "restore"} disabled={!!busy} onTest={test} onClose={closeIncident} />
             <TeamCard v={data.drill} disabled={!!busy} onStart={startDrill} />
             <AwayCard gaps={data.clinic.single_point_of_failure} />
           </div>
@@ -83,11 +97,16 @@ function Summary({ restore, drill, gaps }) {
   );
 }
 
-function BackupCard({ r, testing, disabled, onTest }) {
+function BackupCard({ r, incident, itName, testing, disabled, onTest, onClose }) {
   const yn = (ok) => <span className="bold" style={{ color: ok ? "var(--green-ink)" : "var(--red-ink)" }}>{ok ? "Yes" : "No"}</span>;
   const check = (name) => r.checks.find((c) => c.check === name);
   const failed = check("integrity")?.failed_files || [];
   const fixes = r.checks.filter((c) => !c.passed).map((c) => c.fix);
+  const isSafe = r.result === "PASS";
+  const itResolved = incident && incident.status === "resolved";
+  // The owner can close once IT has resolved it AND the latest check is safe.
+  const canClose = itResolved && isSafe;
+  const canSendBack = itResolved && !isSafe;
   return (
     <section className="card" id="backup">
       <div className="row-between">
@@ -116,10 +135,37 @@ function BackupCard({ r, testing, disabled, onTest }) {
             {fixes.length ? <div className="tinted"><strong>Fix:</strong> {fixes.join(" ")}</div> : null}
           </>
         )}
-      <div className="row">
+
+      {/* v3: the incident loop. While it's open, IT is on it; once IT resolves it the owner
+          retests and either closes it (safe) or sends it back (still not safe). */}
+      {incident && incident.status === "open" ? (
+        <div className="callout amber">
+          <span><strong>{itName}</strong> has been told the backup isn't safe and is fixing it.
+          {incident.fix_steps.length ? " Suggested steps: " : ""}{incident.fix_steps.join(" · ")}</span>
+        </div>
+      ) : null}
+      {itResolved ? (
+        <div className="callout blue">
+          <span><strong>{itName}</strong> says it's fixed: “{incident.it_resolved_note}”.
+          {isSafe ? " The last check is safe." : " The last check still isn't safe."}
+          {" "}{isSafe ? "Close it." : "Send it back to " + itName + "."}</span>
+        </div>
+      ) : null}
+
+      <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
         <button type="button" className="btn btn-primary" disabled={disabled} onClick={onTest}>
           {testing ? "Testing…" : r.result === "NOT_TESTED" ? "Test the backup" : "Test again"}
         </button>
+        {canClose ? (
+          <button type="button" className="btn btn-soft" disabled={disabled} onClick={() => onClose(true)}>
+            Close backup incident
+          </button>
+        ) : null}
+        {canSendBack ? (
+          <button type="button" className="btn btn-soft" disabled={disabled} onClick={() => onClose(false, "Still not safe after retest")}>
+            Send back to {itName}
+          </button>
+        ) : null}
         {r.started_at && !testing ? <span className="small muted">Last test {fmtTime(r.started_at)}</span> : null}
       </div>
     </section>

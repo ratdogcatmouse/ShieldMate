@@ -31,19 +31,25 @@ export default function ItPanel() {
   const [drafts, setDrafts] = useState({});    // typed notes, per incident
   const [showClosed, setShowClosed] = useState(false);
   const { data, stale, refresh } = usePoll(async () => {
-    const [clinic, list, actions, devices] = await Promise.all([
+    const [clinic, list, actions, devices, incidents] = await Promise.all([
       api.getClinic(),
       api.getAlerts("owner", { includeClosed: true }),
       api.listOrEmpty(api.getActions(), "actions"),
       api.listOrEmpty(api.getDevices(), "devices"),
+      api.listOrEmpty(api.getRestoreIncidents(), "incidents"),
     ]);
-    return { clinic, alerts: list.alerts, actions, devices };
+    return { clinic, alerts: list.alerts, actions, devices, incidents };
   }, 2000);
 
   const all = data?.alerts ?? [];
   const open = all.filter((a) => !a.it.closed_at && a.status !== "mine")
     .sort((x, y) => ORDER[x.it.status] - ORDER[y.it.status] || y.first_seen.localeCompare(x.first_seen));
   const closed = all.filter((a) => a.it.closed_at);
+
+  // The backup incident (v3): a "not safe" restore check opened it; IT resolves it with a
+  // note. It shows above the alert tickets while open; a closed one disappears (like alerts).
+  const incidents = data?.incidents ?? [];
+  const openBackup = incidents.find((i) => !i.closed_at);
 
   // A new call buzzes and chimes once per tab.
   const ringing = open.filter((a) => a.it.status === "called").map((a) => a.id).join(",");
@@ -67,6 +73,25 @@ export default function ItPanel() {
     });
   };
 
+  // The backup incident is a separate record (not an alert ticket), so it has its own draft
+  // and its own resolve call. The owner is pinged by the server; IT just says what they did.
+  const backupDraft = drafts["backup"] || "";
+  const setBackupDraft = (v) => setDrafts((d) => ({ ...d, backup: v }));
+  const resolveBackup = () => {
+    const note = backupDraft.trim();
+    if (note.length < RESOLVED_NOTE_MIN) {
+      toast("Say what you did, so the owner can check it");
+      document.getElementById("note-backup")?.focus();
+      return;
+    }
+    run("resolve-backup", async () => {
+      await api.resolveRestoreIncident(note);
+      setDrafts((d) => ({ ...d, backup: "" }));
+      toast("The owner has been told to retest and close it");
+      await refresh();
+    });
+  };
+
   const c = data?.clinic;
   return (
     <>
@@ -83,7 +108,11 @@ export default function ItPanel() {
       </header>
       <main className="it-main" aria-live="polite">
         <div className="col">
-          {!data ? <p className="muted">Loading…</p> : open.length ? open.map((a) => (
+          {!data ? <p className="muted">Loading…</p> : (
+            <>
+              {openBackup ? <BackupTicket b={openBackup} clinic={data.clinic} busy={!!busy}
+                draft={backupDraft} setDraft={setBackupDraft} onResolve={resolveBackup} /> : null}
+              {open.length ? open.map((a) => (
             <Ticket key={a.id} a={a} clinic={c} act={data.actions.find((x) => x.id === a.action?.id)} busy={busy}
               draft={drafts[a.id] || ""} setDraft={(v) => setDrafts((d) => ({ ...d, [a.id]: v }))}
               onSend={(action) => send(a, action)} />
@@ -108,6 +137,8 @@ export default function ItPanel() {
               )) : null}
             </section>
           ) : null}
+            </>
+          )}
         </div>
         {c ? (
           <aside className="col">
@@ -149,6 +180,57 @@ function blockLine(act) {
   if (act.status === "failed") return "Block didn't take effect: Wazuh didn't answer";
   if (act.status === "refused") return `Not blocked: ${act.refused_reason || "protected address"}`;
   return `Block ${act.status}`;
+}
+
+// Backup incident ticket (v3): the IT contact sees the "not safe" restore check, reads the
+// suggested fixes, and marks it resolved by saying what they did. The owner then retests.
+function BackupTicket({ b, clinic, busy, draft, setDraft, onResolve }) {
+  const isResolved = b.status === "resolved";
+  const tone = isResolved ? "blue" : "red";
+  const label = isResolved ? "Waiting for the owner to confirm" : "Not safe";
+  return (
+    <article className={`card ticket ${isResolved ? "resolved" : "open"} slide-in`} aria-label="Backup restore check not safe">
+      <div className="row-between">
+        <Pill tone={tone}>{label}</Pill>
+        <span className="small muted">Opened {fmtTime(b.created_at)}</span>
+      </div>
+      <h2 style={{ fontSize: 20 }}>Backup restore check is not safe</h2>
+      {!isResolved ? (
+        <div className="callout amber">
+          <span>The backup wouldn't restore cleanly. Fix it, then mark resolved so the owner can retest.</span>
+        </div>
+      ) : null}
+      {b.fix_steps.length ? (
+        <details className="log" open>
+          <summary>Suggested fixes</summary>
+          <div className="body">
+            <ol className="playbook">{b.fix_steps.map((s) => <li key={s}>{s}</li>)}</ol>
+          </div>
+        </details>
+      ) : null}
+      {isResolved ? (
+        <div className="callout blue">
+          <span>You marked it resolved{b.it_resolved_at ? ` at ${fmtTime(b.it_resolved_at)}` : ""}. The owner is checking the backup now.</span>
+        </div>
+      ) : null}
+      {!isResolved ? (
+        <section className="stack-sm">
+          <label className="field-label" htmlFor="note-backup">Note for the owner</label>
+          <textarea
+            className="it-note"
+            id="note-backup"
+            maxLength={300}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="What you checked or changed. To mark it resolved, say what you fixed."
+          />
+          <button type="button" className="btn btn-primary" disabled={!!busy} onClick={onResolve}>
+            Mark resolved
+          </button>
+        </section>
+      ) : null}
+    </article>
+  );
 }
 
 function Ticket({ a, clinic, act, busy, draft, setDraft, onSend }) {

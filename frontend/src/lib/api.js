@@ -138,6 +138,15 @@ export const endDrill = (code, playerId) =>
 export const runRestore = () => call("POST", "/restore/run", { who: "owner" });
 export const getRestoreLatest = () => call("GET", "/restore/latest");
 
+// --- v3 restore-incident loop (a "not safe" check becomes an IT incident) ---
+// IT polls the list (no who), marks it resolved with a note; only the owner closes it
+// (confirm=true after a safe retest) or sends it back (confirm=false).
+export const getRestoreIncidents = () => call("GET", "/restore/incidents");
+export const resolveRestoreIncident = (note) =>
+  call("POST", "/restore/incidents/resolve", { body: { note } });
+export const closeRestoreIncident = (staffId, confirm, note = "") =>
+  call("POST", "/restore/incidents/close", { who: "owner", body: { staff_id: staffId, confirm, note } });
+
 // --- devices and actions (flag ACTIONS: a flagged-off route answers not_enabled, 404) ---
 export const getDevices = () => call("GET", "/devices");
 export const getActions = (status) => call("GET", `/actions${query({ status })}`);

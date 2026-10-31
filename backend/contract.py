@@ -503,6 +503,47 @@ class RestoreRun(Model):
     checks: list[RestoreCheck]
 
 
+# --- v3 restore-incident loop (restore/incident.py) ------------------------
+# A FAIL check opens an incident for the IT contact; IT resolves it; the owner retests and
+# closes it when the next check is safe. The IT contact is reached by polling, not a role.
+
+RestoreIncidentStatus = Literal["open", "resolved", "closed"]
+
+
+class RestoreIncident(Model):
+    """The backup-incident the IT contact and the owner work. ``fix_steps`` are the
+    actionable steps pulled from the failed checks (what IT should do)."""
+    id: int
+    status: RestoreIncidentStatus
+    last_result: Literal["PASS", "FAIL"]          # the newest check that set the current state
+    fix_steps: list[str]                          # actionable steps for IT (empty when resolved/closed-safe)
+    last_run_id: int | None                        # the restore_runs row that set last_result
+    it_resolved_at: str | None
+    it_resolved_note: str | None                  # IT's own words - shown as text, never logged
+    it_sent_back_at: str | None
+    it_sent_back_note: str | None
+    closed_at: str | None
+    closed_by: int | None
+    created_at: str
+
+
+class RestoreIncidentsResponse(Model):
+    """GET /restore/incidents: the IT contact's poll - every incident, newest first."""
+    incidents: list[RestoreIncident]
+
+
+class RestoreIncidentResolveRequest(Model):
+    """POST /restore/incidents/resolve - the IT contact says what they fixed."""
+    note: str = Field(max_length=300)
+
+
+class RestoreIncidentCloseRequest(Model):
+    """POST /restore/incidents/close - the owner confirms the retest passed, or sends it back."""
+    staff_id: int
+    confirm: bool
+    note: str = Field(max_length=300)
+
+
 class RestoreVerifyResult(Model):
     """POST /restore/verify: does a backup of a compromised directory carry the same
     vulnerabilities as the live system?
@@ -694,6 +735,13 @@ ROUTES: list[Route] = [
     Route("POST", "/restore/run", None, RestoreRun, "restore_run.json", who="owner"),
     Route("POST", "/restore/verify", None, RestoreVerifyResult, "restore_verify.json", who="owner"),
     Route("GET", "/restore/latest", None, RestoreRun, "restore_latest.json"),
+    # v3: the restore-incident loop. IT polls the list (who=any, same as the alerts IT poll);
+    # IT resolves it; only the owner closes or sends it back.
+    Route("GET", "/restore/incidents", None, RestoreIncidentsResponse, "restore_incidents.json"),
+    Route("POST", "/restore/incidents/resolve", RestoreIncidentResolveRequest, RestoreIncident,
+          "restore_incident_resolved.json"),
+    Route("POST", "/restore/incidents/close", RestoreIncidentCloseRequest, RestoreIncident,
+          "restore_incident_closed.json", who="owner"),
     Route("GET", "/devices", None, DevicesResponse, "devices.json", flag="ACTIONS"),
     Route("GET", "/actions", None, ActionsResponse, "actions.json", flag="ACTIONS"),
     Route("POST", "/actions/{id}/approve", ActionDecisionRequest, ActionOut, "action_executed.json", who="owner", flag="ACTIONS"),

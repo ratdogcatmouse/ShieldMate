@@ -25,13 +25,13 @@ from eventlog.log import Event, NullEventLog
 # actions (standing-rule and escalation notes), so they must go before them.
 RUNTIME_TABLES = [
     "notifications", "actions", "drill_answers", "drill_players", "drills",
-    "restore_runs", "sim_runs", "alert_steps", "alert_it_log", "alerts",
+    "restore_runs", "restore_incidents", "sim_runs", "alert_steps", "alert_it_log", "alerts",
 ]
 
 # Must match ``PRAGMA user_version`` in schema.sql. Bump it with any schema change: an
 # older file is dropped and rebuilt at start-up (its rows are demo state that Reset wipes
 # anyway; the event log is a separate file and is kept).
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 class Database:

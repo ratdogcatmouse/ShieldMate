@@ -1,0 +1,18 @@
+{
+  "id": 1,
+  "status": "resolved",
+  "last_result": "FAIL",
+  "fix_steps": [
+    "Back up every day, and check that it ran.",
+    "Repair the backup and run this check again before trusting it.",
+    "Unplug the backup drive after each backup, or keep an offline copy."
+  ],
+  "last_run_id": 1,
+  "it_resolved_at": "2026-11-01T05:10:00Z",
+  "it_resolved_note": "Rebuilt the backup, unplugged the drive, fixed the corruption.",
+  "it_sent_back_at": null,
+  "it_sent_back_note": null,
+  "closed_at": null,
+  "closed_by": null,
+  "created_at": "2026-11-01T04:20:00Z"
+}
