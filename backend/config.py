@@ -124,6 +124,8 @@ class Config:
             wazuh_ar_command=env.get("WAZUH_AR_COMMAND") or d.wazuh_ar_command,
             wazuh_timeout_seconds=float(env.get("WAZUH_TIMEOUT_SECONDS") or d.wazuh_timeout_seconds),
             ai_provider=env.get("AI_PROVIDER") or d.ai_provider,
+            # Which clinic seed to load (e.g. backend/seed/clinic.lab.json for the Wazuh lab).
+            seed_path=_path(env["SEED_PATH"]) if env.get("SEED_PATH") else d.seed_path,
             simulate=_flag(env.get("SIMULATE")),
             sim_dir=_path(env["SIM_DIR"]) if env.get("SIM_DIR") else d.sim_dir,
             sim_time_limit_ms=int(env.get("SIM_TIME_LIMIT_MS") or d.sim_time_limit_ms),

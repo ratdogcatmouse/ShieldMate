@@ -123,6 +123,9 @@ class RealWazuhClient:
         # Obtain root-ca.pem from Ishaan's Wazuh installation. Use a hostname/IP
         # present in the server certificate. Do not disable certificate checking.
         self._tls = ssl.create_default_context(cafile=self.settings.ca_cert)
+        # Python 3.13+ adds VERIFY_X509_STRICT, which rejects Wazuh's self-made root CA
+        # (no keyUsage extension). Chain and hostname checks stay fully on.
+        self._tls.verify_flags &= ~ssl.VERIFY_X509_STRICT
         self._token: str | None = None
         self._auth_lock = threading.RLock()
 
