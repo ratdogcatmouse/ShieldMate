@@ -212,7 +212,8 @@ test("every screen loads without script errors", async ({ browser, request }) =>
     ["/backstage", "Demo controls"],
   ]) {
     const d = await device(browser, path === "/mission" ? { width: 1440, height: 900 } : PHONE, path);
-    await expect(d.page.getByText(text, { exact: false }).first()).toBeVisible();
+    // "/" shows the 3-second landing screen before the roles screen.
+    await expect(d.page.getByText(text, { exact: false }).first()).toBeVisible({ timeout: 10_000 });
     expect(d.errors, path).toEqual([]);
     await d.close();
   }

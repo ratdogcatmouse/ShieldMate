@@ -87,6 +87,21 @@ button { font: inherit; color: inherit; }
 .topbar .app-name { font-size: 19px; font-weight: 700; }
 .content { flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 8px 18px 20px; }
 
+/* ---------- Landing (3 s welcome before the roles screen) ---------- */
+/* Plain white, system font. Sizes scale with the screen: phone at the low end, laptop at the high end. */
+.landing {
+  position: fixed; inset: 0; z-index: 100; background: #fff; color: #111;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.landing-inner { width: 100%; max-width: 640px; text-align: center; }
+.landing p { margin: 0 0 clamp(6px, 1vw, 10px); font-size: clamp(15px, 1.6vw, 19px); color: #666; }
+.landing h1 { margin: 0; font-size: clamp(26px, 5vw, 44px); font-weight: 600; line-height: 1.2; overflow-wrap: break-word; }
+.landing-bar { width: clamp(140px, 30vw, 220px); margin: clamp(24px, 4vw, 36px) auto 0; height: 2px; background: #eee; }
+.landing-bar i { display: block; height: 2px; background: #111; transform-origin: left; animation: smLandingFill 3s linear both; }
+@keyframes smLandingFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) { .landing-bar i { animation: none; } }
+
 .practice-banner {
   display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
   background: var(--amber-soft); color: var(--amber-ink);

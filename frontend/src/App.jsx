@@ -5,6 +5,7 @@ import { getStatus } from "./lib/api.js";
 import { track } from "./lib/telemetry.js";
 import { syncServerTime } from "./lib/time.js";
 import { usePoll } from "./lib/usePoll.js";
+import Landing from "./pages/Landing.jsx";
 import Start from "./pages/Start.jsx";
 import Staff from "./pages/Staff.jsx";
 import StaffDrill from "./pages/StaffDrill.jsx";
@@ -41,7 +42,7 @@ export default function App() {
   return (
     <ToastProvider>
       <Routes>
-        <Route path="/" element={<Start />} />
+        <Route path="/" element={<Landing><Start /></Landing>} />
         <Route path="/staff/:staffId" element={<Staff view="today" />} />
         <Route path="/staff/:staffId/history" element={<Staff view="history" />} />
         <Route path="/staff/:staffId/drill" element={<StaffDrill />} />
