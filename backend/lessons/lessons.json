@@ -1,0 +1,76 @@
+[
+  {
+    "rule_id": "60204",
+    "lesson_id": "password_guessing",
+    "severity": "needs_you_now",
+    "drill_scenario": null,
+    "proposed_action": "BLOCK_IP",
+    "count_defaults": {"count": 8, "window_minutes": 4},
+    "roles": {
+      "front_desk": {
+        "headline": "Someone is repeatedly guessing the password on {agent_name}.",
+        "what_we_know": "{count}+ wrong passwords in {window_minutes} minutes. Not a confirmed break-in yet.",
+        "why": "One correct guess opens patient records.",
+        "steps": [
+          {"action": "DONT_USE_DEVICE", "text": "Don't log in from {agent_name}."},
+          {"action": "CALL_SAVED_IT", "text": "Call your IT contact (saved in ShieldMate)."},
+          {"action": "NOTIFY_OWNER", "text": "Tap Done: the office manager is notified."}
+        ],
+        "show_log_fields": ["username_tried"],
+        "translations": {}
+      },
+      "billing": {
+        "headline": "Someone is repeatedly guessing the password on {agent_name}.",
+        "what_we_know": "{count}+ wrong passwords in {window_minutes} minutes. Not a confirmed break-in yet.",
+        "why": "One correct guess opens patient records.",
+        "steps": [
+          {"action": "DONT_USE_DEVICE", "text": "Don't log in from {agent_name}."},
+          {"action": "CALL_SAVED_IT", "text": "Call your IT contact (saved in ShieldMate)."},
+          {"action": "NOTIFY_OWNER", "text": "Tap Done: the office manager is notified."}
+        ],
+        "show_log_fields": ["username_tried"],
+        "translations": {}
+      },
+      "owner": {
+        "headline": "Repeated password guessing on {agent_name}.",
+        "what_we_know": "{count}+ wrong passwords in {window_minutes} minutes from one address. Not a confirmed break-in yet.",
+        "why": "One correct guess opens patient records. Blocking that address stops the guessing.",
+        "steps": [
+          {"action": "CALL_SAVED_IT", "text": "Review the block request, or call your IT contact (saved in ShieldMate)."}
+        ],
+        "show_log_fields": ["username_tried", "source_ip"],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Someone keeps trying to get into {agent_name} by guessing its password.",
+      "why": "If they guess right, they can open patient records."
+    }
+  },
+  {
+    "rule_id": "100201",
+    "lesson_id": "ransomware",
+    "severity": "needs_you_now",
+    "drill_scenario": "ransomware_clinic",
+    "proposed_action": null,
+    "count_defaults": {"files_renamed": 37, "window_minutes": 1},
+    "roles": {
+      "owner": {
+        "headline": "Files on {agent_name} are being locked. This looks like ransomware.",
+        "what_we_know": "{files_renamed} files were renamed to .locked in {window_minutes} minute. Treat it as real until IT says otherwise.",
+        "why": "Locked files can stop appointments, billing and patient records.",
+        "steps": [
+          {"action": "ISOLATE_NETWORK", "text": "Unplug {agent_name} from the network. Leave it switched on."},
+          {"action": "CALL_SAVED_IT", "text": "Call your IT contact (saved in ShieldMate)."},
+          {"action": "VERIFY_BACKUP", "text": "Test your backup before you restore anything."}
+        ],
+        "show_log_fields": [],
+        "translations": {}
+      }
+    },
+    "fallback_reword": {
+      "headline": "Files on {agent_name} are being locked, which looks like ransomware.",
+      "why": "Locked files can stop appointments, billing and patient records."
+    }
+  }
+]

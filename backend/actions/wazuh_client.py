@@ -20,12 +20,21 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from pathlib import Path
+from typing import Any, Callable, Protocol
 
 log = logging.getLogger(__name__)
 
 
-class WazuhApiError(RuntimeError):
+class WazuhUnavailable(RuntimeError):
+    """Transport failure handled by the approval flow as wazuh_unavailable."""
+
+
+class UndoNotSupported(Exception):
+    """Undo is disabled until lab test T5.07 passes."""
+
+
+class WazuhApiError(WazuhUnavailable):
     """Safe to map to wazuh_unavailable / HTTP 502; no upstream body/secrets."""
 
 
@@ -76,22 +85,45 @@ class Settings:
             float(os.environ.get('WAZUH_TIMEOUT_SECONDS', '5')))
 
 
-class WazuhClient:
-    def __init__(self, settings: Settings):
-        self.settings = settings
-        for url in (settings.api_url, settings.indexer_url):
+class RealWazuhClient:
+    def __init__(self, settings: Settings | None = None):
+        # main.build_context passes Config, whose fields use wazuh_* names.
+        # Read the registered agent and safety list from the same seed as the DB.
+        self._never_block: set[str] | None = None
+        if settings is not None and not isinstance(settings, Settings):
+            config = settings
+            seed = json.loads(config.seed_path.read_text(encoding='utf-8'))
+            device = next((d for d in seed['devices']
+                           if d['agent_name'] == 'RECEPTION-PC'), None)
+            if not device or not device.get('wazuh_agent_id'):
+                raise ValueError('Set RECEPTION-PC wazuh_agent_id in the seed before live mode')
+            self._never_block = {str(ipaddress.IPv4Address(item['ip']))
+                                 for item in seed['clinic']['never_block']}
+            if not config.wazuh_ca_cert:
+                raise ValueError('WAZUH_CA_CERT is required for live mode')
+            ca = Path(config.wazuh_ca_cert)
+            if not ca.is_absolute():
+                ca = config.seed_path.resolve().parents[2] / ca
+            settings = Settings(
+                config.wazuh_api_url, config.wazuh_indexer_url,
+                config.wazuh_api_user, config.wazuh_api_password,
+                config.wazuh_indexer_user, config.wazuh_indexer_password,
+                str(ca), str(device['wazuh_agent_id']), device['agent_name'],
+                config.wazuh_ar_command, config.wazuh_timeout_seconds)
+        self.settings = settings or Settings.from_environment()
+        for url in (self.settings.api_url, self.settings.indexer_url):
             parsed = urllib.parse.urlsplit(url)
             if (parsed.scheme != 'https' or not parsed.hostname or parsed.username
                     or parsed.password or parsed.query or parsed.fragment
                     or parsed.path not in ('', '/')):
                 raise ValueError('Wazuh URLs must be HTTPS origins without credentials')
-        if not re.fullmatch(r'\d{3,}', settings.agent_id) or settings.agent_id == '000':
+        if not re.fullmatch(r'\d{3,}', self.settings.agent_id) or self.settings.agent_id == '000':
             raise ValueError('Use the registered Windows agent ID, never manager 000')
-        if settings.timeout <= 0:
+        if self.settings.timeout <= 0:
             raise ValueError('Timeout must be positive')
         # Obtain root-ca.pem from Ishaan's Wazuh installation. Use a hostname/IP
         # present in the server certificate. Do not disable certificate checking.
-        self._tls = ssl.create_default_context(cafile=settings.ca_cert)
+        self._tls = ssl.create_default_context(cafile=self.settings.ca_cert)
         self._token: str | None = None
         self._auth_lock = threading.RLock()
 
@@ -119,7 +151,12 @@ class WazuhClient:
             urllib.request.HTTPSHandler(context=self._tls), NoRedirect())
         try:
             with opener.open(request, timeout=self.settings.timeout) as response:
-                text = response.read().decode('utf-8')
+                # Bound memory use even if an upstream service misbehaves.
+                maximum = 8 * 1024 * 1024
+                content = response.read(maximum + 1)
+                if len(content) > maximum:
+                    raise WazuhApiError('Wazuh response exceeded the size limit')
+                text = content.decode('utf-8')
             return text.strip() if raw else json.loads(text)
         except urllib.error.HTTPError as exc:
             # Keep the status for token refresh, but do not expose raw error bodies.
@@ -168,8 +205,13 @@ class WazuhClient:
             authorization=self._basic(self.settings.indexer_user,
                                       self.settings.indexer_password), **kwargs)
         if (not isinstance(result, dict) or result.get('error') or result.get('timed_out')
+                or not isinstance(result.get('_shards', {}), dict)
                 or result.get('_shards', {}).get('failed', 0)):
             raise WazuhApiError('Indexer returned an incomplete/failed search')
+        if method != 'DELETE' and (
+                not isinstance(result.get('hits'), dict)
+                or not isinstance(result['hits'].get('hits'), list)):
+            raise WazuhApiError('Indexer response is missing search hits')
         return result
 
     def alert_hits(self, start: datetime, end: datetime):
@@ -210,21 +252,28 @@ class WazuhClient:
                      and item.get('status') == 'active' for item in items)
         self._indexer('POST', '/wazuh-alerts-4.x-*/_search', body={
             'size': 1, 'query': {'term': {'agent.name': self.settings.agent_name}}})
-        return {'connected': active, 'agent_active': active, 'indexer_reachable': True}
+        # Match Config.Context/contract.WazuhHealth, including the fake seam.
+        return {'api_ok': True, 'indexer_ok': True, 'agent_active': active}
 
-    def block_ip(self, agent_id: str, ip: str, *, never_block: set[str]) -> dict:
+    def block_ip(self, agent_id: str, ip: str, *, never_block: set[str] | None = None) -> dict:
         """INTERNAL ONLY: call after a persisted approval/standing-rule decision.
 
         Return means command accepted by Wazuh, not proven Windows enforcement.
         Never expose this method directly as an unauthenticated HTTP endpoint.
         """
-        target = validate_target(ip, never_block)
+        protected = never_block if never_block is not None else self._never_block
+        if protected is None:
+            raise WazuhUnavailable('A never-block list is required before dispatch')
+        try:
+            target = validate_target(ip, protected)
+        except ValueError:
+            raise WazuhUnavailable('Refused unsafe block target') from None
         if agent_id != self.settings.agent_id:
-            raise ValueError('Refused: agent is outside the configured lab scope')
+            raise WazuhUnavailable('Refused: agent is outside the configured lab scope')
         # Final spec uses configured netsh3600, NOT !netsh.exe or an arbitrary
         # command from an alert/request. Ishaan configures timeout and dummy rule.
         if not re.fullmatch(r'netsh\d+', self.settings.command):
-            raise ValueError('Expected a lab-verified configured netsh timeout command')
+            raise WazuhUnavailable('Expected a lab-verified configured netsh timeout command')
         body = {'command': self.settings.command, 'arguments': [],
                 'alert': {'data': {'srcip': target}}}
         result = self._api('PUT', '/active-response',
@@ -233,6 +282,10 @@ class WazuhClient:
             raise WazuhApiError('Wazuh did not acknowledge exactly one target agent')
         # Store only sanitized response metadata in actions.wazuh_response.
         return {'accepted': True, 'confirmed': False, 'request': body}
+
+    def unblock_ip(self, agent_id: str, ip: str) -> dict:
+        """Unblock support is intentionally disabled until lab test T5.07 proves it."""
+        raise UndoNotSupported('No verified undo command is configured')
 
 
 def validate_target(ip: str, never_block: set[str]) -> str:
@@ -296,3 +349,31 @@ class WazuhPoller:
             else:
                 self.last_success = end  # Never advance after partial failure.
                 self.last_error = None
+
+class WazuhClient(Protocol):
+    def block_ip(self, agent_id: str, ip: str) -> dict: ...      # raises WazuhUnavailable
+    def unblock_ip(self, agent_id: str, ip: str) -> dict: ...    # raises UndoNotSupported
+    def health(self) -> dict: ...                                 # {api_ok, indexer_ok, agent_active}
+
+
+class FakeWazuhClient:
+    """Records every call in ``.calls`` and sends nothing. Used by every test except Gate T5."""
+
+    def __init__(self, fail_with: Exception | None = None):
+        self.calls: list[tuple[str, str, str]] = []
+        self.fail_with = fail_with          # tests set this to simulate a Wazuh outage
+
+    def block_ip(self, agent_id: str, ip: str) -> dict:
+        self.calls.append(("block_ip", agent_id, ip))
+        if self.fail_with:
+            raise self.fail_with
+        return {"fake": True, "agent_id": agent_id, "ip": ip}
+
+    def unblock_ip(self, agent_id: str, ip: str) -> dict:
+        self.calls.append(("unblock_ip", agent_id, ip))
+        if self.fail_with:
+            raise self.fail_with
+        return {"fake": True, "agent_id": agent_id, "ip": ip}
+
+    def health(self) -> dict:
+        return {"api_ok": None, "indexer_ok": None, "agent_active": None}

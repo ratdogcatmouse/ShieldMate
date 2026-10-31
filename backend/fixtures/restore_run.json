@@ -1,0 +1,15 @@
+{
+  "id": 4,
+  "started_at": "2026-11-01T04:31:00Z",
+  "result": "FAIL",
+  "simulated_backup": true,
+  "backup_age_hours": 216,
+  "files_total": 50,
+  "files_ok": 48,
+  "exposed": true,
+  "checks": [
+    {"check": "freshness", "passed": false, "detail": "Last backup was 9 days ago. Your limit is 24 hours.", "fix": "Back up every day, and check that it ran."},
+    {"check": "integrity", "passed": false, "detail": "48 of 50 files restored exactly. 2 did not match.", "failed_files": ["invoices/invoice_017.txt", "letters/letter_032.txt"], "fix": "Repair the backup and run this check again before trusting it."},
+    {"check": "exposure", "passed": false, "detail": "The backup drive is always connected to the server.", "fix": "Unplug the backup drive after each backup, or keep an offline copy."}
+  ]
+}

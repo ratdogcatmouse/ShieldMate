@@ -1,0 +1,88 @@
+{
+  "scenario_id": "ransomware_clinic",
+  "title": "Ransomware at the clinic",
+  "steps": [
+    {
+      "step_id": "s1",
+      "phase": "detect",
+      "game_time": "9:10 AM",
+      "situation": "Files on the shared drive are turning into .locked and a ransom note just appeared on the reception PC.",
+      "devices": {"RECEPTION-PC": "infected", "FILE-SERVER": "encrypting", "DOCTOR-PC": "ok"},
+      "options": {
+        "staff": [
+          {"option_id": "a", "text": "Switch the PC off", "actions": [], "correct": false,
+           "feedback": "Switching off can wipe evidence investigators need. Disconnect from the network first; power off only if you can't (CISA)."},
+          {"option_id": "b", "text": "Unplug the network cable / turn Wi-Fi off; leave the PC on", "actions": ["ISOLATE_NETWORK"], "correct": true,
+           "feedback": "Right. Cutting the network stops the spread and keeps the evidence."},
+          {"option_id": "c", "text": "Keep working, tell IT at lunch", "actions": [], "correct": false,
+           "feedback": "Every minute online lets it reach more files."}
+        ],
+        "owner": []
+      }
+    },
+    {
+      "step_id": "s2",
+      "phase": "contain",
+      "game_time": "9:14 AM",
+      "situation": "The ransom note lists an 'IT support' number and a payment link.",
+      "devices": {"RECEPTION-PC": "isolated", "FILE-SERVER": "encrypted", "DOCTOR-PC": "ok"},
+      "options": {
+        "staff": [
+          {"option_id": "a", "text": "Call the number in the note", "actions": [], "correct": false,
+           "feedback": "Attackers plant fake helplines. Only use contacts saved in ShieldMate."},
+          {"option_id": "b", "text": "Call the saved IT contact and tell the owner", "actions": ["CALL_SAVED_IT", "NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. Saved contacts only, and the owner needs to know now."},
+          {"option_id": "c", "text": "Pay fast to keep the clinic running", "actions": [], "correct": false,
+           "feedback": "Paying is the owner's decision, never the front desk's, and it doesn't guarantee your files come back."}
+        ],
+        "owner": []
+      }
+    },
+    {
+      "step_id": "s3",
+      "phase": "recover",
+      "game_time": "9:40 AM",
+      "situation": "The shared drive is encrypted. Dr. Rao wants to restore everything from the backup drive plugged into the server.",
+      "devices": {"RECEPTION-PC": "isolated", "FILE-SERVER": "encrypted", "DOCTOR-PC": "ok"},
+      "options": {
+        "staff": [
+          {"option_id": "a", "text": "Leave the backup drive alone and tell the owner", "actions": ["NOTIFY_OWNER"], "correct": true,
+           "feedback": "Right. Restoring is the owner's call, and the backup needs checking first."},
+          {"option_id": "b", "text": "Plug the backup drive into the reception PC and copy files back", "actions": [], "correct": false,
+           "feedback": "The reception PC may still be infected. It could encrypt the backup too."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Restore everything right away", "actions": [], "correct": false,
+           "feedback": "If the backup is old or infected, you restore the problem. Test it first."},
+          {"option_id": "b", "text": "Test the backup first, then restore onto a cleaned PC", "actions": ["VERIFY_BACKUP"], "correct": true,
+           "feedback": "Right. Run the restore check before trusting the backup.", "triggers": "restore_check"},
+          {"option_id": "c", "text": "Reinstall Windows and skip the backup", "actions": [], "correct": false,
+           "feedback": "You'd lose every file since the PC was set up. Test the backup first."}
+        ]
+      }
+    },
+    {
+      "step_id": "s4",
+      "phase": "report",
+      "game_time": "11:30 AM",
+      "situation": "Patient records were on the encrypted drive.",
+      "devices": {"RECEPTION-PC": "isolated", "FILE-SERVER": "encrypted", "DOCTOR-PC": "ok"},
+      "options": {
+        "staff": [
+          {"option_id": "a", "text": "Write down what you saw and when, and give it to the owner", "actions": ["PRESERVE_EVIDENCE"], "correct": true,
+           "feedback": "Right. Your notes become the incident timeline."},
+          {"option_id": "b", "text": "Delete the ransom note so patients don't see it", "actions": [], "correct": false,
+           "feedback": "That destroys evidence. Leave it and write down what you saw."}
+        ],
+        "owner": [
+          {"option_id": "a", "text": "Wait until everything is fixed", "actions": [], "correct": false,
+           "feedback": "CERT-In expects a report within 6 hours of noticing the incident."},
+          {"option_id": "b", "text": "Report to CERT-In within 6 hours of noticing; start the DPDP breach note", "actions": ["REPORT_CERTIN", "START_DPDP_NOTE"], "correct": true,
+           "feedback": "Right. Report now; the breach note covers the patient records."},
+          {"option_id": "c", "text": "Don't report: nothing left the building", "actions": [], "correct": false,
+           "feedback": "Losing access to patient records counts as a personal-data breach under DPDP, even if nothing was copied out."}
+        ]
+      }
+    }
+  ]
+}

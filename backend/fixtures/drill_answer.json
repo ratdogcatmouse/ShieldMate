@@ -1,0 +1,6 @@
+{
+  "option_id": "b",
+  "correct": true,
+  "feedback": "Right. Cutting the network stops the spread and keeps the evidence.",
+  "actions": ["ISOLATE_NETWORK"]
+}
