@@ -56,8 +56,8 @@ EVENT_TYPES: dict[str, EventType] = {
                                   "A pending proposal was dropped; reason is mine or closed (v2)."),
     # --- clinic, notifications, devices ---
     "clinic.standing_rule_set": EventType(("enabled",), "The owner switched the standing rule."),
-    "notification.sent": EventType(("alert_id", "action_row_id", "to_role", "to_staff_id"),
-                                   "A notification was stored (its text is never logged)."),
+    "notification.sent": EventType(("alert_id", "action_row_id", "to_role", "to_staff_id", "kind"),
+                                   "A notification was stored (its text is never logged); kind is info or attack."),
     "device.status_changed": EventType(("from_status", "to_status"), "A device strip status moved."),
     # --- drills (drills/engine.py) ---
     "drill.created": EventType(("scenario_id", "source_alert_id", "player_id"), "The host opened a drill lobby."),

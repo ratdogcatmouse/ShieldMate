@@ -1,0 +1,24 @@
+{
+  "notifications": [
+    {
+      "id": 4,
+      "alert_id": 12,
+      "action_row_id": 5,
+      "from_staff": null,
+      "to_role": "front_desk",
+      "to_staff_id": null,
+      "kind": "attack",
+      "text": "Someone is repeatedly guessing the password on RECEPTION-PC.",
+      "created_at": "2026-11-01T04:10:00Z",
+      "quick_action": {
+        "action_row_id": 5,
+        "action": "BLOCK_IP",
+        "label": "Block 192.168.1.57 for 60 minutes",
+        "target_ip": "192.168.1.57",
+        "minutes": 60,
+        "status": "proposed"
+      }
+    }
+  ],
+  "last_id": 4
+}

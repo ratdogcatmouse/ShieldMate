@@ -6,7 +6,7 @@
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
-PRAGMA user_version = 2;
+PRAGMA user_version = 3;
 
 -- setup (re-seeded on every reset)
 
@@ -119,6 +119,8 @@ CREATE TABLE notifications (
   from_staff_id INTEGER REFERENCES staff(id),
   to_role TEXT CHECK (to_role IN ('front_desk','billing','owner')),
   to_staff_id INTEGER REFERENCES staff(id),       -- proposed (16)
+  -- v3: 'attack' = a new alert card; the route attaches a quick_action button to it
+  kind TEXT NOT NULL DEFAULT 'info' CHECK (kind IN ('info','attack')),
   text TEXT NOT NULL,
   created_at TEXT NOT NULL
 );

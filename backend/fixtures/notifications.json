@@ -7,8 +7,10 @@
       "from_staff": {"id": 1, "name": "Meena"},
       "to_role": "owner",
       "to_staff_id": null,
+      "kind": "info",
       "text": "Meena handled: Someone is repeatedly guessing the password on RECEPTION-PC.",
-      "created_at": "2026-11-01T04:11:05Z"
+      "created_at": "2026-11-01T04:11:05Z",
+      "quick_action": null
     }
   ],
   "last_id": 3

@@ -271,6 +271,19 @@ class StaffRef(Model):
     name: str
 
 
+class QuickAction(Model):
+    """v3: the one-tap button on an ``attack`` notification (BLOCK_IP, fired with POST /actions/{id}/approve).
+
+    ``action_row_id`` is the row id of the action (what ``approve`` takes), not the string "BLOCK_IP".
+    """
+    action_row_id: int
+    action: Literal["BLOCK_IP"]
+    label: str
+    target_ip: str
+    minutes: int
+    status: Literal["proposed", "executed", "expired"]
+
+
 class NotificationOut(Model):
     id: int
     alert_id: int | None
@@ -278,8 +291,12 @@ class NotificationOut(Model):
     from_staff: StaffRef | None
     to_role: Role | None
     to_staff_id: int | None
+    kind: Literal["info", "attack"]     # v3
     text: str
     created_at: str
+    # v3: only on an attack note, only while ACTIONS is on and there is a block to offer
+    # (null for ransomware, which has no source IP, or a refused or withdrawn request).
+    quick_action: QuickAction | None
 
 
 class NotificationsResponse(Model):
@@ -660,5 +677,6 @@ EXTRA_FIXTURES: dict[str, type[BaseModel]] = {
     "restore_latest_untested.json": RestoreRun,
     "action_proposed.json": ActionOut,
     "action_refused.json": ActionOut,
+    "notification_attack.json": NotificationsResponse,
     "error.json": ErrorBody,
 }

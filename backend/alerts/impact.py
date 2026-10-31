@@ -201,6 +201,14 @@ def notification_prefix(impact_obj: dict | None) -> str:
     return ""
 
 
+def notify_roles(agent_name: str, book: ImpactBook | None) -> list[str]:
+    """Who hears about a new attack on this device: the role whose account lives there, then
+    the owner (the escalation target, decision 16). Deduped, so DOCTOR-PC gives just
+    ``["owner"]``; an unknown device or no impact block also gives ``["owner"]``."""
+    account = ((book.data or {}).get("device_accounts") or {}).get(agent_name) if book else None
+    return [account, "owner"] if account and account != "owner" else ["owner"]
+
+
 # Re-export for type checkers importing the model alongside the engine.
 __all__ = ["ImpactOut", "ImpactBook", "ImpactError", "book_for",
-           "alert_out", "device_strip", "step_exposure", "notification_prefix"]
+           "alert_out", "device_strip", "step_exposure", "notification_prefix", "notify_roles"]

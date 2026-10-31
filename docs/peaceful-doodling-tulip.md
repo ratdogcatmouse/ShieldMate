@@ -96,7 +96,7 @@ the demo-backup generator's fixed seed).
   notification's recipient (staff tap). No new action machinery.
 - **Contract** (ships with fixtures + contract tests, one merge):
   - `NotificationOut` gains `quick_action: QuickAction | None` where
-    `QuickAction = {action_id, action: "BLOCK_IP", label, target_ip, minutes, status}` —
+    `QuickAction = {action_row_id, action: "BLOCK_IP", label, target_ip, minutes, status}` —
     built by the notifications route joining `actions` when `notification.action_row_id` is
     set (it's already a column!); `minutes`/`label` from `propose.label_for` + clinic.
     `target_ip` null (ransomware, no source IP) → no button.

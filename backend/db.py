@@ -31,7 +31,7 @@ RUNTIME_TABLES = [
 # Must match ``PRAGMA user_version`` in schema.sql. Bump it with any schema change: an
 # older file is dropped and rebuilt at start-up (its rows are demo state that Reset wipes
 # anyway; the event log is a separate file and is kept).
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Database:
@@ -166,14 +166,17 @@ class Database:
 
     def add_notification(self, text: str, created_at: str, *, alert_id: int | None = None,
                          action_row_id: int | None = None, from_staff_id: int | None = None,
-                         to_role: str | None = None, to_staff_id: int | None = None) -> int:
+                         to_role: str | None = None, to_staff_id: int | None = None,
+                         kind: str = "info") -> int:
+        """``kind`` is ``info`` (the default) or ``attack`` (a new alert card; v3)."""
         note_id = self.execute(
             "INSERT INTO notifications (alert_id, action_row_id, from_staff_id, to_role,"
-            " to_staff_id, text, created_at) VALUES (?,?,?,?,?,?,?)",
-            (alert_id, action_row_id, from_staff_id, to_role, to_staff_id, text, created_at))
+            " to_staff_id, kind, text, created_at) VALUES (?,?,?,?,?,?,?,?)",
+            (alert_id, action_row_id, from_staff_id, to_role, to_staff_id, kind, text, created_at))
         # Every notification passes through here; its text holds names, so only the ids are logged.
         self.emit("notification.sent", actor=from_staff_id, subject=("notification", note_id),
-                  alert_id=alert_id, action_row_id=action_row_id, to_role=to_role, to_staff_id=to_staff_id)
+                  alert_id=alert_id, action_row_id=action_row_id, to_role=to_role, to_staff_id=to_staff_id,
+                  kind=kind)
         return note_id
 
     # --- schema, seed, reset -----------------------------------------------

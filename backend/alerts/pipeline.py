@@ -12,7 +12,7 @@ from sqlite3 import Row
 from typing import Literal
 
 from actions import propose
-from alerts import impact, it
+from alerts import impact, it, notify
 from alerts.filter import should_filter
 from alerts.group import find_group, find_paused, next_count
 from alerts.normalise import NormalisedAlert
@@ -92,9 +92,16 @@ def process(alert: NormalisedAlert, db: Database, clock: Clock, *, lessons: Less
 
         # Step 4a: with ACTIONS on, a lesson that proposes BLOCK_IP creates an approval request.
         #          (Ransomware's lesson has proposed_action null, so it proposes nothing.)
+        action_row_id = None
         if config.actions and lesson.get("proposed_action") == "BLOCK_IP":
-            propose.propose(db, clock, alert_id, alert.source, alert.agent_name,
-                            alert.log_fields.get("source_ip"))
+            action_row_id = propose.propose(db, clock, alert_id, alert.source, alert.agent_name,
+                                            alert.log_fields.get("source_ip"))
+        # Step 4a2 (v3): tell the people this concerns. Only a brand-new card gets here, so repeats
+        #          stay quiet. The notification carries the proposal so the phone can show a Block button.
+        new_row = db.one("SELECT * FROM alerts WHERE id = ?", (alert_id,))
+        notify.attack(db, now_text, alert_id=alert_id, agent_name=alert.agent_name,
+                      action_row_id=action_row_id, book=impact.book_for(config.seed_path),
+                      headline_for=lambda role: (card(lessons, new_row, role, "en") or {}).get("headline"))
         # Step 4b: a new password-guessing alert flips that PC's strip to "under attack"
         #          (via Lane 2's set_device_status; a no-op until it exists).
         if alert.rule_id == "60204":

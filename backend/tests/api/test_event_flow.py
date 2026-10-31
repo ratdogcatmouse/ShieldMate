@@ -26,6 +26,7 @@ def test_alert_story_is_logged_in_order_with_its_request(app_h):
 
     trail = [t for t in types(app_h.events()) if t != "request.completed"]
     assert trail == ["system.started", "demo.reset", "alert.filtered", "alert.created",
+                     "notification.sent", "notification.sent",      # v3: the attack notes (front desk, owner)
                      "device.status_changed", "demo.replay", "alert.done", "notification.sent",
                      "device.status_changed"]
     done = one(app_h, "alert.done")
@@ -44,7 +45,8 @@ def test_a_repeat_done_tap_is_logged_but_sends_nothing(app_h):
     app_h.post("/alerts/2/done", json={"staff_id": MEENA})
     app_h.post("/alerts/2/done", json={"staff_id": MEENA})
     assert [e["data"]["already_done"] for e in app_h.events("alert.done")] == [False, True]
-    assert len(app_h.events("notification.sent")) == 1
+    # Two attack notes when the card was created (front desk and owner), then one for the first Done.
+    assert [e["data"]["kind"] for e in app_h.events("notification.sent")] == ["attack", "attack", "info"]
 
 
 def test_each_reset_starts_a_new_epoch(app_h):

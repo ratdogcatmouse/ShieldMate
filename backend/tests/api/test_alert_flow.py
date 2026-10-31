@@ -21,9 +21,11 @@ def test_t1_02_done_notifies_owner_once_and_is_idempotent(app_h):
     again = app_h.post(f"/alerts/{aid}/done", json={"staff_id": MEENA}).json()
     assert first == again and first["status"] == "done" and first["done_by"] == MEENA
     notes = app_h.get(f"/notifications?role=owner&since_id=0").json()
-    assert len(notes["notifications"]) == 1
-    assert notes["notifications"][0]["text"].startswith("Meena handled: Someone is repeatedly guessing")
-    assert notes["last_id"] == notes["notifications"][0]["id"]
+    # The new card sent the owner one "attack" note (v3); Done adds exactly one "info" note on top.
+    assert [n["kind"] for n in notes["notifications"]] == ["attack", "info"]
+    handled = notes["notifications"][1]
+    assert handled["text"].startswith("Meena handled: Someone is repeatedly guessing")
+    assert notes["last_id"] == handled["id"]
     assert app_h.get(f"/notifications?role=owner&since_id={notes['last_id']}").json()["notifications"] == []
 
 
