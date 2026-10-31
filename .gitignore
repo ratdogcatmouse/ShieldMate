@@ -1,0 +1,13 @@
+# ShieldMate gitignored directories
+backend/demo_backup/originals/
+backend/demo_backup/backup/
+backend/restore_sandbox/
+
+# Python & Node defaults
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+node_modules/
+dist/
