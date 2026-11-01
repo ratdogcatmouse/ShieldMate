@@ -6,7 +6,7 @@ import { Pill, Retest, StatusPill, useAction } from "../components/ui.jsx";
 import * as api from "../lib/api.js";
 import { PREVIOUS_DRILL } from "../lib/content.js";
 import { ownerOf } from "../lib/derive.js";
-import { getLastDrill, getPlayer, setLastDrill, setPlayer } from "../lib/session.js";
+import { getLastDrill, getPlayer } from "../lib/session.js";
 import { fmtTime } from "../lib/time.js";
 import { usePoll } from "../lib/usePoll.js";
 
@@ -50,12 +50,9 @@ export default function OwnerReadiness() {
     await refresh();
   });
 
-  const startDrill = () => run("drill", async () => {
-    const r = await api.createDrill("ransomware_clinic", data.owner.id);
-    setPlayer(r.code, data.owner.id, r.player_id);
-    setLastDrill(r.code);
-    navigate(`/owner/drill?code=${r.code}`);
-  });
+  // Go to the drill start screen (the scenario picker), not straight into a fixed drill -
+  // the owner chooses which drill to run on that screen.
+  const startDrill = () => navigate("/owner/drill");
 
   return (
     <OwnerShell clinicName={data?.clinic.clinic.name} ownerName={data?.owner?.name} stale={stale}>

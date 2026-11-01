@@ -64,17 +64,32 @@ function Test-PortBusy([int]$Port, [string]$What) {
 }
 
 function Get-LanIp {
-    # The address a phone on the same network would use (ipconfig parse; first non-loopback IPv4).
-    $ip = ""
-    $lines = ipconfig 2>$null
-    foreach ($l in $lines) {
-        if ($l -match 'IPv4 Address[^\d]*(\d+\.\d+\.\d+\.\d+)') {
-            $ip = $Matches[1]
-            if ($ip.StartsWith("127.") -or $ip.StartsWith("169.254.")) { $ip = "" }
-            if ($ip) { break }
+    # The address a phone on the same network would use: the adapter that owns the default
+    # gateway (the real LAN uplink). Many machines also have VirtualBox/VPN/Bluetooth
+    # adapters with an IPv4 that is NOT reachable from the phone; picking "first IPv4 in
+    # ipconfig" grabs those. Fall back to a first-usable-IPv4 scan if the .NET lookup fails.
+    $best = ""
+    try {
+        $best = (Get-NetIPConfiguration |
+                 Where-Object { $_.IPv4DefaultGateway -and $_.IPv4Address } |
+                 Sort-Object { [int32]$_.RouteMetric } |
+                 ForEach-Object {
+                     ($_.IPv4Address |
+                      Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" } |
+                      Select-Object -First 1).IPAddress
+                 } |
+                 Select-Object -First 1)
+    } catch { }
+    if (-not $best) {
+        $lines = ipconfig 2>$null
+        foreach ($l in $lines) {
+            if ($l -match 'IPv4 Address[^\d]*(\d+\.\d+\.\d+\.\d+)') {
+                $ip = $Matches[1]
+                if ($ip -notlike "127.*" -and $ip -notlike "169.254.*") { $best = $ip; break }
+            }
         }
     }
-    $ip
+    $best
 }
 
 function Show-Banner([int]$Port) {

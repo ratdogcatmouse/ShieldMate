@@ -47,10 +47,15 @@ export default function OwnerDrill() {
     }
   }, 2000, [code]);
 
-  // A running drill found without a code in the address: put its code there.
+  // A *running* drill found without a code in the address: put its code there. A finished
+  // drill is not one - "Start another drill" clears the code to show the picker, and we
+  // must not bounce back to the just-finished drill (stale poll data still carries its code).
   useEffect(() => {
-    if (data?.code && data.code !== code) navigate(`/owner/drill?code=${data.code}`, { replace: true });
-  }, [data?.code, code, navigate]);
+    const runningCode = data?.code;
+    const isFinished = data?.view?.status === "finished";
+    if (runningCode && runningCode !== code && !isFinished)
+      navigate(`/owner/drill?code=${runningCode}`, { replace: true });
+  }, [data?.code, data?.view?.status, code, navigate]);
 
   const v = data?.view;
   const pid = v?.me.player_id;
