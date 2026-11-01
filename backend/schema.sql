@@ -1,4 +1,4 @@
--- ShieldMate schema: ten tables, live-mode columns included from H0 (T0.01).
+-- ShieldMate schema: eleven tables, live-mode columns included from H0 (T0.01).
 -- Setup tables are re-seeded from seed/clinic.json on every reset;
 -- runtime tables are emptied. "-- proposed (n)" marks Build Spec decision n.
 -- "-- v2" marks the contract v2 additions (step ticking, "That was me", the IT loop).
@@ -6,7 +6,7 @@
 
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
-PRAGMA user_version = 3;
+PRAGMA user_version = 4;
 
 -- setup (re-seeded on every reset)
 
@@ -165,6 +165,24 @@ CREATE TABLE restore_runs (
   files_ok INTEGER NOT NULL,
   exposed INTEGER NOT NULL,
   details TEXT NOT NULL                           -- JSON: checks[] as in the API
+);
+
+-- v3: restore-incident loop (restore/incident.py). A "not safe" check opens one; the IT
+-- contact (clinic.it_contact_name, not a staff row) resolves it; the owner retests and
+-- closes it when the next check is safe. One active (open/resolved) incident at a time.
+CREATE TABLE restore_incidents (
+  id INTEGER PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('open','resolved','closed')),
+  last_result TEXT NOT NULL CHECK (last_result IN ('PASS','FAIL')),
+  fix_steps TEXT NOT NULL DEFAULT '[]',          -- JSON list: the actionable steps for IT (from the failed checks)
+  last_run_id INTEGER,                            -- the restore_runs row that set last_result
+  it_resolved_at TEXT,
+  it_resolved_note TEXT,
+  it_sent_back_at TEXT,                           -- sent back to IT (owner declined, or a retest failed)
+  it_sent_back_note TEXT,
+  closed_at TEXT,
+  closed_by INTEGER REFERENCES staff(id),
+  created_at TEXT NOT NULL
 );
 
 -- Attack simulation (roadmap T8): one row per in-app attack-script run. The simulator is

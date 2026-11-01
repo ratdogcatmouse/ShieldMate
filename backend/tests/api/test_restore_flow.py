@@ -112,3 +112,85 @@ def test_latest_ignores_verify_runs(app_h):
                       "files_ok": None, "exposed": None, "checks": []}
     app_h.post("/restore/run")
     assert app_h.get("/restore/latest").json()["result"] in ("PASS", "FAIL")
+
+
+# --- v3: the restore-incident loop -------------------------------------------------
+# A FAIL check opens an incident for the IT contact; IT resolves it (which, in the demo layout,
+# repairs the faulty backup); the owner retests and closes it when the retest is safe.
+
+def test_a_fail_check_opens_an_incident_for_it(app_h):
+    app_h.reset()
+    r = app_h.post("/restore/run")
+    assert r.json()["result"] == "FAIL"
+    inc = app_h.get("/restore/incidents").json()["incidents"]
+    assert len(inc) == 1
+    i = inc[0]
+    assert i["status"] == "open" and i["last_result"] == "FAIL"
+    # The fix steps come from the failed checks (freshness, integrity, exposure are all bad).
+    assert "Repair the backup and run this check again before trusting it." in i["fix_steps"]
+    assert app_h.ctx.db.one("SELECT status FROM restore_incidents")["status"] == "open"
+
+
+def test_a_pass_check_opens_no_incident(app_h):
+    app_h.reset()
+    # Build IT's repaired backup as a separate clean tree; the check targets it, so it's safe
+    # and no incident opens.
+    from demo_backup import make
+    make.build_new()
+    assert app_h.post("/restore/run").json()["result"] == "PASS"
+    assert app_h.get("/restore/incidents").json()["incidents"] == []
+
+
+def test_full_incident_loop_from_fail_to_closed(app_h):
+    app_h.reset()
+    assert app_h.post("/restore/run").json()["result"] == "FAIL"      # opens the incident
+    # IT resolves it (say what they did); in the demo this repairs the backup and pings the owner.
+    res = app_h.post("/restore/incidents/resolve", json={"note": "Rebuilt the backup, unplugged the drive"})
+    assert res.status_code == 200, res.text
+    assert res.json()["status"] == "resolved"
+    owner_note = app_h.get("/notifications", params={"role": "owner"}).json()["notifications"]
+    assert any("retEst" in n["text"].lower() or "retest" in n["text"].lower() for n in owner_note)
+    # The owner retests: the repaired demo backup is now safe, so the check passes.
+    assert app_h.post("/restore/run").json()["result"] == "PASS"
+    # ...and closes the incident.
+    closed = app_h.post("/restore/incidents/close", json={"staff_id": OWNER, "confirm": True, "note": ""})
+    assert closed.status_code == 200, closed.text
+    assert closed.json()["status"] == "closed" and closed.json()["last_result"] == "PASS"
+
+
+def test_resolve_requires_a_note(app_h):
+    app_h.reset()
+    app_h.post("/restore/run")
+    r = app_h.post("/restore/incidents/resolve", json={"note": "ok"})
+    assert (r.status_code, r.json()["error"]) == (400, "invalid_request")
+
+
+def test_close_requires_it_to_have_resolved(app_h):
+    app_h.reset()
+    app_h.post("/restore/run")                       # open, not yet resolved
+    r = app_h.post("/restore/incidents/close", json={"staff_id": OWNER, "confirm": True, "note": ""})
+    assert (r.status_code, r.json()["error"]) == (409, "not_resolved")
+
+
+def test_close_requires_a_safe_retest(app_h):
+    app_h.reset()
+    app_h.post("/restore/run")
+    app_h.post("/restore/incidents/resolve", json={"note": "Rebuilt the backup"})
+    # IT's repair is the separate clean tree (backup_new/). Remove it: the retest falls back to
+    # the old faulty backup, fails, and reopens the incident for IT (after_check sets it to
+    # open) - so a confirmed close is refused until IT resolves it again.
+    import shutil
+    from demo_backup import make
+    shutil.rmtree(make.NEW_BACKUP_DIR, ignore_errors=True)
+    assert app_h.post("/restore/run").json()["result"] == "FAIL"
+    r = app_h.post("/restore/incidents/close", json={"staff_id": OWNER, "confirm": True, "note": ""})
+    assert (r.status_code, r.json()["error"]) == (409, "not_resolved")
+
+
+def test_close_is_owner_only(app_h):
+    app_h.reset()
+    app_h.post("/restore/run")
+    app_h.post("/restore/incidents/resolve", json={"note": "Rebuilt the backup"})
+    # A non-owner (staff id 1, front_desk) may not close it.
+    r = app_h.post("/restore/incidents/close", json={"staff_id": 1, "confirm": True, "note": ""})
+    assert (r.status_code, r.json()["error"]) == (403, "not_owner")

@@ -38,6 +38,7 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 BASE_DIR = BACKEND_DIR / "demo_backup"
 ORIGINALS_DIR = BASE_DIR / "originals"
 BACKUP_DIR = BASE_DIR / "backup"
+NEW_BACKUP_DIR = BASE_DIR / "backup_new"   # IT's repaired backup - a separate, clean tree
 COMPROMISED_DIR = BASE_DIR / "compromised"     # the live directory, mid-attack
 PATCHED_DIR = BASE_DIR / "patched"             # the IT update (only the fixed files)
 MARKERS_FILE = BASE_DIR / "vuln_markers.json"
@@ -109,6 +110,9 @@ def build(originals_dir: Path = ORIGINALS_DIR, backup_dir: Path = BACKUP_DIR,
     for dir_ in (originals_dir, backup_dir, compromised_dir, patched_dir):
         shutil.rmtree(dir_, ignore_errors=True)
         Path(dir_).mkdir(parents=True)
+    # The old backup stays the baseline: a rebuild drops the repaired (new) backup too, so the
+    # demo always restarts with the faulty backup as the only one on disk.
+    shutil.rmtree(NEW_BACKUP_DIR, ignore_errors=True)
 
     # 1. The originals and their manifest (the expected hashes).
     manifest: dict[str, str] = {}
@@ -155,6 +159,36 @@ def _build_verify_trees(compromised_dir: Path, patched_dir: Path, markers_path: 
             clean.write_bytes(_content(rel).encode("utf-8"))
     markers_path.write_text(json.dumps({"markers": VULN_MARKERS, "compromised_files": sorted(COMPROMISED_FILES)}),
                             encoding="utf-8")
+
+
+def build_new(now_text: str | None = None, new_backup_dir: Path = NEW_BACKUP_DIR) -> None:
+    """Build IT's repaired backup as a *separate* clean tree (``backup_new/``).
+
+    The old faulty backup (``backup/``) is left in place as the baseline - the story is
+    "back up the compromised thing, fix it, and keep the repaired copy alongside the old
+    one." The clean tree's files hash to the originals' manifest and its meta says fresh +
+    disconnected, so a check against it passes all three checks.
+    """
+    now_text = now_text or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    shutil.rmtree(new_backup_dir, ignore_errors=True)
+    Path(new_backup_dir).mkdir(parents=True)
+    for rel in _NAMES:
+        target = new_backup_dir / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(_content(rel).encode("utf-8"))
+    meta = {"last_backup_at": now_text, "always_connected": False}
+    (new_backup_dir / "backup_meta.json").write_text(json.dumps(meta), encoding="utf-8")
+
+
+def target_backup(config_restore_backup_dir: Path) -> Path:
+    """Which backup a check should run against, in the demo layout: IT's repaired
+    ``backup_new/`` when it exists, else the old ``backup/``. A real backup drive
+    (anywhere but demo_backup/) is always checked as-is.
+    """
+    base = Path(config_restore_backup_dir).parent
+    if base.name == "demo_backup" and (NEW_BACKUP_DIR / "backup_meta.json").is_file():
+        return NEW_BACKUP_DIR
+    return Path(config_restore_backup_dir)
 
 
 def _shift(now_text: str, days: int) -> str:
