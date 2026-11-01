@@ -10,6 +10,7 @@ lives in its own file; ``main.build_context`` plugs the real log in as ``db.even
 from __future__ import annotations
 
 import json
+import secrets
 import shutil
 import sqlite3
 import threading
@@ -30,8 +31,14 @@ RUNTIME_TABLES = [
 
 # Must match ``PRAGMA user_version`` in schema.sql. Bump it with any schema change: an
 # older file is dropped and rebuilt at start-up (its rows are demo state that Reset wipes
-# anyway; the event log is a separate file and is kept).
+# anyway; the event log is a separate file and is kept). A new nullable/defaulted column
+# can go in ADDED_COLUMNS instead, which adds it in place and keeps the rows.
 SCHEMA_VERSION = 4
+
+# (table, column, definition) added to an existing file by ``init_schema`` with ALTER TABLE.
+ADDED_COLUMNS = [
+    ("clinic", "reset_id", "TEXT NOT NULL DEFAULT ''"),
+]
 
 
 class Database:
@@ -203,6 +210,10 @@ class Database:
                 has_tables = False
             if not has_tables:
                 self.conn.executescript(schema_path.read_text(encoding="utf-8"))
+            for table, column, definition in ADDED_COLUMNS:
+                columns = {r[1] for r in self.conn.execute(f'PRAGMA table_info("{table}")')}
+                if column not in columns:
+                    self.conn.execute(f'ALTER TABLE "{table}" ADD COLUMN {column} {definition}')
 
     def load_seed(self, seed_path: Path) -> None:
         """(Re)insert the setup tables from seed/clinic.json. Assumes they are empty."""
@@ -217,9 +228,10 @@ class Database:
                      int(s["can_approve_downtime"]), int(s["is_backup_approver"])))
             self.execute(
                 "INSERT INTO clinic (id,name,backup_age_limit_hours,it_contact_name,it_contact_phone,"
-                "approval_timeout_minutes,block_minutes,never_block) VALUES (1,?,?,?,?,?,?,?)",
+                "approval_timeout_minutes,block_minutes,never_block,reset_id) VALUES (1,?,?,?,?,?,?,?,?)",
                 (c["name"], c["backup_age_limit_hours"], c["it_contact_name"], c["it_contact_phone"],
-                 c["approval_timeout_minutes"], c["block_minutes"], json.dumps(c["never_block"])))
+                 c["approval_timeout_minutes"], c["block_minutes"], json.dumps(c["never_block"]),
+                 secrets.token_hex(8)))
             for d in seed["devices"]:
                 self.execute(
                     "INSERT INTO devices (agent_name,wazuh_agent_id,location,services,when_down)"
@@ -291,6 +303,8 @@ def connect(config: Config) -> Database:
     db.init_schema(config.schema_path)
     if db.one("SELECT 1 FROM clinic") is None:
         db.load_seed(config.seed_path)
+    elif db.one("SELECT reset_id FROM clinic WHERE id = 1")["reset_id"] == "":
+        db.execute("UPDATE clinic SET reset_id = ? WHERE id = 1", (secrets.token_hex(8),))   # file from before reset_id
     return db
 
 

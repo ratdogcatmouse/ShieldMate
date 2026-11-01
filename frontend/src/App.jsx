@@ -3,6 +3,7 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import { ToastProvider } from "./components/ui.jsx";
 import { getStatus } from "./lib/api.js";
 import { track } from "./lib/telemetry.js";
+import { syncResetId } from "./lib/session.js";
 import { syncServerTime } from "./lib/time.js";
 import { usePoll } from "./lib/usePoll.js";
 import Landing from "./pages/Landing.jsx";
@@ -28,11 +29,14 @@ function usePageViews() {
   }, [pathname]);
 }
 
-// Keeps countdowns on the server's clock (Backstage can skip it ahead).
+// Keeps countdowns on the server's clock (Backstage can skip it ahead), and starts this
+// device afresh after a demo reset or a clean-slate start (the server's reset_id changed).
 function useServerClock() {
   const { data } = usePoll(getStatus, 10000);
   useEffect(() => {
-    if (data) syncServerTime(data.server_time);
+    if (!data) return;
+    syncServerTime(data.server_time);
+    if (syncResetId(data.reset_id)) window.location.reload();
   }, [data]);
 }
 

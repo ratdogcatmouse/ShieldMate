@@ -14,10 +14,10 @@ ARGS ?=
 EVENTS ?= backend/shieldmate-events.db
 N ?= 50
 
-.PHONY: help install start dev fresh build test smoke e2e reset status events clean
+.PHONY: help install start dev fresh clean-slate build test smoke e2e reset status events clean
 
 help: ## List the targets
-	@grep -hE '^[a-z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  \033[36m%-8s\033[0m %s\n", $$1, $$2}'
+	@grep -hE '^[a-z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "} {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
 install: ## Create backend/.venv, install backend requirements and frontend packages
 	@test -x $(PY) || (command -v python3.12 >/dev/null && python3.12 -m venv backend/.venv) || python3 -m venv backend/.venv
@@ -32,6 +32,9 @@ dev: ## uvicorn on :8000 + Vite dev server on :5173 with hot reload (Ctrl-C stop
 
 fresh: ## Like `start`, but delete the SQLite database first
 	./start.sh --fresh
+
+clean-slate: ## Fresh start for a presentation: delete the DB and the event log, then start (server must be stopped)
+	./start.sh --clean-slate
 
 build: ## Build the frontend (frontend/dist, served by FastAPI)
 	cd frontend && npm run build

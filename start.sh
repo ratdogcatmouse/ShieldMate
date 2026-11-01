@@ -6,6 +6,8 @@
 #   ./start.sh dev             dev mode: uvicorn on :8000 + the Vite dev server on :5173
 #                              (hot reload; Vite proxies /api to :8000). Ctrl-C stops both.
 #   ./start.sh --fresh         also delete the SQLite DB first (the backend recreates it)
+#   ./start.sh --clean-slate   --fresh, plus delete the event log and empty the restore sandbox
+#                              (a completely fresh session for a presentation)
 #   ./start.sh --no-build      serve mode only: reuse the existing frontend/dist
 #
 # The ports are fixed because frontend/vite.config.js hard-codes the proxy target
@@ -24,6 +26,7 @@ FRONTEND_PORT=5173
 
 MODE="serve"
 FRESH=0
+CLEAN_SLATE=0
 BUILD=1
 
 info() { printf '\033[1;36m[shieldmate]\033[0m %s\n' "$*"; }
@@ -32,11 +35,12 @@ die()  { printf '\033[1;31m[shieldmate] error:\033[0m %s\n' "$*" >&2; exit 1; }
 
 usage() {
   cat <<EOF
-Usage: ./start.sh [serve|dev] [--fresh] [--no-build] [-h]
+Usage: ./start.sh [serve|dev] [--fresh] [--clean-slate] [--no-build] [-h]
 
   serve         build the frontend and serve everything from FastAPI on :$BACKEND_PORT (default)
   dev           uvicorn on :$BACKEND_PORT + Vite dev server on :$FRONTEND_PORT (hot reload)
   --fresh       delete the SQLite database before starting
+  --clean-slate --fresh, plus delete the event log and empty the restore sandbox
   --no-build    serve mode: skip the frontend build and reuse frontend/dist
 EOF
 }
@@ -46,6 +50,7 @@ for arg in "$@"; do
   case "$arg" in
     serve|dev)  MODE="$arg" ;;
     --fresh)    FRESH=1 ;;
+    --clean-slate) FRESH=1; CLEAN_SLATE=1 ;;
     --no-build) BUILD=0 ;;
     -h|--help)  usage; exit 0 ;;
     *)          usage >&2; die "unknown argument: $arg" ;;
@@ -119,6 +124,23 @@ reset_database() {
   case "$db" in /*) ;; *) db="$ROOT/$db" ;; esac
   info "Removing database $db (and its -wal/-shm files)"
   rm -f "$db" "$db-wal" "$db-shm"
+  if [ "$CLEAN_SLATE" -eq 1 ]; then wipe_event_log "$db"; fi
+}
+
+# --clean-slate: the event log (kept by --fresh and by Reset) and the restore sandbox too.
+# Paths follow config.py: EVENTS_DB_PATH, else "<db name>-events.db" beside the DB.
+wipe_event_log() {
+  local db="$1" events sandbox
+  events="${EVENTS_DB_PATH:-${db%.db}-events.db}"
+  case "$events" in /*) ;; *) events="$ROOT/$events" ;; esac
+  info "Removing event log $events (and its -wal/-shm files)"
+  rm -f "$events" "$events-wal" "$events-shm"
+  sandbox="${RESTORE_SANDBOX_DIR:-backend/restore_sandbox}"
+  case "$sandbox" in /*) ;; *) sandbox="$ROOT/$sandbox" ;; esac
+  if [ -d "$sandbox" ]; then
+    info "Emptying restore sandbox $sandbox"
+    find "$sandbox" -mindepth 1 -delete
+  fi
 }
 
 # --- banner ------------------------------------------------------------------------------

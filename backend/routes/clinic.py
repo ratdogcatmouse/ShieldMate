@@ -78,4 +78,6 @@ def get_status(request: Request):
         "wazuh": ctx.wazuh_health,       # all null in replay mode
         # v4: the latest attack simulation's outcome, so the team's screens can show it.
         "simulation": ctx.sim.summary() if ctx.sim is not None else None,
+        # A new value after every reset or fresh DB tells open browsers to forget old drills/PINs.
+        "reset_id": ctx.db.clinic()["reset_id"],
     }

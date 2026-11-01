@@ -30,7 +30,8 @@ CREATE TABLE clinic (
   standing_rule_set_at TEXT,
   approval_timeout_minutes INTEGER NOT NULL DEFAULT 5,
   block_minutes INTEGER NOT NULL DEFAULT 60,
-  never_block TEXT NOT NULL DEFAULT '[]'          -- JSON list of {ip, label}
+  never_block TEXT NOT NULL DEFAULT '[]',         -- JSON list of {ip, label}
+  reset_id TEXT NOT NULL DEFAULT ''               -- new random hex on every seed; browsers clear their demo state when it changes
 );
 
 CREATE TABLE devices (

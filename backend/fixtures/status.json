@@ -4,5 +4,6 @@
   "undo_supported": false,
   "server_time": "2026-11-01T04:10:00Z",
   "wazuh": {"api_ok": null, "indexer_ok": null, "agent_active": null, "last_alert_at": null},
+  "reset_id": "3f9a1c7e5b2d4086",
   "simulation": null
 }

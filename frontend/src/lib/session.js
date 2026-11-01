@@ -5,6 +5,7 @@ const KEYS = {
   ownerPin: "sm.owner_pin", // sessionStorage: cleared when the tab closes
   session: "sm.session", // sessionStorage: one id per tab for the event log
   backstageToken: "sm.backstage_token", // sessionStorage: only needed once BACKSTAGE_TOKEN is set
+  resetId: "sm.reset_id", // localStorage: the server's reset_id this device last saw
 };
 
 function read(store, key) {
@@ -67,6 +68,28 @@ export function clearSeen() {
   } catch {
     /* nothing to clear */
   }
+}
+
+// The server's reset_id (from /status) changes on every reset or fresh database. When it does,
+// forget this device's drill players, last drill, owner PIN and seen marks so the next demo
+// starts clean. Language, the event-log session and the Backstage token are kept.
+// Returns true when there was an older id and it changed (the caller reloads the page).
+export function syncResetId(id) {
+  if (!id) return false;
+  const prev = read("localStorage", KEYS.resetId);
+  if (prev === id) return false;
+  try {
+    Object.keys(window.localStorage)
+      .filter((k) => k.startsWith("sm.player.") || k === "sm.last_drill")
+      .forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* nothing to clear */
+  }
+  write("sessionStorage", KEYS.ownerPin, null);
+  clearSeen();
+  write("localStorage", KEYS.resetId, id);
+  // Only reload when the new id actually stuck, so blocked storage can't cause a reload loop.
+  return prev !== null && read("localStorage", KEYS.resetId) === id;
 }
 
 export const getOwnerPin = () => read("sessionStorage", KEYS.ownerPin);

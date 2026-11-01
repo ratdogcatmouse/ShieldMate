@@ -171,6 +171,7 @@ class StatusResponse(Model):
     server_time: str
     wazuh: WazuhHealth
     simulation: SimSummary | None = None    # v4
+    reset_id: str = ""                      # changes on every reset/fresh DB; the frontend clears demo state
 
 
 # --- alerts --------------------------------------------------------------

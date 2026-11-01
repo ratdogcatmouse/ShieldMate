@@ -1,5 +1,6 @@
 -- ShieldMate event log: an append-only record of everything that happens, kept for later
--- analysis. Its own SQLite file (not the ten-table schema.sql), so a demo reset never wipes it.
+-- analysis. Its own SQLite file (not the ten-table schema.sql), so a demo reset never wipes it;
+-- only `make clean-slate` (./start.sh --clean-slate) deletes the file.
 -- Types and their data keys are listed in eventlog/catalogue.py.
 
 PRAGMA journal_mode = WAL;

@@ -380,3 +380,35 @@ def test_an_older_database_file_is_rebuilt(tmp_path):
         assert db.one("SELECT 1 FROM sqlite_master WHERE name = 'alert_it_log'") is not None
     finally:
         db.close()
+
+
+def test_reset_id_changes_on_every_reset(app_h):
+    """/status carries a reset_id; a reset gives a new one, so open browsers drop old drill/PIN state."""
+    first = app_h.get("/status").json()["reset_id"]
+    assert len(first) == 16
+    assert app_h.get("/status").json()["reset_id"] == first      # stable between resets
+    app_h.reset()
+    assert app_h.get("/status").json()["reset_id"] not in ("", first)
+
+
+def test_a_file_from_before_reset_id_keeps_its_rows(tmp_path):
+    """The reset_id column is added in place: an existing v4 file keeps its data and gets an id."""
+    from config import Config
+    from db import connect
+
+    config = Config(db_path=tmp_path / "v4.db", restore_sandbox_dir=tmp_path / "sandbox")
+    lines = config.schema_path.read_text(encoding="utf-8").splitlines()
+    old_schema = "\n".join(l for l in lines if "reset_id" not in l).replace(
+        "never_block TEXT NOT NULL DEFAULT '[]',", "never_block TEXT NOT NULL DEFAULT '[]'")
+    conn = sqlite3.connect(config.db_path)
+    conn.executescript(old_schema)
+    conn.execute("INSERT INTO clinic (id, name, backup_age_limit_hours, it_contact_name, it_contact_phone)"
+                 " VALUES (1, 'Kept', 24, 'Suresh', '000')")
+    conn.commit()
+    conn.close()
+    db = connect(config)
+    try:
+        assert db.clinic()["name"] == "Kept"
+        assert len(db.clinic()["reset_id"]) == 16
+    finally:
+        db.close()
