@@ -20,6 +20,24 @@ log = logging.getLogger("shieldmate")
 
 LOOKBACK = timedelta(minutes=2)
 
+RANSOMWARE_RULE = "100201"
+
+
+def _shieldmate_block(alert: dict) -> dict | None:
+    """The counts block a live alert lacks. Only the ransomware rule gets one: its card needs
+    ``files_renamed``, which Wazuh reports as ``rule.frequency`` (else ``rule.firedtimes``).
+    Anything that is not a plain whole number is left out, and the lesson's default shows instead."""
+    rule = alert.get("rule") if isinstance(alert, dict) else None
+    if not isinstance(rule, dict) or str(rule.get("id")) != RANSOMWARE_RULE:
+        return None
+    block: dict = {"window_minutes": 1}
+    for key in ("frequency", "firedtimes"):
+        value = rule.get(key)
+        if isinstance(value, int) and not isinstance(value, bool):
+            block["files_renamed"] = value
+            break
+    return block
+
 
 class WazuhSource:
     """Implements ``AlertSource`` for ALERT_SOURCE=wazuh; ``main`` calls ``next_batch`` every 5 s."""
@@ -60,8 +78,9 @@ class WazuhSource:
                 self._seen[external_id] = end
                 # ``alert`` is passed through untouched; alerts.normalise reads the Windows fields
                 # and the pipeline fills counts from the lesson's count_defaults (decision 18).
+                # Only ransomware (100201) carries a counts block, built from the alert's own rule.
                 batch.append({"source": "wazuh", "external_id": external_id,
-                              "alert": alert, "shieldmate": None})
+                              "alert": alert, "shieldmate": _shieldmate_block(alert)})
 
             self._last_success = end
             # Anything older than the look-back can no longer be returned by Wazuh again.

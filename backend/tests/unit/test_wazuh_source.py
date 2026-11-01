@@ -194,6 +194,37 @@ def test_live_alert_never_calls_the_wazuh_client_for_a_block(actions_h):
     assert actions_h.ctx.db.one("SELECT status, simulated FROM actions")["simulated"] == 0
 
 
+def ransom_hit(doc_id="R1", **rule_extra):
+    return {"_index": "wazuh-alerts-4.x-2026.11.01", "_id": doc_id, "_source": {
+        "timestamp": "2026-11-01T04:00:10Z",
+        "rule": {"id": "100201", "level": 12, "description": "Possible ransomware", **rule_extra},
+        "agent": {"id": "003", "name": "RECEPTION-PC"},
+        "syscheck": {"path": "D:\Shared\a.xlsx.locked", "event": "added"}}}
+
+
+def test_100201_block_prefers_frequency_then_firedtimes_then_omits():
+    src, _, clock = source([ransom_hit("a", frequency=52, firedtimes=3), ransom_hit("b", firedtimes=3),
+                            ransom_hit("c"), hit("d")])
+    clock.advance(5)
+    blocks = [r["shieldmate"] for r in src.next_batch()]
+    assert blocks == [{"files_renamed": 52, "window_minutes": 1}, {"files_renamed": 3, "window_minutes": 1},
+                      {"window_minutes": 1}, None]
+
+
+def test_live_100201_makes_a_ransomware_card_and_proposes_no_action(actions_h):
+    src = WazuhSource(None, actions_h.clock, client=FakeIndexer([ransom_hit(frequency=52)]))
+    actions_h.advance(5)
+    (raw,) = src.next_batch()
+    assert raw["shieldmate"]["files_renamed"] == 52
+    ingest(actions_h, [raw])                                  # ACTIONS on, so a block *could* be proposed
+
+    (alert,) = actions_h.get("/alerts?role=owner").json()["alerts"]
+    assert alert["rule_id"] == "100201" and alert["source"] == "wazuh"
+    assert "52 files" in alert["card"]["what_we_know"]        # files_renamed, not the lesson default 37
+    assert actions_h.ctx.db.one("SELECT count(*) AS n FROM actions")["n"] == 0
+    assert actions_h.wazuh.calls == []
+
+
 # --- compatibility and start-up -----------------------------------------------------------
 
 def test_old_imports_from_wazuh_client_still_work():

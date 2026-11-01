@@ -60,5 +60,7 @@ def normalise(raw: RawAlert, now: str) -> NormalisedAlert:
         timestamp=alert.get("timestamp") or now,
         log_fields=log_fields,
         counts=counts,
-        raw=alert,
+        # The card re-reads its counts from the stored alert, so a block that arrived beside the
+        # alert (live ingest) is stored inside it, as replayed alerts already carry theirs.
+        raw={**alert, "shieldmate": block} if block and "shieldmate" not in alert else alert,
     )
