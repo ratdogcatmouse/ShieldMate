@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Staff first-run setup · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" stroke-width="3"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Staff first-run setup</span>
+  <span class="mk-route">/staff/:id/welcome</span>
+  <span class="mk-tag ready">Ready now · no backend change</span>
+</header>
+
+<div class="mk-stage">
+  <div class="mk-frame">
+    <div class="mk-phone">
+      <div class="shell">
+        <header class="topbar">
+          <div class="row" style="gap: 8px"><span style="color: var(--blue); display: flex"><svg class="i" style="width: 26px; height: 26px"><use href="#i-shield"/></svg></span><span class="app-name">ShieldMate</span></div>
+          <span class="small muted">1 of 3</span>
+        </header>
+        <main class="content">
+          <div class="progress-segs" style="grid-template-columns: repeat(3, 1fr)"><span class="on"></span><span></span><span></span></div>
+          <h1 style="font-size: 30px; margin-top: 8px">Hi Meena</h1>
+          <p class="ink-2">ShieldMate tells you when something on the clinic's computers needs you, and exactly what to do.</p>
+          <span class="section-label" style="margin-top: 6px">Pick your language</span>
+          <div class="tiles">
+            <button type="button" class="tile" aria-pressed="true"><span class="ic">EN</span><span class="grow">English</span><svg class="i" style="color: var(--blue)"><use href="#i-check"/></svg></button>
+            <button type="button" class="tile" aria-pressed="false"><span class="ic" lang="kn">ಕ</span><span class="grow"><span lang="kn">ಕನ್ನಡ</span><span class="sub">Kannada</span></span></button>
+            <button type="button" class="tile" aria-pressed="false"><span class="ic" lang="hi">हि</span><span class="grow"><span lang="hi">हिन्दी</span><span class="sub">Hindi</span></span></button>
+          </div>
+          <p class="small muted">Alert cards switch to this language. A few words may stay in English until they're translated.</p>
+          <button type="button" class="btn btn-primary btn-lg btn-block" style="margin-top: auto">Next</button>
+        </main>
+      </div>
+    </div>
+    <p class="mk-caption"><b>1 · Language first.</b> Today the language buttons only appear once an alert is already on screen.</p>
+  </div>
+
+  <div class="mk-frame">
+    <div class="mk-phone">
+      <div class="shell">
+        <header class="topbar">
+          <div class="row" style="gap: 8px"><span style="color: var(--blue); display: flex"><svg class="i" style="width: 26px; height: 26px"><use href="#i-shield"/></svg></span><span class="app-name">ShieldMate</span></div>
+          <span class="small muted">2 of 3</span>
+        </header>
+        <main class="content">
+          <div class="progress-segs" style="grid-template-columns: repeat(3, 1fr)"><span class="on"></span><span class="on"></span><span></span></div>
+          <span class="ic big" style="margin-top: 8px"><svg class="i"><use href="#i-speaker"/></svg></span>
+          <h1 style="font-size: 28px">Turn on the alert sound</h1>
+          <p class="ink-2">Phones only play a sound after you tap once. Tap below: you'll hear the alert and feel a buzz.</p>
+          <button type="button" class="btn btn-primary btn-lg btn-block">Play the alert sound</button>
+          <div class="card tight" role="status" style="background: var(--green-soft); box-shadow: none">
+            <span class="row bold" style="color: var(--green-ink); gap: 8px"><svg class="i"><use href="#i-check"/></svg> Sound is on</span>
+            <span class="small">You'll hear this when a card arrives.</span>
+          </div>
+          <section class="card tight">
+            <span class="section-label">Keep ShieldMate on screen</span>
+            <span class="small">ShieldMate checks for alerts while it's open on your screen. Add it to your home screen so it's one tap away:</span>
+            <span class="small"><strong>iPhone:</strong> Share, then Add to Home Screen</span>
+            <span class="small"><strong>Android:</strong> ⋮ menu, then Add to Home screen</span>
+          </section>
+          <button type="button" class="btn btn-primary btn-lg btn-block" style="margin-top: auto">Next</button>
+        </main>
+      </div>
+    </div>
+    <p class="mk-caption"><b>2 · Sound and home screen.</b> Unlocks audio with a real tap and says plainly when alerts can reach the phone.</p>
+  </div>
+
+  <div class="mk-frame">
+    <div class="mk-phone">
+      <div class="shell">
+        <header class="topbar">
+          <div class="row" style="gap: 8px"><span style="color: var(--blue); display: flex"><svg class="i" style="width: 26px; height: 26px"><use href="#i-shield"/></svg></span><span class="app-name">ShieldMate</span></div>
+          <span class="small muted">3 of 3</span>
+        </header>
+        <main class="content">
+          <div class="progress-segs" style="grid-template-columns: repeat(3, 1fr)"><span class="on"></span><span class="on"></span><span class="on"></span></div>
+          <h1 style="font-size: 28px; margin-top: 8px">What an alert looks like</h1>
+          <article class="card" style="border: 2px dashed var(--line); box-shadow: none; gap: 10px">
+            <div class="row" style="gap: 8px"><span class="pill pill-red pill-sm">Needs you now</span><span class="pill pill-sim">Example</span></div>
+            <span class="bold" style="font-size: 18px; line-height: 1.3">Someone is repeatedly guessing the password on RECEPTION-PC.</span>
+            <span class="small"><span class="bold">1</span> Don't log in from RECEPTION-PC.</span>
+            <span class="small"><span class="bold">2</span> Call your IT contact (saved in ShieldMate).</span>
+            <span class="small"><span class="bold">3</span> Tap Done: the office manager is notified.</span>
+          </article>
+          <span class="section-label">When one arrives</span>
+          <ol class="small" style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px">
+            <li>Do the steps from the top. Tap each one as you finish it.</li>
+            <li>Tap the big button at the bottom to tell Dr. Rao.</li>
+            <li>If it was you, like a mistyped password, tap “That was me”.</li>
+          </ol>
+          <button type="button" class="btn btn-primary btn-lg btn-block" style="margin-top: auto">Start using ShieldMate</button>
+        </main>
+      </div>
+    </div>
+    <p class="mk-caption"><b>3 · A sample card.</b> The first card someone sees shouldn't be a real attack.</p>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>The language toggle only shows when an alert card is on screen (<code>Staff.jsx:104–114</code>). A Kannada or Hindi speaker first meets ShieldMate in English, in the middle of an attack. The sound unlock is a small topbar button that's easy to miss, and nothing tells staff that alerts only arrive while the page is on screen.</dd>
+      <dt>When it shows</dt>
+      <dd>On the first visit to <code>/staff/:id</code> on a phone (<code>seenOnce("welcome-&lt;staffId&gt;")</code>). It can be skipped, and reopened from the Help tab.</dd>
+      <dt>Data</dt>
+      <dd>Client only: <code>session.setLang</code>, <code>fx.unlockAudio()</code> and <code>alertFx()</code>, and the staff name from <code>GET /clinic</code>. No API change.</dd>
+      <dt>Also</dt>
+      <dd>Show the language toggle on Today too, not only on a card.</dd>
+      <dt>Accuracy</dt>
+      <dd><code>usePoll</code> pauses while the tab is hidden, and there is no push yet (<code>OwnerNotify.jsx</code>: “real push notifications come after the demo”). The copy must not promise alerts on a locked phone.</dd>
+      <dt>Translations</dt>
+      <dd>Only the language names appear in Kannada and Hindi here. The new sentences need the fluent checker before they're translated (T2.05).</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice history · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Practice history</span>
+  <span class="mk-route">/owner/drill/history</span>
+  <span class="mk-tag contract">Needs a list-drills route</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#" aria-current="page">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="stack-sm" style="gap: 10px">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="#">Drills</a><span>›</span><span>Practice history</span></nav>
+        <div class="owner-head"><h1>Practice history</h1><span class="pill pill-sim">Sample data</span></div>
+      </div>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card">
+            <h2>Drills</h2>
+            <div class="table-wrap">
+              <table class="simple">
+                <thead><tr><th scope="col">Drill</th><th scope="col">Last practised</th><th scope="col">Team result</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <th scope="row"><strong>Ransomware at the clinic</strong><br><span class="small muted">about 6 min</span></th>
+                    <td class="nowrap">1 Nov</td>
+                    <td><strong>8 of 10</strong><br><span class="small" style="color: var(--green-ink)">up from 5 of 10 on 3 Oct</span></td>
+                    <td><a class="btn btn-soft" style="min-height: 40px; white-space: nowrap" href="#">Run again</a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row"><strong>Someone is guessing a password</strong><br><span class="small muted">about 3 min</span></th>
+                    <td class="nowrap">17 Oct</td>
+                    <td><strong>4 of 4</strong></td>
+                    <td><a class="btn btn-soft" style="min-height: 40px; white-space: nowrap" href="#">Run again</a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row"><strong>A fake supplier asks for payment to a new bank account</strong><br><span class="small muted">about 5 min · practice attack stopped in 1:05 today</span></th>
+                    <td class="muted nowrap">Not yet</td>
+                    <td class="muted">–</td>
+                    <td><a class="btn btn-primary" style="min-height: 40px; white-space: nowrap" href="#">Start</a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row"><strong>A fake invoice email takes over the doctor's email</strong><br><span class="small muted">about 6 min</span></th>
+                    <td class="muted nowrap">Not yet</td>
+                    <td class="muted">–</td>
+                    <td><a class="btn btn-soft" style="min-height: 40px; white-space: nowrap" href="#">Start</a></td>
+                  </tr>
+                  <tr>
+                    <th scope="row"><strong>A fake “tech support” phone call</strong><br><span class="small muted">about 6 min</span></th>
+                    <td class="muted nowrap">Not yet</td>
+                    <td class="muted">–</td>
+                    <td><a class="btn btn-soft" style="min-height: 40px; white-space: nowrap" href="#">Start</a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="row-between"><h2>Ransomware at the clinic, run by run</h2><span class="small muted">team right calls</span></div>
+            <div class="bars" role="img" aria-label="Team result: 5 of 10 on 3 October, 8 of 10 on 1 November">
+              <div class="bar"><span>5/10</span><i style="height: 50px"></i></div>
+              <div class="bar now"><span style="color: var(--blue)">8/10</span><i style="height: 80px"></i></div>
+            </div>
+            <div class="row-between small muted" style="justify-content: space-around"><span>3 Oct</span><span>1 Nov</span></div>
+            <span class="bold">3 more right calls than last time</span>
+          </section>
+        </div>
+
+        <aside class="col-side">
+          <section class="card">
+            <h2 style="font-size: 18px">Habits still to learn</h2>
+            <div class="list" style="padding: 0; background: transparent">
+              <div class="list-row" style="flex-direction: column; align-items: flex-start; gap: 2px"><span class="bold">Unplug the network, leave the computer on</span><span class="small muted">Ravi · ransomware drill, 1 Nov</span></div>
+              <div class="list-row" style="flex-direction: column; align-items: flex-start; gap: 2px"><span class="bold">Only call numbers saved in ShieldMate</span><span class="small muted">Ravi · ransomware drill, 1 Nov</span></div>
+              <div class="list-row" style="flex-direction: column; align-items: flex-start; gap: 2px"><span class="bold">Tell the owner</span><span class="small muted">Ravi · ransomware drill, 1 Nov</span></div>
+            </div>
+            <span class="small ink-2">Meena got every step right in her last drill.</span>
+          </section>
+          <section class="card tight">
+            <span class="section-label">Suggested next</span>
+            <span>Nobody has practised the three newer drills. Start with the fake supplier: change-of-bank emails are the most common way clinics lose money to scammers.</span>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>Readiness only knows the last drill this device hosted (<code>getLastDrill()</code>, <code>OwnerReadiness.jsx:15</code>). The “Last month vs today” bars use the hard-coded <code>PREVIOUS_DRILL</code> sample (<code>content.js:93</code>). Nothing shows which drills the team has never practised.</dd>
+      <dt>Contract change</dt>
+      <dd>e.g. <code>GET /drills?status=finished</code> → <code>{ drills: [{ code, scenario_id, title, finished_at, results }] }</code>. <code>drills/engine.py</code> already keeps finished drills until a Reset; this route only reads them.</dd>
+      <dt>Until then</dt>
+      <dd>A device-only version can list the drills this browser joined (player ids in <code>session.js</code>), read each with <code>GET /drills/{code}?player_id=</code>, and skip ones a Reset removed (404).</dd>
+      <dt>Data per row</dt>
+      <dd><code>results.team</code> for the score, <code>players[].missed_actions</code> run through <code>ACTION_LABEL</code> for the habits, and <code>SCENARIOS</code> for the five drills and their lengths. The practice-attack note comes from <code>GET /status</code>.</dd>
+      <dt>Replaces</dt>
+      <dd><code>PREVIOUS_DRILL</code> in Readiness, drill Results and the staff results screen. Keep the “sample data” label until real runs exist.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

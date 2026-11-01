@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved numbers · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Saved numbers</span>
+  <span class="mk-route">/staff/:id/help</span>
+  <span class="mk-tag contract">IT and 1930 ready now · other numbers need a contacts list</span>
+</header>
+
+<div class="mk-stage">
+  <div class="mk-frame">
+    <div class="mk-phone tall">
+      <div class="shell">
+        <header class="topbar">
+          <div class="who"><span class="small muted">Help</span><span class="app-name">Saved numbers</span></div>
+        </header>
+        <main class="content">
+          <section class="card tight dark">
+            <span class="bold" style="font-size: 18px">Only call numbers on this page.</span>
+            <span class="small on-dark-muted">If a call, email or pop-up gives you a different number, don't use it. Call back on the number here.</span>
+          </section>
+
+          <span class="section-label" style="padding: 0 4px">Clinic</span>
+          <div class="list">
+            <div class="contact">
+              <span class="av">S</span>
+              <span class="who"><span class="bold">Suresh (TechCare IT)</span><span class="small muted">Computer problems</span><span class="num">+91 90000 00000</span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-phone"/></svg> Call</a>
+            </div>
+            <div class="contact">
+              <span class="av">R</span>
+              <span class="who"><span class="bold">Dr. Rao</span><span class="small muted">Owner</span><span class="num">+91 90000 00001 <span class="mk-flag">needs field</span></span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-phone"/></svg> Call</a>
+            </div>
+          </div>
+
+          <span class="section-label" style="padding: 0 4px">Money</span>
+          <div class="list">
+            <div class="contact">
+              <span class="av">B</span>
+              <span class="who"><span class="bold">The clinic's bank, fraud line</span><span class="small muted">Stop a payment</span><span class="num">+91 90000 00002 <span class="mk-flag">needs field</span></span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-phone"/></svg> Call</a>
+            </div>
+            <div class="contact">
+              <span class="av">M</span>
+              <span class="who"><span class="bold">MedSupply Pharma, accounts</span><span class="small muted">Check any change to their bank details</span><span class="num">+91 90000 00003 <span class="mk-flag">needs field</span></span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-phone"/></svg> Call</a>
+            </div>
+          </div>
+
+          <span class="section-label" style="padding: 0 4px">Report a scam</span>
+          <div class="list">
+            <div class="contact">
+              <span class="av" style="font-size: 13px">1930</span>
+              <span class="who"><span class="bold">Cyber-fraud helpline</span><span class="small muted">Call now if money was sent</span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-phone"/></svg> Call</a>
+            </div>
+            <div class="contact">
+              <span class="av" style="font-size: 13px">www</span>
+              <span class="who"><span class="bold">cybercrime.gov.in</span><span class="small muted">Report online</span></span>
+              <a class="btn btn-tint" href="#"><svg class="i"><use href="#i-ext"/></svg> Open</a>
+            </div>
+          </div>
+
+          <section class="card tight">
+            <span class="bold">Someone says they're from IT or the bank?</span>
+            <span class="small ink-2">Hang up. Call them back on a number on this page, not one they give you.</span>
+          </section>
+
+          <a class="btn btn-soft btn-block" href="staff-report.html">Something looks wrong?</a>
+        </main>
+        <nav class="tabbar five" aria-label="Main">
+          <a href="#"><svg class="i"><use href="#i-home"/></svg>Today</a>
+          <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+          <a href="staff-history.html"><svg class="i"><use href="#i-history"/></svg>History</a>
+          <a href="#" aria-current="page"><svg class="i"><use href="#i-help"/></svg>Help</a>
+          <a href="#"><svg class="i"><use href="#i-menu"/></svg>Switch</a>
+        </nav>
+      </div>
+    </div>
+    <p class="mk-caption"><b>Help tab.</b> The numbers the cards tell staff to call, in one place.</p>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>Cards tell staff to “Call your IT contact (saved in ShieldMate)”, to “Call the supplier on the number you already have” and to “Call the bank's fraud line” (<code>lessons.json</code>). The tip of the week says to use only the contact saved in ShieldMate. But the IT contact is the only saved number, and it only appears as a button inside an alert card.</dd>
+      <dt>Ready now</dt>
+      <dd>The IT contact (<code>GET /clinic</code> → <code>it_contact_name</code>, <code>it_contact_phone</code>), and 1930 and cybercrime.gov.in, which <code>content.js</code> and the lessons already name. Ship these three first.</dd>
+      <dt>Needs a contract change</dt>
+      <dd>The bank, suppliers and owner. e.g. <code>contacts: [{ name, purpose, phone, group }]</code> on <code>GET /clinic</code>, edited from Setup. Staff phone numbers aren't in <code>StaffOut</code> today.</dd>
+      <dt>Calls</dt>
+      <dd><code>tel:</code> links, like the existing “Call IT” step. Logging a tap needs a new <code>ClientEventType</code>, because the list in <code>contract.py</code> is closed. The event would carry a contact kind, never the number.</dd>
+      <dt>Tab bar</dt>
+      <dd>This is the fifth staff tab. <code>.tabbar</code> needs five columns on staff pages.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

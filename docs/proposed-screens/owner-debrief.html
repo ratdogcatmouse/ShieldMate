@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Practice attack debrief · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Practice attack debrief</span>
+  <span class="mk-route">/owner/practice-attack</span>
+  <span class="mk-tag ready">Ready now · stage names need a field</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#" aria-current="page">Right now</a>
+    <a class="nav" href="owner-history.html">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="stack-sm" style="gap: 10px">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="#">Right now</a><span>›</span><span>Practice attack</span></nav>
+        <div class="owner-head">
+          <div><span class="small muted">Practice attack · test mode · today 8:30 AM</span><h1>Fake supplier asks for payment to a new bank account</h1></div>
+          <span class="pill pill-green">Contained</span>
+        </div>
+      </div>
+
+      <section class="card dark">
+        <span class="on-dark-muted small">Attack stopped in</span>
+        <span class="mono" style="font-size: 64px; line-height: 1; color: #7DD3FC">1:05</span>
+        <div class="stats">
+          <div class="stat"><span class="k">Stopped by</span><span class="v">Ravi</span></div>
+          <div class="stat"><span class="k">How</span><span class="v">Called the supplier back</span></div>
+          <div class="stat"><span class="k">Stages that happened</span><span class="v">1</span></div>
+          <div class="stat"><span class="k">Stages that never happened</span><span class="v">1</span></div>
+        </div>
+      </section>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card">
+            <h2>How it went</h2>
+            <ol class="evt-list">
+              <li class="evt"><time>8:30 AM</time><span class="rail"></span><span class="what">Practice attack started from Backstage<span class="by">Nothing real was sent or paid</span></span></li>
+              <li class="evt evt-alert"><time>8:30 AM</time><span class="rail"></span><span class="what">“An email asks the clinic to pay a supplier's new bank account.”<span class="by">Card on Ravi's and Dr. Rao's phones</span></span></li>
+              <li class="evt evt-step"><time>8:31 AM</time><span class="rail"></span><span class="what">Ravi: “Don't pay. Call the supplier on the number you already have, not one in the email.”<span class="by">1:05 after the start · this stopped the attack</span></span></li>
+              <li class="evt evt-never"><time>Never</time><span class="rail"></span><span class="what">1 later stage never happened</span></li>
+            </ol>
+          </section>
+
+          <section class="card">
+            <h2>Who saw what</h2>
+            <div class="table-wrap">
+              <table class="simple">
+                <thead><tr><th scope="col">Person</th><th scope="col">Card</th><th scope="col">What they did</th></tr></thead>
+                <tbody>
+                  <tr><th scope="row">Ravi</th><td class="nowrap">8:30 AM</td><td>Ticked the call-back step at 8:31 AM</td></tr>
+                  <tr><th scope="row">Dr. Rao</th><td class="nowrap">8:30 AM</td><td class="muted">Nothing needed</td></tr>
+                  <tr><th scope="row">Meena</th><td class="muted nowrap">Not sent</td><td class="muted">Supplier payments aren't hers</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <aside class="col-side">
+          <section class="card tight">
+            <span class="section-label">The habit that stopped it</span>
+            <span class="bold" style="font-size: 18px">Check by calling back on a number you already have</span>
+            <span class="small ink-2">Money sent to a scammer's account is very hard to get back.</span>
+          </section>
+          <section class="card tight">
+            <span class="section-label">Next</span>
+            <a class="btn btn-primary" href="#">Practise it as a team drill</a>
+            <a class="btn btn-soft" href="#">Run another practice attack</a>
+          </section>
+          <section class="card tight" style="border: 2px dashed var(--line); box-shadow: none">
+            <span class="tiny muted">When the team misses it, this page leads with:</span>
+            <span class="pill pill-red">The attack got through</span>
+            <span class="small">What would have stopped it: check by calling back on a number you already have.</span>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>After a practice attack, Right now and staff Today show one line (<code>SimResult</code>). <code>GET /status</code> → <code>simulation</code> carries much more: start and finish times, stages fired and cancelled, the stop actions, and who contained it and when. Nothing shows the team how it went.</dd>
+      <dt>Data</dt>
+      <dd>
+        <ul>
+          <li><code>GET /status</code> → <code>simulation</code> (<code>SimSummary</code>), with <code>derive.simResult()</code> for the headline.</li>
+          <li>The cards it raised: alerts with <code>first_seen</code> between <code>started_at</code> and <code>finished_at</code>.</li>
+          <li>Who saw what: each role's list, using <code>derive.stepProgress()</code> as Mission control does.</li>
+          <li>Habit wording: <code>ACTION_LABEL</code> for <code>contained_by.action</code> and <code>stop_actions</code>.</li>
+        </ul>
+      </dd>
+      <dt>Opens from</dt>
+      <dd>The <code>SimResult</code> card on Right now and staff Today (make it a link), and Backstage's “Last run” line.</dd>
+      <dt>Needs a field (optional)</dt>
+      <dd>Naming the stages that never happened needs the script's phase titles on <code>SimSummary</code> (a contract change). Counts work today.</dd>
+      <dt>Drill link</dt>
+      <dd><code>phish_doctor_email</code>, <code>tech_support_call</code> and <code>supplier_bank_fraud</code> share ids with drill scenarios. The other three scripts need a small map in <code>content.js</code>.</dd>
+      <dt>States</dt>
+      <dd>Running: “Practice attack in progress” and the live cards. Stopped from Backstage or out of time: the grey <code>simResult</code> line. After a Reset <code>simulation</code> is null: “No practice attack yet.”</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

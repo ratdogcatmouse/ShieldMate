@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens to add to ShieldMate</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+<style>
+  /* Layout for this document only; the mockups use the app's own components. */
+  .doc { max-width: 1000px; margin: 0 auto; padding: 44px 20px 80px; display: flex; flex-direction: column; gap: 16px; }
+  .doc h1 { font-family: var(--display); font-size: 38px; line-height: 1.12; letter-spacing: -0.01em; }
+  .doc h2 { font-family: var(--display); font-size: 25px; margin-top: 26px; letter-spacing: -0.01em; }
+  .doc p, .doc li { max-width: 74ch; }
+  .doc ul, .doc ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+  .byline { color: var(--muted); font-size: 15px; }
+  .lead { font-size: 19px; line-height: 1.5; color: var(--ink-2); }
+  .howto { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; font-size: 15px; }
+  .panel { background: var(--surface); border-radius: 20px; padding: 6px 16px 10px; box-shadow: 0 10px 28px rgba(79, 44, 240, 0.06); }
+  .panel table.simple { font-size: 15px; }
+  .panel table.simple td, .panel table.simple th { padding: 11px 8px; }
+  .panel a { font-weight: 700; }
+  .entries { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .entry { background: var(--surface); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 10px 28px rgba(79, 44, 240, 0.06); }
+  .entry h3 { font-family: var(--display); font-size: 18px; line-height: 1.25; }
+  .entry h3 a { color: var(--ink); text-decoration: none; }
+  .entry h3 a:hover { color: var(--blue-dark); text-decoration: underline; }
+  .entry .meta { font-family: var(--mono); font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+  .entry dl { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 5px 10px; margin: 0; font-size: 15px; }
+  .entry dt { color: var(--muted); font-weight: 700; }
+  .entry dd { margin: 0; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); font-size: 13px; font-weight: 700; margin-right: 6px; vertical-align: 2px; }
+  .gaps li strong { color: var(--ink); }
+  .gaps .to { color: var(--muted); font-size: 15px; }
+
+  /* Site map */
+  .sm-wrap { overflow-x: auto; background: var(--surface); border-radius: 20px; padding: 8px 8px 4px; box-shadow: 0 10px 28px rgba(79, 44, 240, 0.06); }
+  .sm { display: block; width: 100%; min-width: 760px; height: auto; }
+  .sm text { font-family: var(--font); font-size: 13px; fill: var(--ink); }
+  .sm .ttl { font-family: var(--display); font-size: 17px; font-weight: 700; }
+  .sm .sub, .sm .hd { fill: var(--muted); }
+  .sm .hd { font-weight: 700; }
+  .sm .ex rect { fill: #fff; stroke: #BDB6DC; stroke-width: 1.25; }
+  .sm .nw rect { fill: #EEEAFD; stroke: var(--blue); stroke-width: 1.75; }
+  .sm .nw text { font-weight: 700; fill: var(--blue-dark); }
+  .sm .nw text.tag { font-size: 11px; font-weight: 700; fill: var(--blue); }
+  .sm a:hover rect { stroke-width: 3; }
+  .sm .ln { fill: none; stroke: #BDB6DC; stroke-width: 1.25; }
+</style>
+</head>
+<body>
+<main class="doc">
+  <h1>Screens to add to ShieldMate</h1>
+  <p class="byline">Frontend proposal · 1 November 2026 · checked against <code>frontend/src</code> and <code>backend/contract.py</code> as they are today</p>
+
+  <p class="lead">ShieldMate's 11 screens cover the live moment well: an alert arrives, staff act, the owner decides and IT fixes it. What's missing is before and after that moment. No screen keeps an incident's record once it closes or drafts the CERT-In report. Some backend data has no screen at all. Staff can only react to alerts. This proposes <strong>13 screens: 9 build on today's API, 4 need a small contract addition.</strong></p>
+
+  <p class="howto">Each mockup is a standalone <code>.html</code> file in this folder. It loads the app's real stylesheet and fonts (<code>frontend/src/styles/shieldmate.css</code>), so it looks like the app; keep the folder where it is. Every mockup ends with build notes covering why, which routes and fields it uses, and what the backend needs. A dashed <span class="mk-flag">needs field</span> chip marks a value the API doesn't return yet.</p>
+
+  <h2>The 13 screens, in build order</h2>
+  <p>Quick wins that remove demo risk come first, then the incident story, then the screens that wait on one batched contract change.</p>
+  <div class="panel table-wrap">
+    <table class="simple">
+      <thead><tr><th scope="col">#</th><th scope="col">Screen</th><th scope="col">For</th><th scope="col">Route</th><th scope="col">Backend</th><th scope="col">Size</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><th scope="row"><a href="states.html">System states and PIN prompt</a></th><td>Everyone</td><td class="mono small">every screen</td><td><span class="pill pill-green pill-sm">None</span></td><td>S</td></tr>
+        <tr><td>2</td><th scope="row"><a href="owner-incident.html">Incident detail</a></th><td>Owner</td><td class="mono small">/owner/incident/:id</td><td><span class="pill pill-green pill-sm">None</span></td><td>M</td></tr>
+        <tr><td>3</td><th scope="row"><a href="owner-history.html">History</a></th><td>Owner</td><td class="mono small">/owner/history</td><td><span class="pill pill-green pill-sm">None</span></td><td>M</td></tr>
+        <tr><td>4</td><th scope="row"><a href="owner-report.html">CERT-In report draft</a></th><td>Owner</td><td class="mono small">/owner/incident/:id/report</td><td><span class="pill pill-green pill-sm">None</span></td><td>M</td></tr>
+        <tr><td>5</td><th scope="row"><a href="owner-recovery.html">Recovery check</a></th><td>Owner</td><td class="mono small">/owner/readiness/recovery</td><td><span class="pill pill-green pill-sm">None</span> <span class="small muted">route exists</span></td><td>S</td></tr>
+        <tr><td>6</td><th scope="row"><a href="staff-history.html">Staff history and past card</a></th><td>Staff</td><td class="mono small">/staff/:id/alert/:id</td><td><span class="pill pill-green pill-sm">None</span></td><td>M</td></tr>
+        <tr><td>7</td><th scope="row"><a href="staff-welcome.html">Staff first-run setup</a></th><td>Staff</td><td class="mono small">/staff/:id/welcome</td><td><span class="pill pill-green pill-sm">None</span></td><td>S</td></tr>
+        <tr><td>8</td><th scope="row"><a href="owner-computers.html">Computers</a></th><td>Owner</td><td class="mono small">/owner/computers</td><td><span class="pill pill-green pill-sm">None</span> <span class="small muted">+2 optional fields</span></td><td>M</td></tr>
+        <tr><td>9</td><th scope="row"><a href="owner-debrief.html">Practice attack debrief</a></th><td>Owner</td><td class="mono small">/owner/practice-attack</td><td><span class="pill pill-green pill-sm">None</span> <span class="small muted">+1 optional field</span></td><td>S</td></tr>
+        <tr><td>10</td><th scope="row"><a href="staff-numbers.html">Saved numbers</a></th><td>Staff</td><td class="mono small">/staff/:id/help</td><td><span class="pill pill-amber pill-sm">Partly</span> <span class="small muted">contacts list</span></td><td>S</td></tr>
+        <tr><td>11</td><th scope="row"><a href="staff-report.html">Report something suspicious</a></th><td>Staff</td><td class="mono small">/staff/:id/report</td><td><span class="pill pill-amber pill-sm">New route</span></td><td>M</td></tr>
+        <tr><td>12</td><th scope="row"><a href="owner-setup.html">Setup</a></th><td>Owner</td><td class="mono small">/owner/setup</td><td><span class="pill pill-amber pill-sm">New routes</span> <span class="small muted">+2 fields</span></td><td>L</td></tr>
+        <tr><td>13</td><th scope="row"><a href="owner-practice-history.html">Practice history</a></th><td>Owner</td><td class="mono small">/owner/drill/history</td><td><span class="pill pill-amber pill-sm">New route</span></td><td>M</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">Size: S is one screen built mostly from existing components. M is a new page with a few new components. L has several sections and needs backend routes.</p>
+
+  <h2>Where they sit</h2>
+  <div class="sm-wrap">
+    <svg class="sm" viewBox="0 0 960 680" aria-labelledby="sm-title sm-desc">
+      <title id="sm-title">Four new menu entries. The other nine open from a screen, not the menu.</title>
+      <desc id="sm-desc">Existing and proposed ShieldMate screens by who uses them. Proposed boxes link to their mockups.</desc>
+      <text class="ttl" x="24" y="32">Four new menu entries. The other nine open from a screen, not the menu.</text>
+      <text class="sub" x="24" y="54">Violet boxes are proposed and open their mockup. White boxes exist today.</text>
+      <text class="hd" x="24" y="92">Staff phone</text>
+      <text class="hd" x="336" y="92">Owner, laptop or phone</text>
+      <text class="hd" x="648" y="92">Everyone else</text>
+
+      <g class="ln-group">
+        <path class="ln" d="M38 184V212H52"/>
+        <path class="ln" d="M38 316V344H52"/>
+        <path class="ln" d="M350 140V168H364"/>
+        <path class="ln" d="M350 228V256H364"/>
+        <path class="ln" d="M378 272V300H392"/>
+        <path class="ln" d="M350 404V432H364"/>
+        <path class="ln" d="M350 492V520H364"/>
+      </g>
+
+      <!-- Staff phone -->
+      <a href="staff-welcome.html"><g class="nw"><rect x="24" y="108" width="288" height="32" rx="8"/><text x="36" y="129">First-run setup</text></g></a>
+      <g class="ex"><rect x="24" y="152" width="288" height="32" rx="8"/><text x="36" y="173">Today and the alert card</text></g>
+      <a href="staff-report.html"><g class="nw"><rect x="52" y="196" width="260" height="32" rx="8"/><text x="64" y="217">Report something suspicious</text></g></a>
+      <g class="ex"><rect x="24" y="240" width="288" height="32" rx="8"/><text x="36" y="261">Drills</text></g>
+      <g class="ex"><rect x="24" y="284" width="288" height="32" rx="8"/><text x="36" y="305">History</text></g>
+      <a href="staff-history.html"><g class="nw"><rect x="52" y="328" width="260" height="32" rx="8"/><text x="64" y="349">Past alert card</text></g></a>
+      <a href="staff-numbers.html"><g class="nw"><rect x="24" y="372" width="288" height="32" rx="8"/><text x="36" y="393">Help: saved numbers</text><text class="tag" x="300" y="392" text-anchor="end">new tab</text></g></a>
+
+      <!-- Owner -->
+      <g class="ex"><rect x="336" y="108" width="288" height="32" rx="8"/><text x="348" y="129">Right now</text></g>
+      <a href="owner-debrief.html"><g class="nw"><rect x="364" y="152" width="260" height="32" rx="8"/><text x="376" y="173">Practice attack debrief</text></g></a>
+      <a href="owner-history.html"><g class="nw"><rect x="336" y="196" width="288" height="32" rx="8"/><text x="348" y="217">History</text><text class="tag" x="612" y="216" text-anchor="end">new menu item</text></g></a>
+      <a href="owner-incident.html"><g class="nw"><rect x="364" y="240" width="260" height="32" rx="8"/><text x="376" y="261">Incident detail</text></g></a>
+      <a href="owner-report.html"><g class="nw"><rect x="392" y="284" width="232" height="32" rx="8"/><text x="404" y="305">CERT-In report draft</text></g></a>
+      <a href="owner-computers.html"><g class="nw"><rect x="336" y="328" width="288" height="32" rx="8"/><text x="348" y="349">Computers</text><text class="tag" x="612" y="348" text-anchor="end">new menu item</text></g></a>
+      <g class="ex"><rect x="336" y="372" width="288" height="32" rx="8"/><text x="348" y="393">Readiness</text></g>
+      <a href="owner-recovery.html"><g class="nw"><rect x="364" y="416" width="260" height="32" rx="8"/><text x="376" y="437">Recovery check</text></g></a>
+      <g class="ex"><rect x="336" y="460" width="288" height="32" rx="8"/><text x="348" y="481">Drills</text></g>
+      <a href="owner-practice-history.html"><g class="nw"><rect x="364" y="504" width="260" height="32" rx="8"/><text x="376" y="525">Practice history</text></g></a>
+      <a href="owner-setup.html"><g class="nw"><rect x="336" y="548" width="288" height="32" rx="8"/><text x="348" y="569">Setup</text><text class="tag" x="612" y="568" text-anchor="end">new menu item</text></g></a>
+      <g class="ex"><rect x="336" y="592" width="288" height="32" rx="8"/><text x="348" y="613">Phone alert preview</text></g>
+
+      <!-- Everyone else -->
+      <g class="ex"><rect x="648" y="108" width="288" height="32" rx="8"/><text x="660" y="129">Start: who's using this device</text></g>
+      <g class="ex"><rect x="648" y="152" width="288" height="32" rx="8"/><text x="660" y="173">IT panel</text></g>
+      <g class="ex"><rect x="648" y="196" width="288" height="32" rx="8"/><text x="660" y="217">Mission control (projector)</text></g>
+      <g class="ex"><rect x="648" y="240" width="288" height="32" rx="8"/><text x="660" y="261">Backstage (demo controls)</text></g>
+      <a href="states.html"><g class="nw"><rect x="648" y="284" width="288" height="32" rx="8"/><text x="660" y="305">System states (every screen)</text></g></a>
+
+      <!-- Key -->
+      <g class="ex"><rect x="24" y="644" width="28" height="18" rx="5"/></g>
+      <text x="60" y="657">Exists today</text>
+      <g class="nw"><rect x="172" y="644" width="28" height="18" rx="5"/></g>
+      <text x="208" y="657">Proposed</text>
+    </svg>
+  </div>
+  <p>Incident detail also opens from the cards on Right now and from “Closed today”. On phones, the owner's three new menu items go in a “More” tab, and staff get a fifth tab, Help.</p>
+
+  <h2>Gaps in today's screens</h2>
+  <ul class="gaps">
+    <li><strong>An incident's story disappears once it closes.</strong> Staff history rows don't open (<code>Staff.jsx:324</code>). Right now keeps 3 closed incidents (<code>OwnerNow.jsx:430</code>) and the newest 7 activity lines (<code>OwnerNow.jsx:471</code>). <span class="to">→ Incident detail, History, Staff history.</span></li>
+    <li><strong>Promised on screen, not built.</strong> The CERT-In card says a report will be “drafted from this timeline” (<code>OwnerNow.jsx:295</code>). Readiness says choosing a second person “is part of setup (after the demo)” (<code>OwnerReadiness.jsx:220</code>). “Last month's” drill score is hard-coded sample data (<code>content.js:93</code>). <span class="to">→ CERT-In draft, Setup, Practice history.</span></li>
+    <li><strong>Backend data with no screen.</strong> <code>POST /restore/verify</code> is in the contract (<code>contract.py:771</code>), but <code>api.js</code> has no function for it. Device services, blocks and impact show only as a status pill. The practice attack's timing and stages show as one line. <span class="to">→ Recovery check, Computers, Debrief.</span></li>
+    <li><strong>Staff can only react.</strong> The language toggle appears only on an alert card (<code>Staff.jsx:104–114</code>). Cards say to call numbers “saved in ShieldMate”, but only IT's number is saved. Three of the five drills start with a call or email a person notices, yet there's no way to report one. <span class="to">→ First-run setup, Saved numbers, Report.</span></li>
+    <li><strong>Fragile edges.</strong> If the server is down on first load, screens show “Loading…” indefinitely, under a banner about “the last update”. An unknown address falls through to Start (<code>App.jsx:60</code>). <code>setOwnerPin</code> is never called (<code>session.js:96</code>), so turning on the owner PIN (decision 3) would block every owner decision. <span class="to">→ System states.</span></li>
+  </ul>
+
+  <h2>Screen by screen</h2>
+  <div class="entries">
+    <article class="entry">
+      <h3><span class="num">1</span><a href="states.html">System states and PIN prompt</a></h3>
+      <span class="meta">every screen · everyone</span>
+      <dl>
+        <dt>Why</dt><dd>First-load failure, unknown links and the owner PIN have no proper screen.</dd>
+        <dt>Shows</dt><dd>Can't reach ShieldMate (Wi-Fi checks, laptop address), unknown person, not found, feature switched off, PIN sheet.</dd>
+        <dt>Data</dt><dd><code>usePoll</code>'s error, <code>GET /status</code> flags, <code>setOwnerPin</code>.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">2</span><a href="owner-incident.html">Incident detail</a></h3>
+      <span class="meta">/owner/incident/:alertId · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Who did what and when is in <code>AlertOut</code>, but split across cards and gone once closed.</dd>
+        <dt>Shows</dt><dd>Checklist with names and times, one-incident timeline, CERT-In clock, computer, IT progress.</dd>
+        <dt>Data</dt><dd>Alerts (closed included), actions, latest restore check, <code>activity()</code> for one alert.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">3</span><a href="owner-history.html">History</a></h3>
+      <span class="meta">/owner/history · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Right now keeps 3 closed incidents and 7 events; nothing lists them all.</dd>
+        <dt>Shows</dt><dd>Every incident since the last reset, the practice attack, and the full activity log with filters.</dd>
+        <dt>Data</dt><dd>What Right now polls; <code>activity()</code> gains a kind and alert id per event.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">4</span><a href="owner-report.html">CERT-In report draft</a></h3>
+      <span class="meta">/owner/incident/:id/report · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Promised on the CERT-In card; the <code>REPORT_CERTIN</code> and <code>START_DPDP_NOTE</code> steps have nothing behind them.</dd>
+        <dt>Shows</dt><dd>Fields filled from the incident, gaps for the owner, copy and print, a breach-record tab.</dd>
+        <dt>Data</dt><dd>The incident's own data. Nothing is sent from ShieldMate.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">5</span><a href="owner-recovery.html">Recovery check</a></h3>
+      <span class="meta">/owner/readiness/recovery · owner</span>
+      <dl>
+        <dt>Why</dt><dd><code>POST /restore/verify</code> is built, but no screen calls it.</dd>
+        <dt>Shows</dt><dd>Would restoring bring the attack back: copy, fix, compare, a yes or no for each, and the fix.</dd>
+        <dt>Data</dt><dd>Add <code>api.restoreVerify()</code>; render <code>RestoreVerifyResult</code>.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">6</span><a href="staff-history.html">Staff history and past card</a></h3>
+      <span class="meta">/staff/:id/history · /staff/:id/alert/:id · staff</span>
+      <dl>
+        <dt>Why</dt><dd>Rows don't open, drills never appear though the empty state promises them, and staff never hear how it ended.</dd>
+        <dt>Shows</dt><dd>A tappable list with drills; the past card read-only, plus “what happened next”.</dd>
+        <dt>Data</dt><dd>The role's alerts, <code>it.log</code>, actions; drills from this phone's stored player ids.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">7</span><a href="staff-welcome.html">Staff first-run setup</a></h3>
+      <span class="meta">/staff/:id/welcome · staff</span>
+      <dl>
+        <dt>Why</dt><dd>The language buttons show only once an attack card is on screen; the sound unlock is easy to miss.</dd>
+        <dt>Shows</dt><dd>Language, a sound test, a keep-on-screen tip, a sample card.</dd>
+        <dt>Data</dt><dd>Client only.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">8</span><a href="owner-computers.html">Computers</a></h3>
+      <span class="meta">/owner/computers · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Services, blocks, status times and impact are fetched but show as a single pill.</dd>
+        <dt>Shows</dt><dd>Each computer's status, what stops while it's down, and today's alerts and blocks.</dd>
+        <dt>Data</dt><dd><code>GET /clinic</code>, <code>GET /devices</code>. Plan B and protected addresses need fields.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">9</span><a href="owner-debrief.html">Practice attack debrief</a></h3>
+      <span class="meta">/owner/practice-attack · owner</span>
+      <dl>
+        <dt>Why</dt><dd><code>SimSummary</code> has times, stages and who stopped it; the screens show one line.</dd>
+        <dt>Shows</dt><dd>Time to stop, who and how, the timeline, who saw what, the habit to practise.</dd>
+        <dt>Data</dt><dd><code>GET /status</code> → <code>simulation</code>, alerts in the run's window.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">10</span><a href="staff-numbers.html">Saved numbers</a></h3>
+      <span class="meta">/staff/:id/help · staff</span>
+      <dl>
+        <dt>Why</dt><dd>Cards say to call IT, the supplier and the bank on saved numbers; only IT's exists.</dd>
+        <dt>Shows</dt><dd>Clinic, money and scam-report numbers with Call buttons, and the call-back rule.</dd>
+        <dt>Data</dt><dd>IT contact and 1930 now; the rest need a contacts list.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">11</span><a href="staff-report.html">Report something suspicious</a></h3>
+      <span class="meta">/staff/:id/report · staff</span>
+      <dl>
+        <dt>Why</dt><dd>Phishing, fake tech support and bank-detail fraud start with a person noticing, and there's no way to say so.</dd>
+        <dt>Shows</dt><dd>Pick what happened, do-now steps, an optional note, tell Dr. Rao.</dd>
+        <dt>Data</dt><dd>New <code>POST /reports</code> that creates an owner notification. The guidance can ship first.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">12</span><a href="owner-setup.html">Setup</a></h3>
+      <span class="meta">/owner/setup · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Readiness sends “choosing a second person” to a setup screen that doesn't exist.</dd>
+        <dt>Shows</dt><dd>People and cover, who gets which alerts, blocking and timings, backups, IT contact, saved numbers, PIN.</dd>
+        <dt>Data</dt><dd>Reads from <code>GET /clinic</code>. The standing rule saves today; the rest needs routes.</dd>
+      </dl>
+    </article>
+    <article class="entry">
+      <h3><span class="num">13</span><a href="owner-practice-history.html">Practice history</a></h3>
+      <span class="meta">/owner/drill/history · owner</span>
+      <dl>
+        <dt>Why</dt><dd>Readiness knows only the last drill this device ran; the comparison is sample data.</dd>
+        <dt>Shows</dt><dd>All five drills with last run and score, run by run, and habits still to learn.</dd>
+        <dt>Data</dt><dd>New <code>GET /drills?status=finished</code>; a device-only version can come first.</dd>
+      </dl>
+    </article>
+  </div>
+
+  <h2>Smaller additions (no mockup)</h2>
+  <ul>
+    <li><strong>Owner “More” tab.</strong> The owner's phone tab bar has four slots. History, Computers, Setup and “Switch person” go in a More sheet.</li>
+    <li><strong>Staff “Help” tab.</strong> A fifth tab means <code>.tabbar</code> needs five columns on staff pages (<code>shieldmate.css:219</code>).</li>
+    <li><strong>Links into the new pages.</strong> Turn the practice-attack result, the headlines on Right now, and the device rows into links.</li>
+    <li><strong>Language toggle on Today</strong>, not only on an alert card.</li>
+    <li><strong>Judges' mini-drill.</strong> Built in the earlier vanilla UI (<code>docs/reference/vanilla-ui/judge.html</code>, <code>judge-tally.html</code>) but never ported. The contract has no routes for it.</li>
+    <li><strong>Ask ShieldMate with a typed question.</strong> Already mocked in <code>docs/n8n-help-widget-mockup.html</code>. <code>InterpreterRequest</code> already carries <code>alert_id</code>, <code>drill_code</code> and <code>device_id</code>.</li>
+    <li><strong>IT panel history.</strong> The panel shows “Closed today” only.</li>
+  </ul>
+
+  <h2>Open questions</h2>
+  <ol>
+    <li><strong>One contract batch?</strong> Screens 10 to 13 and the optional fields need contract changes. CLAUDE.md requires all four owners and the contract tests in one merge, so batch them: contacts, the settings and staff writes, the drills list, reports, and the device fields.</li>
+    <li><strong>CERT-In fields.</strong> Check the draft's fields against CERT-In's current incident reporting form before building it.</li>
+    <li><strong>Patient-data breach record.</strong> Confirm with an advisor what it must contain and by when; the mockup shows fields only.</li>
+    <li><strong>Owner PIN and staff Block buttons.</strong> Staff Block taps call <code>approve</code> as the owner. With the PIN on, should they see the prompt, or should the button hide?</li>
+    <li><strong>Staff reports.</strong> Should a report stay a note to the owner, or open a full incident with the IT loop?</li>
+    <li><strong>Translations.</strong> New staff strings need the fluent-speaker check (Testing Plan T2.05) before Kannada and Hindi ship.</li>
+  </ol>
+
+  <h2>Today's screens, for reference</h2>
+  <div class="panel table-wrap">
+    <table class="simple">
+      <thead><tr><th scope="col">Route</th><th scope="col">Screen</th><th scope="col">For</th></tr></thead>
+      <tbody>
+        <tr><td class="mono small">/</td><th scope="row">Welcome splash, then Start: “Who's using this device?”</th><td>Everyone</td></tr>
+        <tr><td class="mono small">/staff/:id</td><th scope="row">Today, and the alert card when one is open</th><td>Meena, Ravi</td></tr>
+        <tr><td class="mono small">/staff/:id/history</td><th scope="row">History (alerts only; rows don't open)</th><td>Meena, Ravi</td></tr>
+        <tr><td class="mono small">/staff/:id/drill</td><th scope="row">Join a drill: lobby, moments, results</th><td>Meena, Ravi</td></tr>
+        <tr><td class="mono small">/owner</td><th scope="row">Right now: approvals, incidents, IT, computers, activity</th><td>Dr. Rao</td></tr>
+        <tr><td class="mono small">/owner/readiness</td><th scope="row">Readiness: backup check, team practice, cover</th><td>Dr. Rao</td></tr>
+        <tr><td class="mono small">/owner/drill</td><th scope="row">Host a drill</th><td>Dr. Rao</td></tr>
+        <tr><td class="mono small">/owner/notify</td><th scope="row">Lock-screen preview of an approval request</th><td>Dr. Rao</td></tr>
+        <tr><td class="mono small">/it</td><th scope="row">IT panel: tickets, notes, resolve</th><td>Suresh (TechCare IT)</td></tr>
+        <tr><td class="mono small">/mission</td><th scope="row">Mission control, read-only on the projector</th><td>Audience</td></tr>
+        <tr><td class="mono small">/backstage</td><th scope="row">Demo controls</th><td>Presenter</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small muted">Plus the “?” explain-in-simpler-words sheet on cards (<code>Rephrase.jsx</code>).</p>
+</main>
+</body>
+</html>

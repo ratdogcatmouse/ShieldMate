@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" stroke-width="3"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Setup</span>
+  <span class="mk-route">/owner/setup</span>
+  <span class="mk-tag contract">Reads work now · saving needs new routes</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html" aria-current="page">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="owner-head">
+        <div><span class="owner-mobile-head">Sunrise Family Clinic</span><h1>Setup</h1><span class="sub">Who does what, and how ShieldMate acts for you</span></div>
+      </div>
+
+      <div class="grid-auto">
+        <section class="card span-2">
+          <div class="row-between"><h2>People and cover</h2><span class="pill pill-amber pill-sm">1 gap</span></div>
+          <div class="table-wrap">
+            <table class="simple matrix">
+              <thead><tr><th scope="col">Person</th><th scope="col">Can restore backups</th><th scope="col">Can approve downtime</th><th scope="col">Asked if you don't answer</th></tr></thead>
+              <tbody>
+                <tr><th scope="row"><strong>Meena</strong><br><span class="small muted">Front desk</span></th><td><input type="checkbox" aria-label="Meena can restore backups"></td><td><input type="checkbox" aria-label="Meena can approve downtime"></td><td><input type="radio" name="backup" aria-label="Meena is the backup approver"></td></tr>
+                <tr><th scope="row"><strong>Ravi</strong><br><span class="small muted">Billing</span></th><td><input type="checkbox" aria-label="Ravi can restore backups"></td><td><input type="checkbox" aria-label="Ravi can approve downtime"></td><td><input type="radio" name="backup" checked aria-label="Ravi is the backup approver"></td></tr>
+                <tr><th scope="row"><strong>Dr. Rao</strong><br><span class="small muted">Owner</span></th><td><input type="checkbox" checked aria-label="Dr. Rao can restore backups"></td><td><input type="checkbox" checked aria-label="Dr. Rao can approve downtime"></td><td><span class="dash">–</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout amber" style="display: block; font-weight: 400"><strong>Only you can restore backups or approve downtime.</strong> If you're with a patient or on leave, nobody can. Tick a second person.</div>
+          <div class="row"><button type="button" class="btn btn-primary">Save</button><span class="mk-flag">needs route</span></div>
+        </section>
+
+        <section class="card">
+          <h2>Blocking attackers</h2>
+          <div class="row-between nowrap" style="align-items: flex-start">
+            <span class="stack-sm" style="gap: 2px"><span class="bold">Standing rule</span><span class="small ink-2">If you don't answer a block request within 5 minutes, ShieldMate blocks the address for you.</span></span>
+            <button type="button" class="switch" role="switch" aria-checked="true" aria-label="Standing rule"></button>
+          </div>
+          <div class="facts">
+            <div class="fact"><span class="k">Wait for your answer</span><span class="v">5 minutes</span></div>
+            <div class="fact"><span class="k">A block lasts</span><span class="v">60 minutes</span></div>
+          </div>
+          <span class="small muted">The switch works today. The two times are read-only <span class="mk-flag">needs route</span></span>
+        </section>
+
+        <section class="card span-2">
+          <h2>Who gets which alerts</h2>
+          <div class="table-wrap">
+            <table class="simple matrix">
+              <thead><tr><th scope="col">Computer</th><th scope="col">Meena</th><th scope="col">Ravi</th><th scope="col">Dr. Rao</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">Reception computer</th><td><span class="tick"><svg class="i"><use href="#i-check"/></svg></span></td><td><span class="dash">–</span></td><td><span class="tick"><svg class="i"><use href="#i-check"/></svg></span></td></tr>
+                <tr><th scope="row">File server</th><td><span class="dash">–</span></td><td><span class="tick"><svg class="i"><use href="#i-check"/></svg></span></td><td><span class="tick"><svg class="i"><use href="#i-check"/></svg></span></td></tr>
+                <tr><th scope="row">Doctor's computer</th><td><span class="dash">–</span></td><td><span class="dash">–</span></td><td><span class="tick"><svg class="i"><use href="#i-check"/></svg></span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <span class="small ink-2">Nobody gets alerts for another person's computer. A few go to everyone, such as a fake payment message sent to patients in the clinic's name.</span>
+          <span class="small muted">Read-only. <span class="mk-flag">needs field</span></span>
+        </section>
+
+        <section class="card">
+          <h2>Backups</h2>
+          <label class="field-label" for="age">Warn when the last backup is older than</label>
+          <select id="age" class="field"><option>12 hours</option><option selected>24 hours</option><option>48 hours</option></select>
+          <span class="small muted">Used by the restore check's “Fresh?” question. <span class="mk-flag">needs route</span></span>
+        </section>
+
+        <section class="card">
+          <h2>IT contact</h2>
+          <div class="list" style="padding: 0; background: transparent">
+            <div class="list-row"><span class="muted">Name</span><span class="bold">Suresh (TechCare IT)</span></div>
+            <div class="list-row"><span class="muted">Phone</span><span class="mono">+91 90000 00000</span></div>
+          </div>
+          <span class="small ink-2">Shown on every “Call IT” button and on staff phones' saved numbers.</span>
+          <div class="row"><button type="button" class="btn btn-soft">Edit</button><span class="mk-flag">needs route</span></div>
+        </section>
+
+        <section class="card">
+          <h2>Saved numbers</h2>
+          <span class="ink-2">Staff only call numbers saved here. Add your bank's fraud line and each supplier's number, so staff can check a request by calling back.</span>
+          <span class="small muted">5 numbers on staff phones</span>
+          <div class="row"><a class="btn btn-soft" href="staff-numbers.html">See them</a><span class="mk-flag">needs route</span></div>
+        </section>
+
+        <section class="card">
+          <div class="row-between"><h2>Owner PIN</h2><span class="pill pill-grey pill-sm no-dot">Off</span></div>
+          <span class="ink-2">When it's on, ShieldMate asks for your PIN before you approve a block, close an incident, test the backup or run a drill.</span>
+          <span class="small muted">Turned on by whoever runs the server. Each phone asks for it once per session. <a href="states.html">See the prompt</a></span>
+        </section>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>Readiness says “Choosing a second person is part of setup (after the demo)” (<code>OwnerReadiness.jsx:220</code>), but there is no setup screen. The clinic's timings, IT contact and capability flags are read-only facts in <code>GET /clinic</code> that no screen shows, and the standing-rule switch lives in Right now's side column.</dd>
+      <dt>Works today</dt>
+      <dd>Every read comes from <code>GET /clinic</code>: staff flags, <code>approval_timeout_minutes</code>, <code>block_minutes</code>, <code>backup_age_limit_hours</code>, <code>it_contact_*</code>, <code>single_point_of_failure</code>. The one write is the standing rule (<code>PUT /clinic/standing-rule</code>, flag ACTIONS). Keep that switch on Right now too.</dd>
+      <dt>Contract changes</dt>
+      <dd>
+        <ul>
+          <li>Save people and cover: e.g. <code>PUT /clinic/staff/{id}</code> with the three flags.</li>
+          <li>Save timings, backup age and IT contact: e.g. <code>PUT /clinic/settings</code>.</li>
+          <li>Saved numbers: <code>contacts</code> on <code>GET /clinic</code> plus a write route (see the staff Saved numbers mockup).</li>
+          <li>Alert routing grid: each computer's account role on <code>ClinicDevice</code>. It's in <code>seed/clinic.json</code> as <code>impact.device_accounts</code>, and <code>alerts/notify.audience</code> uses it.</li>
+        </ul>
+        Per CLAUDE.md these need all four owners and the contract tests in the same merge, so batch them.
+      </dd>
+      <dt>Owner PIN</dt>
+      <dd>The server turns it on (<code>OWNER_PIN</code>). This card only explains it; the PIN prompt itself is in the System states mockup.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

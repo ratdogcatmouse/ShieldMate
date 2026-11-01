@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incident detail · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" stroke-width="3"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Incident detail</span>
+  <span class="mk-route">/owner/incident/:alertId</span>
+  <span class="mk-tag ready">Ready now · no backend change</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html" aria-current="page">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="stack-sm" style="gap: 10px">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="owner-history.html">History</a><span>›</span><span>Ransomware on the file server</span></nav>
+        <div class="row" style="gap: 8px">
+          <span class="pill pill-red">Needs you now</span>
+          <span class="pill pill-red no-dot">Critical impact</span>
+          <span class="small muted">Started 11:05 AM · 35 min ago</span>
+        </div>
+        <h1 style="font-size: 30px; line-height: 1.2; font-family: var(--display)">Files on FILE-SERVER are being locked. This looks like ransomware.</h1>
+        <p class="ink-2">37 files were renamed to .locked in 1 minute. Treat it as real until IT says otherwise.</p>
+      </div>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card" aria-label="What has to happen">
+            <div class="row-between"><h2>What has to happen</h2><span class="small muted">3 of 3 done</span></div>
+            <div>
+              <div class="list-row" style="justify-content: flex-start; align-items: flex-start; gap: 14px; padding: 12px 0">
+                <span class="check" style="background: var(--green); border-color: var(--green); color: #fff"><svg class="i"><use href="#i-check"/></svg></span>
+                <span class="stack-sm grow" style="gap: 4px"><span>Unplug FILE-SERVER from the network. Leave it switched on.</span><span class="small muted">Dr. Rao · 11:07 AM</span></span>
+              </div>
+              <div class="list-row" style="justify-content: flex-start; align-items: flex-start; gap: 14px; padding: 12px 0">
+                <span class="check" style="background: var(--green); border-color: var(--green); color: #fff"><svg class="i"><use href="#i-check"/></svg></span>
+                <span class="stack-sm grow" style="gap: 4px"><span>Call your IT contact (saved in ShieldMate).</span><span class="small muted">Dr. Rao · 11:08 AM</span></span>
+              </div>
+              <div class="list-row" style="justify-content: flex-start; align-items: flex-start; gap: 14px; padding: 12px 0">
+                <span class="check" style="background: var(--green); border-color: var(--green); color: #fff"><svg class="i"><use href="#i-check"/></svg></span>
+                <span class="stack-sm grow" style="gap: 6px">
+                  <span>Test your backup before you restore anything.</span>
+                  <span class="small" style="color: var(--red-ink)"><strong>Not safe:</strong> 9 days old · 48 of 50 files intact · always plugged in. <a href="#">See fixes</a></span>
+                  <a class="btn btn-tint" style="align-self: flex-start; min-height: 40px" href="owner-recovery.html">Check a restore won't bring the attack back</a>
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>What happened</h2>
+            <ol class="evt-list">
+              <li class="evt evt-alert"><time>11:05 AM</time><span class="rail"></span><span class="what">ShieldMate spotted 37 files renamed to .locked<span class="by">File server · rule 100201, mass file changes · recorded alert</span></span></li>
+              <li class="evt evt-step"><time>11:07 AM</time><span class="rail"></span><span class="what">Unplugged from the network, left switched on<span class="by">Dr. Rao</span></span></li>
+              <li class="evt evt-it"><time>11:08 AM</time><span class="rail"></span><span class="what">Called Suresh (TechCare IT)<span class="by">Dr. Rao</span></span></li>
+              <li class="evt evt-it"><time>11:12 AM</time><span class="rail"></span><span class="what">Suresh picked it up</span></li>
+              <li class="evt evt-backup"><time>11:20 AM</time><span class="rail"></span><span class="what">Backup tested: not safe<span class="by">9 days old · 48 of 50 files intact · always plugged in</span></span></li>
+              <li class="evt evt-it"><time>11:31 AM</time><span class="rail"></span><span class="what">Suresh added a note<span class="log-value" style="margin-top: 4px">Ransom note found in the shared folder. Server stays off the network, still switched on.</span></span></li>
+              <li class="evt evt-wait"><time>Next</time><span class="rail"></span><span class="what">Suresh marks it fixed, then you check and close it</span></li>
+            </ol>
+          </section>
+
+          <details class="log">
+            <summary>Technical details for IT</summary>
+            <div class="body">
+              <dl class="kv">
+                <dt>Computer</dt><dd>FILE-SERVER (agent 001), back office</dd>
+                <dt>Rule</dt><dd>100201 · mass file changes (ransomware pattern)</dd>
+                <dt>Seen</dt><dd>1 time, first at 11:05 AM</dd>
+                <dt>Source</dt><dd>Recorded replay (simulated)</dd>
+              </dl>
+            </div>
+          </details>
+        </div>
+
+        <aside class="col-side">
+          <section class="card dark">
+            <span class="small on-dark-muted">Report to CERT-In by</span>
+            <span class="big">5:05 PM</span>
+            <span class="on-dark-muted">5 h 25 min left · 6 hours from 11:05 AM</span>
+            <a class="btn btn-light" style="align-self: flex-start" href="owner-report.html">Draft the report</a>
+          </section>
+
+          <section class="card tight">
+            <div class="row-between"><span class="bold">Computer</span><span class="pill pill-amber pill-sm">Cut off, still on</span></div>
+            <span>File server · back office</span>
+            <span class="small ink-2">While it's off: no appointments, billing or patient records.</span>
+            <a class="btn btn-ghost" style="align-self: flex-start; padding-left: 0" href="owner-computers.html">See the computer</a>
+          </section>
+
+          <section class="card tight" aria-label="IT support">
+            <div class="row-between"><span class="bold">IT support · Suresh (TechCare IT)</span><span class="pill pill-amber pill-sm">IT is on it</span></div>
+            <div class="stages" role="img" aria-label="IT progress: Called, Picked up">
+              <span class="stage on"><i></i>Called<span class="small muted" style="font-weight: 400">11:08 AM</span></span>
+              <span class="stage on"><i></i>Picked up<span class="small muted" style="font-weight: 400">11:12 AM</span></span>
+              <span class="stage wait"><i></i>Resolved</span>
+              <span class="stage"><i></i>You confirmed</span>
+            </div>
+            <a class="btn btn-soft" style="align-self: flex-start" href="#"><svg class="i"><use href="#i-phone"/></svg> Call Suresh</a>
+          </section>
+
+          <section class="card tight">
+            <span class="section-label">Practise this with the team</span>
+            <span>Ransomware at the clinic · about 6 minutes</span>
+            <a class="btn btn-ghost" style="align-self: flex-start; padding-left: 0" href="#">Start this drill</a>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>An incident's full story (who ticked which step and when, IT's notes, the block decision, the backup result) is in <code>AlertOut</code>, but Right now shows it in separate pieces and drops the incident once it closes. Staff and IT have no single page to point at either.</dd>
+      <dt>Opens from</dt>
+      <dd>History rows, the headline of each card on Right now, “Closed today” rows (<code>OwnerNow.jsx:430</code>), and the IT panel's ticket title.</dd>
+      <dt>Data</dt>
+      <dd>No single-alert route exists, so find the alert by id in <code>GET /alerts?role=owner&amp;include_closed=true</code>. Use <code>GET /actions</code> filtered by <code>alert_id</code> for block rows, and <code>GET /restore/latest</code> with <code>derive.restoreSince</code> for the backup line. The timeline is <code>activity()</code> filtered to this alert, plus the restore run.</dd>
+      <dt>Reuse</dt>
+      <dd><code>Checklist</code>, <code>ItCard</code> and <code>CertIn</code> from <code>OwnerNow.jsx</code>; export them instead of copying. <code>RULE_DESC</code> from <code>content.js</code> for the technical details.</dd>
+      <dt>States</dt>
+      <dd>Id gone after a Reset: “This incident was cleared by a demo reset” with a link to History. Closed: a green “Closed” pill and IT's fix note at the top; the timeline ends with “You confirmed the fix”.</dd>
+      <dt>Safety</dt>
+      <dd>IT notes are free text typed by a person: render them as text nodes only, like <code>log_fields</code>.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

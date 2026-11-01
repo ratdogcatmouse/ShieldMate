@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Computers · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="7" rx="2"/><rect x="4" y="13" width="16" height="7" rx="2"/><path d="M8 7.5h.01M8 16.5h.01"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Computers</span>
+  <span class="mk-route">/owner/computers</span>
+  <span class="mk-tag ready">Ready now · 2 extras need fields</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html" aria-current="page">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="owner-head">
+        <div><span class="owner-mobile-head">Sunrise Family Clinic</span><h1>Computers</h1><span class="sub">ShieldMate is watching 3 computers · checked a few seconds ago</span></div>
+        <span class="pill pill-blue">Recorded alerts · replay mode</span>
+      </div>
+
+      <div class="grid-auto">
+        <section class="card" id="file-server" style="box-shadow: 0 0 0 2px var(--amber) inset, 0 10px 28px rgba(79, 44, 240, 0.08)">
+          <div class="row-between">
+            <div class="row" style="gap: 12px"><span class="ic amber"><svg class="i"><use href="#i-server"/></svg></span><span class="stack-sm" style="gap: 0"><h2>File server</h2><span class="small muted">Back office · FILE-SERVER</span></span></div>
+            <span class="pill pill-amber pill-sm">Cut off, still on</span>
+          </div>
+          <div class="callout" style="display: block; font-weight: 400">
+            <strong>Files are being locked.</strong> This looks like ransomware. Unplugged at 11:07 AM.
+            <a href="owner-incident.html" style="color: var(--red-ink); font-weight: 700">Open the incident</a>
+          </div>
+          <div class="facts">
+            <div class="fact"><span class="k">Impact</span><span class="v" style="color: var(--red-ink)">Critical</span></div>
+            <div class="fact"><span class="k">Changed</span><span class="v">11:07 AM</span></div>
+          </div>
+          <span class="section-label">Stops while it's down</span>
+          <div class="row" style="gap: 6px"><span class="pill pill-grey pill-sm no-dot">Appointments</span><span class="pill pill-grey pill-sm no-dot">Billing</span><span class="pill pill-grey pill-sm no-dot">Patient records</span></div>
+          <span class="section-label">Today</span>
+          <div class="timeline">
+            <div class="ev"><time>11:05 AM</time><span>Files being locked (rule 100201)</span></div>
+          </div>
+        </section>
+
+        <section class="card" id="reception">
+          <div class="row-between">
+            <div class="row" style="gap: 12px"><span class="ic green"><svg class="i"><use href="#i-monitor"/></svg></span><span class="stack-sm" style="gap: 0"><h2>Reception computer</h2><span class="small muted">Front desk · RECEPTION-PC</span></span></div>
+            <span class="pill pill-green pill-sm">OK</span>
+          </div>
+          <span class="section-label">Stops while it's down</span>
+          <div class="row" style="gap: 6px"><span class="pill pill-grey pill-sm no-dot">Front-desk check-in</span></div>
+          <div class="tinted"><strong>Plan B:</strong> check-in moves to the billing PC. <span class="mk-flag">needs field</span></div>
+          <span class="section-label">Today</span>
+          <div class="timeline">
+            <div class="ev"><time>9:41 AM</time><span>Password guessing from <span class="mono">192.168.1.57</span>. <a href="owner-incident.html">Closed 10:20 AM</a></span></div>
+            <div class="ev"><time>9:44 AM</time><span>Blocked <span class="mono">192.168.1.57</span> until 10:44 AM (you approved). Lifted by itself.</span></div>
+          </div>
+        </section>
+
+        <section class="card" id="doctor">
+          <div class="row-between">
+            <div class="row" style="gap: 12px"><span class="ic green"><svg class="i"><use href="#i-monitor"/></svg></span><span class="stack-sm" style="gap: 0"><h2>Doctor's computer</h2><span class="small muted">Consulting room · DOCTOR-PC</span></span></div>
+            <span class="pill pill-green pill-sm">OK</span>
+          </div>
+          <span class="section-label">Stops while it's down</span>
+          <div class="row" style="gap: 6px"><span class="pill pill-grey pill-sm no-dot">Consultations</span></div>
+          <span class="section-label">Today</span>
+          <span class="small muted">Nothing today.</span>
+        </section>
+      </div>
+
+      <div class="cols">
+        <section class="card tight col-main">
+          <div class="row-between"><span class="bold">ShieldMate never blocks these addresses</span><span class="mk-flag">needs field</span></div>
+          <div class="list" style="padding: 0; background: transparent">
+            <div class="list-row"><span>The clinic router</span><span class="mono small">192.168.1.1</span></div>
+            <div class="list-row"><span>The Wazuh server</span><span class="mono small">192.168.1.5</span></div>
+            <div class="list-row"><span>The ShieldMate laptop</span><span class="mono small">192.168.1.9</span></div>
+          </div>
+          <span class="small muted">So a block can never cut the clinic off its own network.</span>
+        </section>
+        <section class="card tight col-side">
+          <span class="bold">Who gets alerts for each computer</span>
+          <span class="small ink-2">Meena gets the reception computer's, Ravi the file server's, and you get all of them.</span>
+          <a class="btn btn-ghost" style="align-self: flex-start; padding-left: 0" href="owner-setup.html">See it in Setup</a>
+        </section>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>The device strip on Right now shows a short name and a status pill. The API also returns each computer's location and services (<code>GET /clinic</code>) and its block, status time and impact (<code>GET /devices</code>), but no screen shows them. The owner can't see what stops when a computer goes down.</dd>
+      <dt>Data</dt>
+      <dd>
+        <ul>
+          <li><code>GET /clinic</code> → <code>devices[]</code>: <code>agent_name</code>, <code>location</code>, <code>services</code>.</li>
+          <li><code>GET /devices</code> (flag ACTIONS): <code>status</code>, <code>status_changed_at</code>, <code>block</code>, <code>impact</code>. With ACTIONS off, fall back to <code>derive.deviceStates()</code>, as Right now does.</li>
+          <li>“Today” per computer: owner alerts and <code>GET /actions</code> filtered by <code>agent_name</code>.</li>
+        </ul>
+      </dd>
+      <dt>Needs fields (optional)</dt>
+      <dd>“Plan B” is <code>when_down</code> and the protected addresses are <code>never_block</code>. Both are already in <code>seed/clinic.json</code> (drills use <code>when_down</code>) but neither is in <code>ClinicResponse</code>. Adding them is a contract change. Build the page without them first.</dd>
+      <dt>Links</dt>
+      <dd>Rows in Right now's “Computers” list open this page at the computer (<code>#file-server</code>). Mission control stays read-only.</dd>
+      <dt>Reuse</dt>
+      <dd><code>StatusPill</code>, <code>deviceName</code> / <code>deviceShort</code>, <code>DEVICE_STATUS</code> from <code>content.js</code>.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

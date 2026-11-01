@@ -1,0 +1,178 @@
+/* Styles for the proposed-screen mockups in docs/proposed-screens.
+   Every page loads the app's own stylesheet first (frontend/src/styles/shieldmate.css), so the
+   mockups use the real cards, pills, buttons, fonts and bold theme. This file adds two things:
+
+   1. "Mockup frame": the annotation bar, phone frames and build notes. Presentation only;
+      none of it belongs in the app.
+   2. "New components": the few pieces the proposed screens need that shieldmate.css doesn't
+      have yet. If a screen is built, its pieces move into shieldmate.css. */
+
+/* =====================================================================
+   1. Mockup frame (not part of the app)
+   ===================================================================== */
+
+.mk-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+.mk-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 20px; background: #0E0B24; color: #DCD4FF; font-size: 14px; }
+.mk-bar a { color: #fff; font-weight: 700; }
+.mk-bar .mk-name { color: #fff; font-weight: 700; font-size: 15px; }
+.mk-bar .mk-route { font-family: var(--mono); font-size: 13px; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 2px 8px; color: #fff; }
+.mk-tag { display: inline-flex; align-items: center; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 700; }
+.mk-tag.ready { background: #CFF5DC; color: #14532D; }
+.mk-tag.contract { background: #FFE3B8; color: #7A3306; }
+
+/* "New" badge on navigation items the proposal adds. */
+.mk-new { flex: none; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; background: var(--gold); color: var(--game); border-radius: 999px; padding: 2px 7px; }
+
+/* A dashed chip on any value the API doesn't return yet. */
+.mk-flag { display: inline-flex; align-items: center; vertical-align: middle; border: 1px dashed #B07A2A; color: #7A3306; background: #FFF8EC; border-radius: 999px; padding: 1px 8px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+/* Phone frames, side by side, each with a caption. */
+.mk-stage { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 32px; padding: 32px 16px 8px; }
+.mk-frame { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 390px; max-width: 100%; }
+.mk-phone { position: relative; width: 390px; max-width: 100%; height: 844px; border: 10px solid #14112E; border-radius: 46px; overflow: hidden; background: var(--bg); box-shadow: 0 24px 60px rgba(20, 17, 46, 0.18); }
+.mk-phone > .shell { height: 100%; min-height: 0; overflow-y: auto; border: 0; }
+/* A frame that grows with its content, so a long screen can be read in one go. */
+.mk-phone.tall { height: auto; min-height: 844px; }
+.mk-phone.tall > .shell { height: auto; min-height: 824px; overflow: visible; }
+.mk-phone .rp-scrim, .mk-phone .rp-sheet { position: absolute; }
+.mk-caption { font-size: 15px; color: var(--muted); text-align: center; }
+.mk-caption b { color: var(--ink); }
+
+/* Build notes under each mockup. */
+.mk-notes { max-width: 1180px; margin: 28px auto 56px; padding: 0 16px; }
+.mk-notes .box { border: 2px dashed var(--line); border-radius: 20px; background: var(--surface); padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.mk-notes h2 { font-size: 19px; }
+.mk-notes dl { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 10px 18px; margin: 0; font-size: 15px; }
+.mk-notes dt { font-weight: 700; color: var(--muted); }
+.mk-notes dd { margin: 0; }
+.mk-notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.mk-notes code, .doc code { font-family: var(--mono); font-size: 0.88em; background: var(--surface-2); border-radius: 5px; padding: 1px 5px; }
+@media (max-width: 700px) { .mk-notes dl { grid-template-columns: 1fr; } .mk-notes dd { margin-bottom: 6px; } }
+@media (max-width: 899px) { .owner + .mk-notes { padding-bottom: 96px; } }
+
+/* =====================================================================
+   2. New components (would move into shieldmate.css)
+   ===================================================================== */
+
+/* Staff tab bar with a fifth "Help" tab (the app's .tabbar has four columns). */
+.tabbar.five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+/* Breadcrumb above a detail page's title. */
+.crumbs { display: flex; flex-wrap: wrap; gap: 6px; font-size: 14px; color: var(--muted); }
+.crumbs a { color: var(--muted); }
+
+/* Filter chips (History, activity). */
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 15px; font-weight: 700; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+/* Underlined tabs inside a page (report draft). */
+.tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs a { padding: 10px 14px; margin-bottom: -1px; border-bottom: 3px solid transparent; color: var(--muted); font-weight: 700; text-decoration: none; }
+.tabs a[aria-current="page"] { color: var(--blue-dark); border-bottom-color: var(--blue); }
+
+/* A tappable row that opens a detail page. */
+a.row-link { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line-soft); color: var(--ink); text-decoration: none; }
+a.row-link:last-child { border-bottom: 0; }
+a.row-link:hover .grow > .bold { color: var(--blue-dark); }
+a.row-link > .i { color: var(--muted); }
+a.card.row-link { flex-direction: row; padding: 14px 16px; border-bottom: 0; }
+
+/* One incident's timeline: time, a coloured dot on a rail, what happened. */
+.evt-list { list-style: none; margin: 0; padding: 0; }
+.evt { display: grid; grid-template-columns: 74px 18px minmax(0, 1fr); column-gap: 10px; }
+.evt time { font-size: 15px; color: var(--muted); padding-top: 1px; white-space: nowrap; }
+.evt .rail { position: relative; }
+.evt .rail::before { content: ""; position: absolute; left: 4px; top: 6px; width: 10px; height: 10px; border-radius: 999px; background: #A9A3C7; box-shadow: 0 0 0 3px var(--surface); z-index: 1; }
+.evt .rail::after { content: ""; position: absolute; left: 8px; top: 12px; bottom: -6px; width: 2px; background: var(--line); }
+.evt:last-child .rail::after { display: none; }
+.evt .what { padding-bottom: 16px; display: flex; flex-direction: column; gap: 2px; font-size: 16px; }
+.evt .what .by { font-size: 14px; color: var(--muted); }
+.evt.evt-alert .rail::before { background: var(--red); }
+.evt.evt-step .rail::before { background: var(--green); }
+.evt.evt-it .rail::before { background: var(--blue); }
+.evt.evt-block .rail::before { background: var(--blue-dark); }
+.evt.evt-backup .rail::before { background: var(--amber); }
+.evt.evt-wait .what, .evt.evt-never .what { color: var(--muted); }
+.evt.evt-wait .rail::before, .evt.evt-never .rail::before { background: var(--surface); border: 2px dashed #A9A3C7; width: 8px; height: 8px; }
+.card.tight .evt .what { font-size: 15px; padding-bottom: 12px; }
+
+/* Plain question with a yes/no answer (restore and recovery checks). */
+.yn { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.yn:last-child { border-bottom: 0; }
+.yn .q { display: flex; flex-direction: column; gap: 2px; }
+.yn .yes { color: var(--green-ink); font-weight: 700; }
+.yn .no { color: var(--red-ink); font-weight: 700; }
+
+/* Three-step "how the check works" strip. */
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+.flow .box { position: relative; background: var(--bg); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 6px; }
+.flow .box + .box::before { content: "→"; position: absolute; left: -23px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; }
+.flow .n { font-size: 13px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.flow .box.good { background: var(--green-soft); }
+.flow .box.bad { background: var(--red-soft); }
+@media (max-width: 760px) {
+  .flow { grid-template-columns: 1fr; gap: 26px; }
+  .flow .box + .box::before { content: "↓"; left: 50%; top: -22px; transform: translateX(-50%); }
+}
+
+/* Report draft: one field per row, with where its value came from. */
+.doc-field { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 8px 20px; padding: 16px 0; border-top: 1px solid var(--line-soft); }
+.doc-field:first-child { border-top: 0; padding-top: 4px; }
+.doc-field .k { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-weight: 700; font-size: 15px; }
+.doc-field .v { display: flex; flex-direction: column; gap: 6px; font-size: 16px; }
+.doc-field ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.src { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 8px; }
+.src.auto { background: var(--green-soft); color: var(--green-ink); }
+.src.you { background: var(--amber-soft); color: var(--amber-ink); }
+.fill { border: 2px dashed var(--line); border-radius: 12px; background: var(--bg); padding: 10px 12px; color: var(--muted); font-size: 15px; }
+.radios { display: flex; flex-wrap: wrap; gap: 8px; }
+.radios label { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 2px solid var(--line); border-radius: 999px; font-size: 15px; font-weight: 700; }
+.radios input { accent-color: var(--blue); width: 18px; height: 18px; margin: 0; }
+@media (max-width: 700px) { .doc-field { grid-template-columns: 1fr; } }
+
+/* Choice tiles (staff "What did you notice?"). */
+.tiles { display: flex; flex-direction: column; gap: 10px; }
+.tile { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 68px; padding: 12px 14px; border: 2px solid var(--line); border-radius: var(--r-item); background: var(--surface); color: var(--ink); text-align: left; font-size: 17px; font-weight: 700; cursor: pointer; }
+.tile .sub { display: block; font-size: 14px; font-weight: 400; color: var(--muted); }
+.tile[aria-pressed="true"] { border-color: var(--blue); background: var(--blue-soft); }
+.ic { flex: none; width: 42px; height: 42px; border-radius: 12px; background: var(--blue-soft); color: var(--blue); display: inline-flex; align-items: center; justify-content: center; }
+.ic.amber { background: var(--amber-soft); color: var(--amber-ink); }
+.ic.red { background: var(--red-soft); color: var(--red-ink); }
+.ic.green { background: var(--green-soft); color: var(--green); }
+.ic.big { width: 56px; height: 56px; border-radius: 999px; }
+.ic.big .i { width: 28px; height: 28px; }
+
+/* Saved numbers. */
+.contact { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+.contact:last-child { border-bottom: 0; }
+.contact .av { flex: none; width: 44px; height: 44px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+.contact .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.contact .num { font-family: var(--mono); font-size: 13px; color: var(--muted); }
+.contact .btn { min-height: 44px; padding: 0 16px; font-size: 15px; }
+
+/* On/off switch (Setup). */
+.switch { position: relative; flex: none; width: 52px; height: 32px; border: 0; border-radius: 999px; background: #C9C3E3; cursor: pointer; }
+.switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 999px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.2s; }
+.switch[aria-checked="true"] { background: var(--green); }
+.switch[aria-checked="true"]::after { transform: translateX(20px); }
+
+/* Yes/no grid (who can do what, who gets which alerts). */
+table.matrix th, table.matrix td { text-align: center; vertical-align: middle; }
+table.matrix th:first-child, table.matrix td:first-child { text-align: left; }
+table.matrix input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--blue); }
+.tick { color: var(--green); display: inline-flex; }
+.dash { color: #A9A3C7; font-weight: 700; }
+
+/* Full-screen states (can't reach the server, not found, unknown person). */
+.state { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; padding: 28px 22px; }
+.state h1 { font-size: 27px; line-height: 1.2; }
+.state ol, .state ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+
+/* A short labelled value on a dark summary card. */
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat .k { font-size: 13px; color: var(--night-muted); }
+.stat .v { font-size: 20px; font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 16px; }

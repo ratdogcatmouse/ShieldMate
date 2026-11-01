@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>History · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">History</span>
+  <span class="mk-route">/owner/history</span>
+  <span class="mk-tag ready">Ready now · no backend change</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html" aria-current="page">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="owner-head">
+        <div><span class="owner-mobile-head">Sunrise Family Clinic</span><h1>History</h1></div>
+        <span class="pill pill-blue">Recorded alerts · replay mode</span>
+      </div>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card">
+            <div class="row-between">
+              <h2>Incidents</h2>
+              <div class="seg" role="group" aria-label="Show">
+                <button type="button" aria-pressed="true">All 3</button>
+                <button type="button" aria-pressed="false">Open 1</button>
+                <button type="button" aria-pressed="false">Closed 2</button>
+              </div>
+            </div>
+
+            <div>
+              <a class="row-link" href="owner-incident.html">
+                <span class="grow stack-sm" style="gap: 4px">
+                  <span class="row" style="gap: 8px"><span class="pill pill-red pill-sm">Needs you now</span><span class="pill pill-red pill-sm no-dot">Critical impact</span></span>
+                  <span class="bold">Files on FILE-SERVER are being locked. This looks like ransomware.</span>
+                  <span class="small muted">File server · started 11:05 AM · IT is on it · CERT-In report due 5:05 PM</span>
+                </span>
+                <svg class="i"><use href="#i-chevron"/></svg>
+              </a>
+              <a class="row-link" href="owner-incident.html">
+                <span class="grow stack-sm" style="gap: 4px">
+                  <span class="row" style="gap: 8px"><span class="pill pill-green pill-sm">Closed 10:20 AM</span></span>
+                  <span class="bold">Repeated password guessing on RECEPTION-PC.</span>
+                  <span class="small muted">Reception · 9:41 AM · you blocked 192.168.1.57 for 60 minutes · fixed by Suresh: “Changed the reception admin password and turned on lockout after 5 tries.”</span>
+                </span>
+                <svg class="i"><use href="#i-chevron"/></svg>
+              </a>
+              <a class="row-link" href="owner-incident.html">
+                <span class="grow stack-sm" style="gap: 4px">
+                  <span class="row" style="gap: 8px"><span class="pill pill-green pill-sm">Closed 9:15 AM</span><span class="pill pill-amber pill-sm no-dot">Heads up</span></span>
+                  <span class="bold">A phishing email was flagged on RECEPTION-PC.</span>
+                  <span class="small muted">Reception · 8:52 AM · Meena left the email in place for IT</span>
+                </span>
+                <svg class="i"><use href="#i-chevron"/></svg>
+              </a>
+            </div>
+            <span class="small muted">Since the last reset at 8:00 AM.</span>
+          </section>
+
+          <section class="card tight">
+            <span class="section-label">Practice</span>
+            <a class="row-link" href="owner-debrief.html">
+              <span class="grow stack-sm" style="gap: 4px">
+                <span class="row" style="gap: 8px"><span class="pill pill-green pill-sm">Practice attack · stopped in 1:05</span></span>
+                <span class="bold">Fake supplier asks for payment to a new bank account</span>
+                <span class="small muted">8:30 AM · Ravi called the supplier back on the number already on file</span>
+              </span>
+              <svg class="i"><use href="#i-chevron"/></svg>
+            </a>
+          </section>
+        </div>
+
+        <aside class="col-side">
+          <section class="card">
+            <h2 style="font-size: 18px">What happened today</h2>
+            <div class="seg" role="group" aria-label="Show in activity">
+              <button type="button" aria-pressed="true">All</button>
+              <button type="button" aria-pressed="false">Alerts</button>
+              <button type="button" aria-pressed="false">Steps</button>
+              <button type="button" aria-pressed="false">Blocks</button>
+              <button type="button" aria-pressed="false">IT</button>
+            </div>
+            <div class="timeline">
+              <div class="ev"><time>11:31 AM</time><span>Suresh (TechCare IT) added a note</span></div>
+              <div class="ev"><time>11:20 AM</time><span>Dr. Rao: Test your backup before you restore anything</span></div>
+              <div class="ev"><time>11:12 AM</time><span>Suresh (TechCare IT) picked it up</span></div>
+              <div class="ev"><time>11:08 AM</time><span>Dr. Rao called Suresh (TechCare IT)</span></div>
+              <div class="ev"><time>11:07 AM</time><span>Dr. Rao: Unplug FILE-SERVER from the network. Leave it switched on</span></div>
+              <div class="ev"><time>11:05 AM</time><span>Files on FILE-SERVER are being locked. This looks like ransomware</span></div>
+              <div class="ev"><time>10:20 AM</time><span>Owner confirmed the fix. Incident closed</span></div>
+              <div class="ev"><time>10:12 AM</time><span>Suresh (TechCare IT) says it's fixed</span></div>
+              <div class="ev"><time>9:58 AM</time><span>Suresh (TechCare IT) added a note</span></div>
+              <div class="ev"><time>9:46 AM</time><span>Suresh (TechCare IT) picked it up</span></div>
+              <div class="ev"><time>9:44 AM</time><span>Blocked 192.168.1.57</span></div>
+              <div class="ev"><time>9:43 AM</time><span>ShieldMate asked to block 192.168.1.57</span></div>
+              <div class="ev"><time>9:42 AM</time><span>Meena called Suresh (TechCare IT)</span></div>
+              <div class="ev"><time>9:42 AM</time><span>Meena: Don't log in from RECEPTION-PC</span></div>
+              <div class="ev"><time>9:41 AM</time><span>Repeated password guessing on RECEPTION-PC</span></div>
+            </div>
+            <button type="button" class="btn btn-soft" style="align-self: flex-start">Show earlier</button>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>Once an incident closes, its story is hard to find: Right now keeps only the 3 newest in “Closed today” (<code>OwnerNow.jsx:430</code>), and “What happened” shows the newest 7 events (<code>OwnerNow.jsx:471</code>). Nothing lists every incident.</dd>
+      <dt>Data</dt>
+      <dd>What Right now already polls: <code>GET /alerts?role=owner&amp;include_closed=true</code>, <code>GET /actions</code>, <code>GET /notifications?role=owner</code>, run through <code>derive.activity()</code> unchanged. The practice row is <code>GET /status</code> → <code>simulation</code>.</dd>
+      <dt>Small code changes</dt>
+      <dd>
+        <ul>
+          <li>Give each <code>activity()</code> event a <code>kind</code> (alert, step, block, it, note) and its <code>alert_id</code>, so the filters and Incident detail can use it. Add tests in <code>derive.test.js</code>.</li>
+          <li>Rows link to <code>/owner/incident/:id</code>; so do the headlines on Right now and in “Closed today”.</li>
+        </ul>
+      </dd>
+      <dt>States</dt>
+      <dd>Empty: “Nothing has happened since the last reset.” A Reset restarts alert ids, so the list only covers time since the last reset. The event log keeps older history but has no read route, and adding one is out of scope.</dd>
+      <dt>Phone layout</dt>
+      <dd>The owner tab bar has four slots. History, Computers and Setup go in a “More” sheet that replaces “Switch” (it moves into the sheet too).</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CERT-In report draft · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">CERT-In report draft</span>
+  <span class="mk-route">/owner/incident/:alertId/report</span>
+  <span class="mk-tag ready">Ready now · copy and print only</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html" aria-current="page">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="stack-sm" style="gap: 10px">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="owner-history.html">History</a><span>›</span><a href="owner-incident.html">Ransomware on the file server</a><span>›</span><span>Report</span></nav>
+        <div class="owner-head">
+          <h1>Report to CERT-In</h1>
+          <span class="pill pill-amber"><svg class="i" style="width: 16px; height: 16px"><use href="#i-clock"/></svg> Due by 5:05 PM · 5 h 25 min left</span>
+        </div>
+        <p class="ink-2">ShieldMate filled in what it knows from this incident. Check each part, fill in the gaps, then send it the way CERT-In asks.</p>
+      </div>
+
+      <nav class="tabs" aria-label="Reports for this incident">
+        <a href="#" aria-current="page">CERT-In report</a>
+        <a href="#">Patient-data breach record</a>
+      </nav>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card" aria-label="Report draft">
+            <div class="doc-field">
+              <div class="k">Organisation<span class="src auto">From ShieldMate</span></div>
+              <div class="v"><span>Sunrise Family Clinic</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">Contact person<span class="src you">You fill this in</span></div>
+              <div class="v"><span>Dr. Rao, owner</span><span class="fill">Your phone number and email</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">What happened<span class="src auto">From ShieldMate</span></div>
+              <div class="v"><span>Suspected ransomware. 37 files on the clinic's file server were renamed to .locked within 1 minute.</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">When<span class="src auto">From ShieldMate</span></div>
+              <div class="v"><span>First seen Sunday, 1 November 2026 at 11:05 AM IST, by ShieldMate's alert.</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">Systems affected<span class="src auto">From ShieldMate</span></div>
+              <div class="v"><span>FILE-SERVER, in the back office. It holds appointments, billing and patient records.</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">How it was found<span class="src auto">From ShieldMate</span></div>
+              <div class="v"><span>Wazuh security monitoring, rule 100201 (mass file changes).</span></div>
+            </div>
+            <div class="doc-field">
+              <div class="k">What we've done so far<span class="src auto">From ShieldMate</span></div>
+              <div class="v">
+                <ul>
+                  <li>11:07 AM: disconnected the file server from the network and left it switched on (Dr. Rao).</li>
+                  <li>11:08 AM: called the clinic's IT contact, Suresh (TechCare IT), who took it on at 11:12 AM.</li>
+                  <li>11:20 AM: tested the backup: not safe to restore (9 days old, 48 of 50 files intact, always connected).</li>
+                </ul>
+              </div>
+            </div>
+            <div class="doc-field">
+              <div class="k">Was patient data involved?<span class="src you">You fill this in</span></div>
+              <div class="v">
+                <div class="radios" role="radiogroup" aria-label="Was patient data involved?">
+                  <label><input type="radio" name="pd"> Yes</label>
+                  <label><input type="radio" name="pd"> No</label>
+                  <label><input type="radio" name="pd" checked> Not sure yet</label>
+                </div>
+                <span class="small muted">If yes, also fill in the patient-data breach record (tab above).</span>
+              </div>
+            </div>
+            <div class="doc-field">
+              <div class="k">Anything else<span class="src you">You fill this in</span></div>
+              <div class="v"><span class="fill">For example, the name of the ransom note file, or any message from the attackers. Don't reply to them.</span></div>
+            </div>
+          </section>
+
+          <div class="row">
+            <button type="button" class="btn btn-primary"><svg class="i"><use href="#i-copy"/></svg> Copy as text</button>
+            <button type="button" class="btn btn-soft"><svg class="i"><use href="#i-print"/></svg> Print or save as PDF</button>
+            <button type="button" class="btn btn-ghost">I've sent it</button>
+          </div>
+        </div>
+
+        <aside class="col-side">
+          <section class="callout amber" style="display: block">
+            ShieldMate drafts this; you send it. Check it against CERT-In's current reporting form first.
+          </section>
+          <section class="card tight">
+            <span class="section-label">Built from</span>
+            <span class="small">This incident's timeline: 6 events, 11:05 to 11:31 AM</span>
+            <span class="small">The backup test at 11:20 AM</span>
+            <span class="small">Clinic details from setup</span>
+            <a class="btn btn-ghost" style="align-self: flex-start; padding-left: 0" href="owner-incident.html">Back to the incident</a>
+          </section>
+          <details class="log">
+            <summary>What the breach record asks</summary>
+            <div class="body small">
+              <span>Which patient details were exposed</span>
+              <span>About how many patients</span>
+              <span>When it was found, and what was done</span>
+              <span>Who has been told, and when</span>
+              <span class="muted">Check what the patient-data rules require with your advisor.</span>
+            </div>
+          </details>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd>The CERT-In card already promises it: “Next step after the demo: a report drafted from this timeline, for you to check and send” (<code>OwnerNow.jsx:295</code>). Two card steps, <code>REPORT_CERTIN</code> and <code>START_DPDP_NOTE</code>, have no screen behind them.</dd>
+      <dt>When it shows</dt>
+      <dd>For lessons with a CERT-In clock (<code>CERTIN_HOURS</code>: ransomware) and cards with a <code>REPORT_CERTIN</code> step (<code>files_copied_out</code>). The breach-record tab shows for cards with <code>START_DPDP_NOTE</code>, or when “Was patient data involved?” is Yes.</dd>
+      <dt>Data</dt>
+      <dd>Same as Incident detail, nothing new: the alert, its steps and IT log, <code>GET /restore/latest</code>, and clinic details from <code>GET /clinic</code>.</dd>
+      <dt>Output</dt>
+      <dd>“Copy as text” via <code>navigator.clipboard.writeText</code>; “Print” via <code>window.print()</code> with a print stylesheet that hides the nav. Nothing is sent from ShieldMate.</dd>
+      <dt>“I've sent it”</dt>
+      <dd>Ticks <code>REPORT_CERTIN</code> through the existing <code>PUT /alerts/{id}/steps/REPORT_CERTIN</code> where the card has that step. The ransomware card has no such step, so remembering “sent” there needs storage (a contract change). The button can be left out until then.</dd>
+      <dt>Privacy</dt>
+      <dd>What the owner types stays in the browser. It is never posted to the event log (CLAUDE.md: event payloads never hold free text).</dd>
+      <dt>Open</dt>
+      <dd>Check the field list against CERT-In's current incident form before building. Confirm with an advisor what the patient-data breach record must hold and by when; the mockup shows fields only.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>

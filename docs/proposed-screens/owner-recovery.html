@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en" data-theme="bold">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery check · proposed ShieldMate screen</title>
+<link rel="stylesheet" href="../../frontend/src/styles/shieldmate.css">
+<link rel="stylesheet" href="mockup.css">
+</head>
+<body>
+<svg class="mk-sprite" aria-hidden="true">
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-shield-plain" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/></symbol>
+  <symbol id="i-bars" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+</svg>
+
+<header class="mk-bar">
+  <a href="index.html">← All proposed screens</a>
+  <span class="mk-name">Recovery check</span>
+  <span class="mk-route">/owner/readiness/recovery</span>
+  <span class="mk-tag ready">Ready now · route exists, no screen calls it</span>
+</header>
+
+<div class="owner">
+  <nav class="sidebar" aria-label="Main">
+    <div class="brand">
+      <span style="color: var(--blue); display: flex"><svg class="i" style="width: 24px; height: 24px"><use href="#i-shield"/></svg></span>
+      <span class="stack-sm" style="gap: 0"><span class="brand-name">ShieldMate</span><span class="tiny muted">Sunrise Family Clinic</span></span>
+    </div>
+    <a class="nav" href="#">Right now<span class="dot" aria-label="Needs you"></span></a>
+    <a class="nav" href="owner-history.html">History <span class="mk-new">New</span></a>
+    <a class="nav" href="owner-computers.html">Computers <span class="mk-new">New</span></a>
+    <a class="nav" href="#" aria-current="page">Readiness</a>
+    <a class="nav" href="#">Drills</a>
+    <a class="nav" href="owner-setup.html">Setup <span class="mk-new">New</span></a>
+    <a class="nav" href="#">Phone alert preview</a>
+    <a class="nav" href="#">Mission control (projector)</a>
+    <div class="foot"><span>Dr. Rao · owner</span><a href="#">Switch person</a><a href="#">Backstage</a></div>
+  </nav>
+
+  <div class="owner-main">
+    <main class="owner-body">
+      <div class="stack-sm" style="gap: 10px">
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="#">Readiness</a><span>›</span><span>Recovery check</span></nav>
+        <div class="owner-head"><h1>Would restoring bring the attack back?</h1><span class="pill pill-sim">Simulated backup</span></div>
+      </div>
+
+      <section class="card dark" style="flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between">
+        <div class="stack-sm grow" style="gap: 4px; min-width: 260px">
+          <span class="on-dark-muted small">Last check 11:24 AM</span>
+          <span style="font-size: 24px; font-weight: 700; line-height: 1.25">Yes. This backup still has the 3 weak spots that IT's fix removed.</span>
+        </div>
+        <span class="on-dark-muted">1 thing to fix</span>
+      </section>
+
+      <div class="cols">
+        <div class="col-main">
+          <section class="card">
+            <h2>How the check works</h2>
+            <div class="flow">
+              <div class="box">
+                <span class="n">1 · Copy</span>
+                <span class="bold">Back up the folder the attacker changed</span>
+                <span class="small ink-2">Copied when you ran the check at 11:24 AM.</span>
+              </div>
+              <div class="box good">
+                <span class="n">2 · Fix</span>
+                <span class="bold">Apply IT's fix to a copy of the live folder</span>
+                <span class="small ink-2">3 weak spots before the fix, none after.</span>
+              </div>
+              <div class="box bad">
+                <span class="n">3 · Compare</span>
+                <span class="bold">Look for the same weak spots in the backup</span>
+                <span class="small ink-2">All 3 are still in the backup.</span>
+              </div>
+            </div>
+            <span class="small muted">Nothing here touches the real computers. The check works on copies in a separate folder.</span>
+          </section>
+
+          <section class="card">
+            <h2>Results</h2>
+            <div>
+              <div class="yn">
+                <span class="q"><strong>Did IT's fix work?</strong><span class="small muted">3 vulnerability marker(s) in the live directory, 0 after the update. All closed.</span></span>
+                <span class="yes">Yes</span>
+              </div>
+              <div class="yn">
+                <span class="q"><strong>Is the backup clean?</strong><span class="small muted">The backup still carries 3 vulnerability marker(s) the update removed from the live directory (e.g. VULN-MD5-002). Restoring it would bring the vulnerabilities back.</span></span>
+                <span class="no">No</span>
+              </div>
+            </div>
+            <div class="tinted"><strong>Fix:</strong> Take a new backup after the update and verify again.</div>
+            <div class="row">
+              <button type="button" class="btn btn-primary">Run the check again</button>
+              <a class="btn btn-soft" href="#"><svg class="i"><use href="#i-phone"/></svg> Call Suresh</a>
+            </div>
+          </section>
+        </div>
+
+        <aside class="col-side">
+          <section class="card tight">
+            <span class="section-label">Before you restore anything</span>
+            <div class="yn">
+              <span class="q"><strong>Backup test</strong><span class="small muted">Fresh, intact, out of reach</span></span>
+              <span class="pill pill-red pill-sm">Not safe</span>
+            </div>
+            <div class="yn">
+              <span class="q"><strong>Recovery check</strong><span class="small muted">Won't bring the attack back</span></span>
+              <span class="pill pill-red pill-sm">Not yet</span>
+            </div>
+            <span class="small ink-2">Both need to pass. Until then, don't restore this backup.</span>
+          </section>
+          <section class="card tight">
+            <span class="section-label">What's a weak spot?</span>
+            <span class="small">Something the attacker changed to get back in later. IT's fix removes it from the live computer, but a backup taken before the fix still has it.</span>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <nav class="tabbar" aria-label="Main">
+      <a href="#"><svg class="i"><use href="#i-shield-plain"/></svg>Right now</a>
+      <a href="#" aria-current="page"><svg class="i"><use href="#i-bars"/></svg>Readiness</a>
+      <a href="#"><svg class="i"><use href="#i-target"/></svg>Drills</a>
+      <a href="#"><svg class="i"><use href="#i-menu"/></svg>More</a>
+    </nav>
+  </div>
+</div>
+
+<section class="mk-notes" aria-label="Build notes">
+  <div class="box">
+    <h2>Build notes (not part of the screen)</h2>
+    <dl>
+      <dt>Why</dt>
+      <dd><code>POST /restore/verify</code> is in the contract (<code>contract.py:771</code>, <code>RestoreVerifyResult</code>) and built on the backend, but <code>api.js</code> has no function for it and no screen calls it.</dd>
+      <dt>Data</dt>
+      <dd>Add <code>api.restoreVerify = () =&gt; call("POST", "/restore/verify", { who: "owner" })</code>. Show <code>result</code>, <code>backup_vuln_files</code>, <code>updated_vuln_files</code>, <code>same_vulnerabilities</code>, and each check's <code>detail</code> and <code>fix</code>. The screen puts its own plain question above each check's technical <code>detail</code>.</dd>
+      <dt>Limits</dt>
+      <dd>There is no GET for the last verify result, so the page is empty until the owner runs it. Keep the result in component state, or add <code>GET /restore/verify/latest</code> (a contract change).</dd>
+      <dt>Opens from</dt>
+      <dd>Readiness' backup card after a test, the ransomware checklist's backup step on Right now, and Incident detail.</dd>
+      <dt>Depends on</dt>
+      <dd>Nothing new. <code>restore/verify.run_verify</code> backs up the compromised folder itself on every run, so the page works today. The separate 100201 auto-snapshot hook (<code>docs/ISHAAN-next-steps.md</code>) isn't wired yet, and this screen doesn't need it.</dd>
+    </dl>
+  </div>
+</section>
+</body>
+</html>
