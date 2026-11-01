@@ -24,3 +24,6 @@ dist/
 # Wazuh lab certificates (demo laptop only)
 backend/*.pem
 backend/*.crt
+
+# Alternative frontend kept locally only (not the submitted UI)
+frontend-testversion/
